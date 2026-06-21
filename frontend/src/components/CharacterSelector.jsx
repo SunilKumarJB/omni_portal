@@ -35,7 +35,7 @@ export default function CharacterSelector({
     setCaptured(src)
     setCameraActive(false)
     fetch(src).then(r => r.blob()).then(blob => {
-      setCharacterImageFile(new File([blob], 'capture.jpg', { type: 'image/*' }))
+      setCharacterImageFile(new File([blob], 'capture.png', { type: 'image/png' }))
       setSelectedCharacter(null)
     })
   }, [webcamRef])

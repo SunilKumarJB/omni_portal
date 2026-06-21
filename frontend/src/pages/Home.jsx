@@ -44,9 +44,48 @@ export default function Home() {
     return true
   }, [currentStep, selectedTemplate, videoPrompt, selectedCharacter, characterImageFile, selectedAudio, audioFile])
 
+  /**
+   * Fetches a public asset URL and returns it as a File object.
+   * Returns null silently if the file is missing or the fetch fails.
+   */
+  async function fetchAsFile(url, filename, mimeType) {
+    try {
+      const resp = await fetch(url)
+      if (!resp.ok) return null
+      const blob = await resp.blob()
+      return new File([blob], filename, { type: mimeType })
+    } catch {
+      return null
+    }
+  }
+
   const handleGenerate = async () => {
     setGenerationState('submitting')
     try {
+      // Resolve preset character → actual image file if user didn't capture/upload
+      let resolvedCharacterImage = characterImageFile
+      if (!resolvedCharacterImage && selectedCharacter?.img) {
+        const ext = selectedCharacter.img.split('.').pop()
+        const mime = ext === 'svg' ? 'image/svg+xml' : 'image/png'
+        resolvedCharacterImage = await fetchAsFile(
+          selectedCharacter.img,
+          `${selectedCharacter.id}.${ext}`,
+          mime,
+        )
+      }
+
+      // Resolve preset audio → actual audio file if user didn't record/upload
+      let resolvedAudioFile = audioFile
+      if (!resolvedAudioFile && selectedAudio?.src) {
+        const ext = selectedAudio.src.split('.').pop()
+        const mime = ext === 'mp3' ? 'audio/mpeg' : `audio/${ext}`
+        resolvedAudioFile = await fetchAsFile(
+          selectedAudio.src,
+          `${selectedAudio.id}.${ext}`,
+          mime,
+        )
+      }
+
       // Append dialogue to prompt if provided
       const finalPrompt = dialogueText.trim()
         ? `${videoPrompt}\n\nSpoken dialogue (exact line): "${dialogueText.trim()}"`
@@ -58,8 +97,8 @@ export default function Home() {
         themeId: 'default',
         characterPresetId: selectedCharacter?.id,
         audioPresetId: selectedAudio?.id,
-        characterImage: characterImageFile,
-        audioFile,
+        characterImage: resolvedCharacterImage,
+        audioFile: resolvedAudioFile,
       })
       setRequestData(result)
       setGenerationState('done')

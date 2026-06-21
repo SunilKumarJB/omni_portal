@@ -59,9 +59,9 @@ export default function AudioSelector({ selectedAudio, setSelectedAudio, audioFi
       mrRef.current = mr; chunksRef.current = []
       mr.ondataavailable = (e) => chunksRef.current.push(e.data)
       mr.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/*' })
+        const blob = new Blob(chunksRef.current, { type: 'audio/wav' })
         setRecBlob(URL.createObjectURL(blob))
-        setAudioFile(new File([blob], 'recording.webm', { type: 'audio/*' }))
+        setAudioFile(new File([blob], 'recording.wav', { type: 'audio/wav' }))
         setSelectedAudio(null)
         stream.getTracks().forEach(t => t.stop())
       }

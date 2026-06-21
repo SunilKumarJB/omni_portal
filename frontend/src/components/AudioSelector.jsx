@@ -88,9 +88,9 @@ export default function AudioSelector({ selectedAudio, setSelectedAudio, audioFi
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
-        <span className="g-step-label">Step 4 of 5</span>
+        <span className="g-step-label">Step 4 of 5 · Optional</span>
         <h2 className="g-step-title">Set the mood</h2>
-        <p className="g-step-sub">Choose a soundtrack or record / upload your own.</p>
+        <p className="g-step-sub">Choose a soundtrack or record / upload your own. Skip to generate without audio.</p>
       </div>
 
       {/* Tabs */}

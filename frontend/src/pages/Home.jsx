@@ -40,7 +40,7 @@ export default function Home() {
     if (currentStep === 1) return !!selectedTemplate && videoPrompt.trim().length >= 10
     if (currentStep === 2) return true  // dialogue is optional
     if (currentStep === 3) return !!selectedCharacter || !!characterImageFile
-    if (currentStep === 4) return !!selectedAudio || !!audioFile
+    if (currentStep === 4) return true  // audio is optional
     return true
   }, [currentStep, selectedTemplate, videoPrompt, selectedCharacter, characterImageFile, selectedAudio, audioFile])
 
@@ -288,10 +288,10 @@ export default function Home() {
               Back
             </button>
             <div className="flex items-center gap-3">
-              {/* Skip button only on optional steps */}
-              {currentStep === 2 && (
+              {/* Skip button on optional steps */}
+              {(currentStep === 2 || currentStep === 4) && (
                 <button
-                  onClick={() => setCurrentStep(3)}
+                  onClick={() => setCurrentStep(s => s + 1)}
                   className="text-sm text-[rgba(255,255,255,0.35)] hover:text-[rgba(255,255,255,0.60)] transition-colors"
                 >
                   Skip

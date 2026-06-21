@@ -84,7 +84,7 @@ async def generate_video(
     if character_image and character_image.filename:
         img_data = await character_image.read()
         url, local_path = await storage_service.upload_bytes(
-            img_data, f"{request_id}/character.jpg", character_image.content_type
+            img_data, f"{request_id}/character.png", character_image.content_type
         )
         character_image_local = local_path
         character_image_mime = character_image.content_type

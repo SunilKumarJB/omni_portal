@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#880E4F"/>
+      <stop offset="100%" stop-color="#C2185B"/>
+    </linearGradient>
+    <clipPath id="clip"><rect width="200" height="200" rx="24"/></clipPath>
+  </defs>
+  <rect width="200" height="200" rx="24" fill="url(#bg)"/>
+  <g clip-path="url(#clip)">
+    <!-- Head -->
+    <circle cx="100" cy="70" r="30" fill="#FFCCBC"/>
+    <!-- Long flowing hair -->
+    <path d="M68 58 Q68 33 100 31 Q132 33 132 58 Q134 50 132 65 Q130 88 124 95 L76 95 Q70 88 68 65 Q66 50 68 58Z" fill="#B71C1C"/>
+    <!-- Side hair flowing down -->
+    <path d="M68 65 Q62 90 65 120 Q70 100 76 95Z" fill="#B71C1C"/>
+    <path d="M132 65 Q138 90 135 120 Q130 100 124 95Z" fill="#B71C1C"/>
+    <!-- Ear details -->
+    <ellipse cx="70" cy="72" rx="5" ry="6" fill="#FFCCBC"/>
+    <ellipse cx="130" cy="72" rx="5" ry="6" fill="#FFCCBC"/>
+    <!-- Earrings -->
+    <circle cx="70" cy="80" r="3" fill="#F48FB1"/>
+    <circle cx="130" cy="80" r="3" fill="#F48FB1"/>
+    <!-- Neck -->
+    <rect x="90" y="97" width="20" height="14" rx="4" fill="#FFCCBC"/>
+    <!-- Creative top (off-shoulder look) -->
+    <path d="M35 200 L35 155 Q60 138 85 135 L100 152 L115 135 Q140 138 165 155 L165 200Z" fill="#AD1457"/>
+    <!-- Artistic brushstroke accent on clothing -->
+    <path d="M65 155 Q80 148 95 152" fill="none" stroke="#F8BBD9" stroke-width="3" stroke-linecap="round"/>
+    <path d="M105 152 Q120 148 140 158" fill="none" stroke="#F8BBD9" stroke-width="2" stroke-linecap="round"/>
+    <!-- Paint palette icon hint -->
+    <circle cx="152" cy="145" r="10" fill="rgba(255,255,255,0.12)"/>
+    <circle cx="149" cy="143" r="2.5" fill="#FF5722"/>
+    <circle cx="154" cy="141" r="2" fill="#FFEB3B"/>
+    <circle cx="156" cy="146" r="2" fill="#4CAF50"/>
+  </g>
+  <rect x="0" y="182" width="200" height="18" fill="rgba(0,0,0,0.35)"/>
+  <text x="100" y="194" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" font-weight="600" fill="rgba(255,255,255,0.75)" letter-spacing="1">CREATIVE · F</text>
+</svg>

@@ -75,6 +75,29 @@ async def copy_gcs_to_local(gcs_uri: str, local_path: str) -> str:
     return url
 
 
+async def read_bytes(storage_path: str) -> Tuple[bytes, str]:
+    """
+    Reads bytes from a storage path (local absolute path or GCS URI).
+    Returns (data, content_type).
+    """
+    if storage_path.startswith("gs://"):
+        from google.cloud import storage as gcs
+        import mimetypes as _mt
+        client = gcs.Client(project=settings.GCP_PROJECT_ID)
+        bucket_name, blob_name = storage_path[5:].split("/", 1)
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        data = blob.download_as_bytes()
+        content_type = blob.content_type or "application/octet-stream"
+        return data, content_type
+    else:
+        import mimetypes as _mt
+        async with aiofiles.open(storage_path, "rb") as f:
+            data = await f.read()
+        content_type, _ = _mt.guess_type(storage_path)
+        return data, content_type or "application/octet-stream"
+
+
 def local_storage_dir(request_id: str) -> Path:
     p = Path(settings.LOCAL_STORAGE_PATH) / request_id
     p.mkdir(parents=True, exist_ok=True)

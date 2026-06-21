@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import clsx from 'clsx'
-import { MapPin, PenLine, ChevronDown, ChevronUp, Check } from 'lucide-react'
+import { MapPin, PenLine, ChevronDown, ChevronUp, Check, Play } from 'lucide-react'
 
 export const VIDEO_TEMPLATES = [
   {
@@ -13,6 +13,8 @@ export const VIDEO_TEMPLATES = [
     prompt: 'A hyper-realistic, cinematic tracking shot of [REF_Character] walking confidently through a futuristic, neon-lit Times Square at night. Holographic billboards glow in the rain-slicked streets. [REF_Character] is wearing sleek, modern streetwear with glowing LED accents, looking directly into the camera with a smirk. The lighting is high-contrast cyan and magenta. Shot on 35mm lens, 8K resolution, photorealistic.',
     accent: '#00D4FF',
     emoji: '🌆',
+    videoSrc: '/assets/videos/template_cyberpunk.mp4',
+    poster: '/assets/videos/poster_cyberpunk.jpg',
   },
   {
     id: 'action_hero',
@@ -24,6 +26,8 @@ export const VIDEO_TEMPLATES = [
     prompt: 'An epic, slow-motion low-angle shot of [REF_Character] standing in the center of the Roman Colosseum during golden hour. Dust particles float in the warm sunlight. [REF_Character] dusts off their shoulder, looking tough and victorious, with a dramatic cape or coat blowing in the wind. Cinematic lighting, IMAX film style, incredibly detailed.',
     accent: '#F59E0B',
     emoji: '⚔️',
+    videoSrc: '/assets/videos/template_action_hero.mp4',
+    poster: '/assets/videos/poster_action_hero.jpg',
   },
   {
     id: 'film_noir',
@@ -35,6 +39,8 @@ export const VIDEO_TEMPLATES = [
     prompt: 'A moody, black and white 1940s film noir shot. [REF_Character] leans against a vintage streetlamp on a cobblestone street in Paris, with the Eiffel Tower glowing dimly in the foggy background. Heavy rain falls, creating deep shadows and dramatic rim lighting on [REF_Character]\'s face. Vintage 35mm film grain, cinematic depth of field, dramatic and mysterious atmosphere.',
     accent: '#94A3B8',
     emoji: '🕵️',
+    videoSrc: '/assets/videos/template_film_noir.mp4',
+    poster: '/assets/videos/poster_film_noir.jpg',
   },
   {
     id: 'animated',
@@ -46,6 +52,8 @@ export const VIDEO_TEMPLATES = [
     prompt: 'A high-quality 3D animated shot in the style of modern Pixar. [REF_Character] is rendered in a stylized, expressive 3D cartoon style, standing in a vibrant field of pink cherry blossoms with Mount Fuji towering in the background. Bright, cheerful sunlight, soft shadows, and vibrant colors. [REF_Character] does a sudden, comedic double-take toward the camera as cherry blossom petals blow past.',
     accent: '#F472B6',
     emoji: '🌸',
+    videoSrc: '/assets/videos/template_animated.mp4',
+    poster: '/assets/videos/poster_animated.jpg',
   },
   {
     id: 'treasure_hunter',
@@ -57,6 +65,8 @@ export const VIDEO_TEMPLATES = [
     prompt: 'A sweeping drone shot circling around [REF_Character] standing atop a massive sand dune, with the Great Pyramids of Giza looming beautifully in the background under a blazing sun. [REF_Character] is dressed in rugged explorer gear, holding an ancient glowing artifact. Heat distortion waves ripple in the air. Unreal Engine 5 style render, hyper-detailed, warm orange and teal color grading.',
     accent: '#F97316',
     emoji: '🏺',
+    videoSrc: '/assets/videos/template_treasure_hunter.mp4',
+    poster: '/assets/videos/poster_treasure_hunter.jpg',
   },
   {
     id: 'custom',
@@ -68,8 +78,60 @@ export const VIDEO_TEMPLATES = [
     prompt: '',
     accent: '#4285F4',
     emoji: '✏️',
+    videoSrc: null,
+    poster: null,
   },
 ]
+
+function TemplateThumbnail({ tpl, selected }) {
+  const videoRef = useRef(null)
+  const [videoReady, setVideoReady] = useState(false)
+
+  if (!tpl.videoSrc) {
+    /* Custom card — just show the accent strip */
+    return <div className="h-0.5 w-full" style={{ background: tpl.accent }} />
+  }
+
+  return (
+    <div className="relative w-full overflow-hidden" style={{ height: videoReady ? 110 : 'auto' }}>
+      {/* Accent strip shown until video loads */}
+      {!videoReady && <div className="h-0.5 w-full" style={{ background: tpl.accent }} />}
+
+      <video
+        ref={videoRef}
+        src={tpl.videoSrc}
+        poster={tpl.poster || undefined}
+        muted
+        autoPlay
+        loop
+        playsInline
+        className="w-full object-cover transition-opacity duration-300"
+        style={{ height: 110, opacity: videoReady ? 1 : 0 }}
+        onCanPlay={() => setVideoReady(true)}
+        onError={() => setVideoReady(false)}
+      />
+
+      {/* Gradient overlay + play badge */}
+      {videoReady && (
+        <>
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: `linear-gradient(to bottom, transparent 40%, ${tpl.accent}28 100%)` }}
+          />
+          <div
+            className="absolute bottom-1.5 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+            style={{ background: 'rgba(0,0,0,0.55)', color: tpl.accent }}
+          >
+            <Play className="w-2.5 h-2.5 fill-current" />
+            Preview
+          </div>
+          {/* Thin accent line at top when video is visible */}
+          <div className="absolute top-0 inset-x-0 h-0.5" style={{ background: tpl.accent }} />
+        </>
+      )}
+    </div>
+  )
+}
 
 export default function PromptSelector({ selectedTemplate, setSelectedTemplate, videoPrompt, setVideoPrompt }) {
   const [expanded, setExpanded] = useState(null)
@@ -125,8 +187,8 @@ export default function PromptSelector({ selectedTemplate, setSelectedTemplate, 
                   }
                 }}
               >
-                {/* Accent top strip */}
-                <div className="h-0.5 w-full" style={{ background: tpl.accent }} />
+                {/* Video thumbnail or accent strip */}
+                <TemplateThumbnail tpl={tpl} selected={selected} />
 
                 <div className="p-4 space-y-3">
                   {/* Header row */}

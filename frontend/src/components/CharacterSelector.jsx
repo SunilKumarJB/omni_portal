@@ -4,12 +4,12 @@ import clsx from 'clsx'
 import { Camera, Upload, RefreshCcw, Check, X } from 'lucide-react'
 
 const PRESET_CHARS = [
-  { id: 'char_01', name: 'Business Pro', gender: 'M', avatar: '👨‍💼', bg: '#1A237E' },
-  { id: 'char_02', name: 'Business Pro', gender: 'F', avatar: '👩‍💼', bg: '#4A148C' },
-  { id: 'char_03', name: 'Creative',     gender: 'M', avatar: '👨‍🎨', bg: '#BF360C' },
-  { id: 'char_04', name: 'Creative',     gender: 'F', avatar: '👩‍🎨', bg: '#880E4F' },
-  { id: 'char_05', name: 'Tech',         gender: '',  avatar: '🧑‍💻', bg: '#1B5E20' },
-  { id: 'char_06', name: 'Influencer',   gender: '',  avatar: '🌟',   bg: '#E65100' },
+  { id: 'char_01', name: 'Business Pro', gender: 'M', avatar: '👨‍💼', bg: '#1A237E', img: '/assets/characters/char_01.svg' },
+  { id: 'char_02', name: 'Business Pro', gender: 'F', avatar: '👩‍💼', bg: '#4A148C', img: '/assets/characters/char_02.svg' },
+  { id: 'char_03', name: 'Creative',     gender: 'M', avatar: '👨‍🎨', bg: '#BF360C', img: '/assets/characters/char_03.svg' },
+  { id: 'char_04', name: 'Creative',     gender: 'F', avatar: '👩‍🎨', bg: '#880E4F', img: '/assets/characters/char_04.svg' },
+  { id: 'char_05', name: 'Tech',         gender: '',  avatar: '🧑‍💻', bg: '#1B5E20', img: '/assets/characters/char_05.svg' },
+  { id: 'char_06', name: 'Influencer',   gender: '',  avatar: '🌟',   bg: '#E65100', img: '/assets/characters/char_06.svg' },
 ]
 
 const TABS = [
@@ -93,25 +93,40 @@ export default function CharacterSelector({
                 key={c.id}
                 onClick={() => { setSelectedCharacter(c); resetCustom() }}
                 className={clsx(
-                  'g-card-hover flex items-center gap-3 text-left',
+                  'g-card-hover flex flex-col items-center gap-3 text-center p-4',
                   selected && 'g-card-selected',
                 )}
               >
-                <div
-                  className="w-11 h-11 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
-                  style={{ background: c.bg }}
-                >
-                  {c.avatar}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm text-white font-medium">{c.name}</div>
-                  {c.gender && (
-                    <div className="text-xs text-white/38">{c.gender === 'M' ? 'Male' : 'Female'}</div>
+                {/* Avatar: SVG image with emoji fallback */}
+                <div className="relative w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0"
+                  style={{ background: c.bg }}>
+                  <img
+                    src={c.img}
+                    alt={`${c.name} ${c.gender}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                      e.currentTarget.nextSibling.style.display = 'flex'
+                    }}
+                  />
+                  <div
+                    className="absolute inset-0 items-center justify-center text-3xl"
+                    style={{ display: 'none' }}
+                  >
+                    {c.avatar}
+                  </div>
+                  {selected && (
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#4285F4] flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                    </div>
                   )}
                 </div>
-                {selected && (
-                  <Check className="w-4 h-4 text-[#4285F4] flex-shrink-0" />
-                )}
+                <div className="min-w-0 w-full">
+                  <div className="text-sm text-white font-medium leading-tight">{c.name}</div>
+                  {c.gender && (
+                    <div className="text-xs text-white/38 mt-0.5">{c.gender === 'M' ? 'Male' : 'Female'}</div>
+                  )}
+                </div>
               </button>
             )
           })}

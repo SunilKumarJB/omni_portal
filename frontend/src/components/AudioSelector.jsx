@@ -3,12 +3,12 @@ import clsx from 'clsx'
 import { Mic, MicOff, Upload, Check } from 'lucide-react'
 
 const PRESET_AUDIO = [
-  { id: 'audio_01', name: 'Upbeat Corporate',  bpm: 128, mood: 'Energetic',    dot: '#4285F4' },
-  { id: 'audio_02', name: 'Cinematic Epic',    bpm: 90,  mood: 'Dramatic',     dot: '#EA4335' },
-  { id: 'audio_03', name: 'Calm Ambient',      bpm: 70,  mood: 'Peaceful',     dot: '#34A853' },
-  { id: 'audio_04', name: 'Energetic Pop',     bpm: 138, mood: 'Fun',          dot: '#FBBC05' },
-  { id: 'audio_05', name: 'Inspirational',     bpm: 100, mood: 'Uplifting',    dot: '#A142F4' },
-  { id: 'audio_06', name: 'Minimal Modern',    bpm: 110, mood: 'Contemporary', dot: '#24C1E0' },
+  { id: 'audio_01', name: 'Upbeat Corporate',  bpm: 128, mood: 'Energetic',    dot: '#4285F4', src: '/assets/audio/audio_01.mp3' },
+  { id: 'audio_02', name: 'Cinematic Epic',    bpm: 90,  mood: 'Dramatic',     dot: '#EA4335', src: '/assets/audio/audio_02.mp3' },
+  { id: 'audio_03', name: 'Calm Ambient',      bpm: 70,  mood: 'Peaceful',     dot: '#34A853', src: '/assets/audio/audio_03.mp3' },
+  { id: 'audio_04', name: 'Energetic Pop',     bpm: 138, mood: 'Fun',          dot: '#FBBC05', src: '/assets/audio/audio_04.mp3' },
+  { id: 'audio_05', name: 'Inspirational',     bpm: 100, mood: 'Uplifting',    dot: '#A142F4', src: '/assets/audio/audio_05.mp3' },
+  { id: 'audio_06', name: 'Minimal Modern',    bpm: 110, mood: 'Contemporary', dot: '#24C1E0', src: '/assets/audio/audio_06.mp3' },
 ]
 
 const TABS = [
@@ -112,30 +112,48 @@ export default function AudioSelector({ selectedAudio, setSelectedAudio, audioFi
           {PRESET_AUDIO.map((a) => {
             const active = selectedAudio?.id === a.id
             return (
-              <button
-                key={a.id}
-                onClick={() => selectPreset(a)}
-                className={clsx(
-                  'g-card-hover flex items-center gap-4 text-left',
-                  active && 'g-card-selected',
-                )}
-              >
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${a.dot}20`, border: `1.5px solid ${a.dot}50` }}
+              <div key={a.id} className="flex flex-col gap-0">
+                <button
+                  onClick={() => selectPreset(a)}
+                  className={clsx(
+                    'g-card-hover flex items-center gap-4 text-left',
+                    active && 'g-card-selected',
+                    active && a.src && 'rounded-b-none border-b-0',
+                  )}
                 >
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: a.dot }} />
-                </div>
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${a.dot}20`, border: `1.5px solid ${a.dot}50` }}
+                  >
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: a.dot }} />
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-white font-medium">{a.name}</div>
-                  <div className="text-xs text-white/38">{a.mood} · {a.bpm} BPM</div>
-                </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-white font-medium">{a.name}</div>
+                    <div className="text-xs text-white/38">{a.mood} · {a.bpm} BPM</div>
+                  </div>
 
-                <MiniWave active={active} color={a.dot} />
+                  <MiniWave active={active} color={a.dot} />
 
-                {active && <Check className="w-4 h-4 text-[#4285F4] flex-shrink-0" />}
-              </button>
+                  {active && <Check className="w-4 h-4 text-[#4285F4] flex-shrink-0" />}
+                </button>
+
+                {/* Inline audio preview — only shown when selected and file exists */}
+                {active && a.src && (
+                  <div
+                    className="px-3 pb-3 rounded-b-2xl border border-t-0"
+                    style={{ borderColor: `${a.dot}40`, background: `${a.dot}0A` }}
+                  >
+                    <audio
+                      src={a.src}
+                      controls
+                      className="w-full h-8"
+                      style={{ colorScheme: 'dark' }}
+                      onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }}
+                    />
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>

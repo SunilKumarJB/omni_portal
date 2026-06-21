@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  body {
+    background: #0A0A0A;
+    color: #EBEBEB;
+    font-family: 'Google Sans', 'Product Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar            { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track      { background: transparent; }
+  ::-webkit-scrollbar-thumb      { background: rgba(255,255,255,0.12); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
+}
+
+@layer components {
+
+  /* ── Surfaces ─────────────────────────────────────────── */
+  .g-card {
+    @apply rounded-2xl border border-white/[0.07] bg-[#111] p-5;
+  }
+  .g-card-hover {
+    @apply g-card transition-all duration-200 cursor-pointer
+           hover:bg-[#161616] hover:border-white/[0.12];
+  }
+  .g-card-selected {
+    border-color: #4285F4 !important;
+    background: rgba(66,133,244,0.08) !important;
+    box-shadow: 0 0 0 1px rgba(66,133,244,0.25), 0 4px 32px rgba(66,133,244,0.08);
+  }
+
+  /* ── Buttons ──────────────────────────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           text-white font-semibold text-sm tracking-wide
+           px-6 py-2.5 rounded-full
+           transition-all duration-200
+           disabled:opacity-30 disabled:cursor-not-allowed;
+    background: #4285F4;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #3b7ae8;
+    box-shadow: 0 4px 28px rgba(66,133,244,0.45);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(66,133,244,0.30);
+  }
+  .btn-tonal {
+    @apply inline-flex items-center justify-center gap-2
+           text-[#4285F4] font-medium text-sm
+           px-5 py-2.5 rounded-full border border-[#4285F4]/25
+           bg-[#4285F4]/10
+           hover:bg-[#4285F4]/20 active:bg-[#4285F4]/25
+           transition-all duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-outlined {
+    @apply inline-flex items-center justify-center gap-2
+           border border-white/[0.15] text-white/80 font-medium text-sm
+           px-5 py-2.5 rounded-full
+           hover:bg-white/[0.05] hover:border-white/[0.20] hover:text-white
+           active:bg-white/[0.08]
+           transition-all duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-text {
+    @apply inline-flex items-center justify-center gap-2
+           text-[#4285F4] font-medium text-sm px-4 py-2 rounded-full
+           hover:bg-[#4285F4]/10 transition-colors duration-150;
+  }
+
+  /* ── Filter chips ─────────────────────────────────────── */
+  .g-chip {
+    @apply inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm
+           border border-white/[0.15] text-white/70 bg-transparent
+           cursor-pointer hover:bg-white/[0.05] hover:border-white/[0.25]
+           transition-all duration-150 select-none;
+  }
+  .g-chip-active {
+    @apply border-[#4285F4]/50 bg-[#4285F4]/10 text-[#4285F4];
+  }
+
+  /* ── Tab bar ──────────────────────────────────────────── */
+  .g-tab-bar {
+    @apply flex border-b border-white/[0.07];
+  }
+  .g-tab {
+    @apply px-5 py-3 text-sm font-medium text-white/55
+           border-b-2 border-transparent -mb-px
+           hover:text-white/85 hover:bg-white/[0.04]
+           transition-all duration-150 cursor-pointer whitespace-nowrap select-none;
+  }
+  .g-tab-active {
+    @apply text-[#4285F4] border-[#4285F4] hover:bg-[#4285F4]/[0.06];
+  }
+
+  /* ── Labels ───────────────────────────────────────────── */
+  .g-label {
+    @apply text-white/45 text-[10px] font-semibold
+           uppercase tracking-[0.14em] mb-2 block;
+  }
+
+  /* ── Inputs ───────────────────────────────────────────── */
+  .g-input {
+    @apply w-full bg-[#0D0D0D] border border-white/[0.09] rounded-xl px-4 py-3
+           text-white/90 placeholder-white/20 text-sm
+           focus:outline-none focus:border-[#4285F4]/60 focus:bg-[#4285F4]/[0.025]
+           transition-all duration-150;
+  }
+
+  /* ── Progress ─────────────────────────────────────────── */
+  .g-progress-track {
+    @apply h-1 rounded-full overflow-hidden relative;
+    background: rgba(255,255,255,0.07);
+  }
+  .g-progress-fill {
+    @apply absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out;
+    background: linear-gradient(90deg, #4285F4 0%, #5BA3F5 100%);
+  }
+
+  /* ── Section heading ──────────────────────────────────── */
+  .g-step-label {
+    @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50 mb-2 block;
+  }
+  .g-step-title {
+    @apply text-2xl font-bold text-white leading-tight mb-1;
+  }
+  .g-step-sub {
+    @apply text-sm text-white/60 leading-relaxed;
+  }
+
+  /* ── Google brand stripe ──────────────────────────────── */
+  .g-rainbow-bar {
+    height: 3px;
+    background: linear-gradient(90deg,
+      #4285F4 0%,   #4285F4 25%,
+      #EA4335 25%,  #EA4335 50%,
+      #FBBC05 50%,  #FBBC05 75%,
+      #34A853 75%,  #34A853 100%);
+    flex-shrink: 0;
+  }
+
+  /* ── Divider ──────────────────────────────────────────── */
+  .g-divider { border-top: 1px solid rgba(255,255,255,0.07); }
+
+  /* ── Status badge ─────────────────────────────────────── */
+  .g-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+}

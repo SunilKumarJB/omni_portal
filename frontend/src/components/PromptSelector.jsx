@@ -36,7 +36,7 @@ export const VIDEO_TEMPLATES = [
     style: '1940s Film Noir · B&W · 35mm grain',
     location: 'Eiffel Tower, Paris — Rainy 1920s',
     dialogue: 'Romance is just a myth we tell ourselves to survive the rain.',
-    prompt: 'A moody, black and white 1940s film noir shot. [REF_Character] leans against a vintage streetlamp on a cobblestone street in Paris, with the Eiffel Tower glowing dimly in the foggy background. Heavy rain falls, creating deep shadows and dramatic rim lighting on [REF_Character]\'s face. Vintage 35mm film grain, cinematic depth of field, dramatic and mysterious atmosphere.',
+    prompt: 'A moody, black and white 1940s film noir shot. Locked-off, completely static camera with zero panning, horizontal movement, or camera drift. The [REF_Character] is framed in the center, keeping the left side of the screen clean, empty, and entirely clear of obstructions or clipping. A character leans against a vintage streetlamp on a cobblestone street in Paris, with the Eiffel Tower glowing dimly in the foggy background. Deep shadows and dramatic rim lighting on [REF_Character]\'s face. Vintage 35mm film grain, cinematic depth of field, dramatic and mysterious atmosphere.',
     accent: '#94A3B8',
     emoji: '🕵️',
     videoSrc: '/assets/videos/template_film_noir.mp4',
@@ -93,7 +93,7 @@ function TemplateThumbnail({ tpl, selected }) {
   }
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: videoReady ? 110 : 'auto' }}>
+    <div className="relative w-full overflow-hidden" style={{ height: videoReady ? 220 : 'auto' }}>
       {/* Accent strip shown until video loads */}
       {!videoReady && <div className="h-0.5 w-full" style={{ background: tpl.accent }} />}
 
@@ -106,7 +106,7 @@ function TemplateThumbnail({ tpl, selected }) {
         loop
         playsInline
         className="w-full object-cover transition-opacity duration-300"
-        style={{ height: 110, opacity: videoReady ? 1 : 0 }}
+        style={{ height: 220, opacity: videoReady ? 1 : 0 }}
         onCanPlay={() => setVideoReady(true)}
         onError={() => setVideoReady(false)}
       />

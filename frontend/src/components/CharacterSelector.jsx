@@ -4,12 +4,12 @@ import clsx from 'clsx'
 import { Camera, Upload, RefreshCcw, Check, X } from 'lucide-react'
 
 const PRESET_CHARS = [
-  { id: 'char_01', name: 'Business Pro', gender: 'M', avatar: '👨‍💼', bg: '#1A237E', img: '/assets/characters/char_01.svg' },
-  { id: 'char_02', name: 'Business Pro', gender: 'F', avatar: '👩‍💼', bg: '#4A148C', img: '/assets/characters/char_02.svg' },
-  { id: 'char_03', name: 'Creative',     gender: 'M', avatar: '👨‍🎨', bg: '#BF360C', img: '/assets/characters/char_03.svg' },
-  { id: 'char_04', name: 'Creative',     gender: 'F', avatar: '👩‍🎨', bg: '#880E4F', img: '/assets/characters/char_04.svg' },
-  { id: 'char_05', name: 'Tech',         gender: '',  avatar: '🧑‍💻', bg: '#1B5E20', img: '/assets/characters/char_05.svg' },
-  { id: 'char_06', name: 'Influencer',   gender: '',  avatar: '🌟',   bg: '#E65100', img: '/assets/characters/char_06.svg' },
+  { id: 'char_01', name: 'Business Pro', gender: 'M', avatar: '👨‍💼', bg: '#1A237E', img: '/assets/characters/char_01.png' },
+  { id: 'char_02', name: 'Business Pro', gender: 'F', avatar: '👩‍💼', bg: '#4A148C', img: '/assets/characters/char_02.png' },
+  { id: 'char_03', name: 'Creative',     gender: 'M', avatar: '👨‍🎨', bg: '#BF360C', img: '/assets/characters/char_03.png' },
+  { id: 'char_04', name: 'Creative',     gender: 'F', avatar: '👩‍🎨', bg: '#880E4F', img: '/assets/characters/char_04.png' },
+  { id: 'char_05', name: 'Tech',         gender: '',  avatar: '🧑‍💻', bg: '#1B5E20', img: '/assets/characters/char_05.png' },
+  { id: 'char_06', name: 'Influencer',   gender: '',  avatar: '🌟',   bg: '#E65100', img: '/assets/characters/char_06.png' },
 ]
 
 const TABS = [
@@ -35,7 +35,7 @@ export default function CharacterSelector({
     setCaptured(src)
     setCameraActive(false)
     fetch(src).then(r => r.blob()).then(blob => {
-      setCharacterImageFile(new File([blob], 'capture.jpg', { type: 'image/jpeg' }))
+      setCharacterImageFile(new File([blob], 'capture.jpg', { type: 'image/*' }))
       setSelectedCharacter(null)
     })
   }, [webcamRef])

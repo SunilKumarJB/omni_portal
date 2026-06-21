@@ -182,15 +182,15 @@ async def generate_video(
     media_inputs = []
     if product_image_bytes:
         media_inputs.append(
-            _media_payload(product_image_bytes, "image", product_image_mime or "image/jpeg")
+            _media_payload(product_image_bytes, "image", product_image_mime or "image/*")
         )
     if character_image_bytes:
         media_inputs.append(
-            _media_payload(character_image_bytes, "image", character_image_mime or "image/jpeg")
+            _media_payload(character_image_bytes, "image", character_image_mime or "image/*")
         )
     if audio_bytes:
         media_inputs.append(
-            _media_payload(audio_bytes, "audio", audio_mime or "audio/wav")
+            _media_payload(audio_bytes, "audio", audio_mime or "audio/*")
         )
     if source_video_bytes:
         media_inputs.append(

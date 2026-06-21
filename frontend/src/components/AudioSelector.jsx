@@ -3,12 +3,12 @@ import clsx from 'clsx'
 import { Mic, MicOff, Upload, Check } from 'lucide-react'
 
 const PRESET_AUDIO = [
-  { id: 'audio_01', name: 'Upbeat Corporate',  bpm: 128, mood: 'Energetic',    dot: '#4285F4', src: '/assets/audio/audio_01.mp3' },
-  { id: 'audio_02', name: 'Cinematic Epic',    bpm: 90,  mood: 'Dramatic',     dot: '#EA4335', src: '/assets/audio/audio_02.mp3' },
-  { id: 'audio_03', name: 'Calm Ambient',      bpm: 70,  mood: 'Peaceful',     dot: '#34A853', src: '/assets/audio/audio_03.mp3' },
-  { id: 'audio_04', name: 'Energetic Pop',     bpm: 138, mood: 'Fun',          dot: '#FBBC05', src: '/assets/audio/audio_04.mp3' },
-  { id: 'audio_05', name: 'Inspirational',     bpm: 100, mood: 'Uplifting',    dot: '#A142F4', src: '/assets/audio/audio_05.mp3' },
-  { id: 'audio_06', name: 'Minimal Modern',    bpm: 110, mood: 'Contemporary', dot: '#24C1E0', src: '/assets/audio/audio_06.mp3' },
+  { id: 'audio_01', name: 'Upbeat Corporate',  bpm: 128, mood: 'Energetic',    dot: '#4285F4', src: '/assets/audio/audio_01.wav' },
+  { id: 'audio_02', name: 'Cinematic Epic',    bpm: 90,  mood: 'Dramatic',     dot: '#EA4335', src: '/assets/audio/audio_02.wav' },
+  { id: 'audio_03', name: 'Calm Ambient',      bpm: 70,  mood: 'Peaceful',     dot: '#34A853', src: '/assets/audio/audio_03.wav' },
+  { id: 'audio_04', name: 'Energetic Pop',     bpm: 138, mood: 'Fun',          dot: '#FBBC05', src: '/assets/audio/audio_04.wav' },
+  { id: 'audio_05', name: 'Inspirational',     bpm: 100, mood: 'Uplifting',    dot: '#A142F4', src: '/assets/audio/audio_05.wav' },
+  { id: 'audio_06', name: 'Minimal Modern',    bpm: 110, mood: 'Contemporary', dot: '#24C1E0', src: '/assets/audio/audio_06.wav' },
 ]
 
 const TABS = [
@@ -59,9 +59,9 @@ export default function AudioSelector({ selectedAudio, setSelectedAudio, audioFi
       mrRef.current = mr; chunksRef.current = []
       mr.ondataavailable = (e) => chunksRef.current.push(e.data)
       mr.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        const blob = new Blob(chunksRef.current, { type: 'audio/*' })
         setRecBlob(URL.createObjectURL(blob))
-        setAudioFile(new File([blob], 'recording.webm', { type: 'audio/webm' }))
+        setAudioFile(new File([blob], 'recording.webm', { type: 'audio/*' }))
         setSelectedAudio(null)
         stream.getTracks().forEach(t => t.stop())
       }

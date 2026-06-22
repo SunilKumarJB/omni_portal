@@ -35,7 +35,7 @@ graph TD
         N -->|Generate Enriched Prompt| O["omni_service.generate_video"]
         O -->|Thread-safe Access Token| P["Get Cached OAuth2 Token (Bypass Auth Server if valid)"]
         O -->|POST Vertex interactions| Q["Vertex AI Interactions API (model: OMNI_MODEL from .env)"]
-        Q -->|Poll Status (every 10s via HTTPX)| R{"Check Omni Generation Status"}
+        Q -->|Poll Status every 10s via HTTPX| R{"Check Omni Generation Status"}
         R -->|in_progress| R
         R -->|completed| S["Download Video Bytes from Omni"]
         R -->|failed| T["Extract specific failure reason & update DB status=failed"]

@@ -1,6 +1,7 @@
 """
 Video view route — serves the data for the unique QR-linked video page.
 """
+
 from fastapi import APIRouter, HTTPException
 from app.services import db_service
 from app.api.routes.generate import _to_status

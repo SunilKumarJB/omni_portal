@@ -1,28 +1,40 @@
-import React from 'react'
-import { MapPin, FlaskConical, Quote, Sparkles } from 'lucide-react'
+import { FlaskConical, MapPin, Quote, Sparkles } from 'lucide-react';
+import React from 'react';
 
 const LANG_NAMES = {
-  en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu',
-  kn: 'Kannada', ml: 'Malayalam', bn: 'Bengali',
-  mr: 'Marathi', gu: 'Gujarati', pa: 'Punjabi',
-}
+  en: 'English',
+  hi: 'Hindi',
+  ta: 'Tamil',
+  te: 'Telugu',
+  kn: 'Kannada',
+  ml: 'Malayalam',
+  bn: 'Bengali',
+  mr: 'Marathi',
+  gu: 'Gujarati',
+  pa: 'Punjabi',
+};
 
 const GCP_SERVICES = [
-  { name: 'Omni',          color: '#4285F4' },
-  { name: 'Nano Banana',   color: '#34A853' },
+  { name: 'Omni', color: '#4285F4' },
+  { name: 'Nano Banana', color: '#34A853' },
   { name: 'Cloud Storage', color: '#EA4335' },
-  { name: 'Firestore',     color: '#A142F4' },
-]
+  { name: 'Firestore', color: '#A142F4' },
+];
 
 export default function ReviewGenerate({
-  testMode, selectedTemplate, videoPrompt,
-  dialogueText, selectedLanguage,
-  selectedCharacter, characterImageFile,
-  selectedAudio, audioFile, onGenerate,
+  testMode,
+  selectedTemplate,
+  videoPrompt,
+  dialogueText,
+  selectedLanguage,
+  selectedCharacter,
+  characterImageFile,
+  selectedAudio,
+  audioFile,
+  onGenerate,
 }) {
   return (
     <div className="max-w-2xl mx-auto space-y-5">
-
       <div className="mb-8">
         <span className="g-step-label">Step 5 of 5</span>
         <h2 className="g-step-title">Review &amp; generate</h2>
@@ -33,7 +45,8 @@ export default function ReviewGenerate({
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#FBBC05]/[0.06] border border-[#FBBC05]/15">
           <FlaskConical className="w-4 h-4 text-[#FBBC05] flex-shrink-0" />
           <span className="text-sm text-white/65">
-            <span className="text-[#FBBC05] font-semibold">Test mode</span> — placeholder video, no real GCP calls.
+            <span className="text-[#FBBC05] font-semibold">Test mode</span> — placeholder video, no
+            real GCP calls.
           </span>
         </div>
       )}
@@ -71,10 +84,7 @@ export default function ReviewGenerate({
             </div>
             <div className="flex gap-2">
               <Quote className="w-4 h-4 flex-shrink-0 text-[#4285F4] mt-0.5" />
-              <p
-                className="text-sm text-white/75 leading-relaxed italic"
-                lang={selectedLanguage}
-              >
+              <p className="text-sm text-white/75 leading-relaxed italic" lang={selectedLanguage}>
                 {dialogueText}
               </p>
             </div>
@@ -110,9 +120,15 @@ export default function ReviewGenerate({
             <div className="flex items-center gap-2.5 mt-1">
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ background: `${selectedAudio.dot ?? '#4285F4'}20`, border: `1.5px solid ${selectedAudio.dot ?? '#4285F4'}50` }}
+                style={{
+                  background: `${selectedAudio.dot ?? '#4285F4'}20`,
+                  border: `1.5px solid ${selectedAudio.dot ?? '#4285F4'}50`,
+                }}
               >
-                <div className="w-2 h-2 rounded-full" style={{ background: selectedAudio.dot ?? '#4285F4' }} />
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: selectedAudio.dot ?? '#4285F4' }}
+                />
               </div>
               <span className="text-sm text-white font-medium">{selectedAudio.name}</span>
             </div>
@@ -138,7 +154,9 @@ export default function ReviewGenerate({
               style={{ background: `${color}0A`, borderColor: `${color}28` }}
             >
               <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-              <span className="text-xs" style={{ color: `${color}CC` }}>{name}</span>
+              <span className="text-xs" style={{ color: `${color}CC` }}>
+                {name}
+              </span>
             </div>
           ))}
         </div>
@@ -153,9 +171,11 @@ export default function ReviewGenerate({
           {testMode ? '🧪 Generate (test mode)' : 'Generate video with Omni →'}
         </button>
         <p className="text-center text-xs text-white/25 mt-3">
-          {testMode ? 'Returns a placeholder video instantly' : 'Generation takes 3–8 minutes · You\'ll get a QR code to return anytime'}
+          {testMode
+            ? 'Returns a placeholder video instantly'
+            : "Generation takes 3–8 minutes · You'll get a QR code to return anytime"}
         </p>
       </div>
     </div>
-  )
+  );
 }

@@ -1,13 +1,13 @@
-import React, { useState, useCallback } from 'react'
-import { FlaskConical } from 'lucide-react'
-import StepIndicator from '../components/StepIndicator.jsx'
-import PromptSelector from '../components/PromptSelector.jsx'
-import DialogueSelector from '../components/DialogueSelector.tsx'
-import CharacterSelector from '../components/CharacterSelector.jsx'
-import AudioSelector from '../components/AudioSelector.jsx'
-import ReviewGenerate from '../components/ReviewGenerate.jsx'
-import ResultPanel from '../components/ResultPanel.jsx'
-import { generateVideo } from '../lib/api.js'
+import { FlaskConical } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import AudioSelector from '../components/AudioSelector.jsx';
+import CharacterSelector from '../components/CharacterSelector.jsx';
+import DialogueSelector from '../components/DialogueSelector.tsx';
+import PromptSelector from '../components/PromptSelector.jsx';
+import ResultPanel from '../components/ResultPanel.jsx';
+import ReviewGenerate from '../components/ReviewGenerate.jsx';
+import StepIndicator from '../components/StepIndicator.jsx';
+import { generateVideo } from '../lib/api.js';
 
 const STEPS = [
   { id: 1, label: 'Scenario' },
@@ -15,34 +15,42 @@ const STEPS = [
   { id: 3, label: 'Character' },
   { id: 4, label: 'Audio' },
   { id: 5, label: 'Review' },
-]
+];
 
 export default function Home() {
-  const [testMode, setTestMode]               = useState(false)
-  const [currentStep, setCurrentStep]         = useState(1)
-  const [generationState, setGenerationState] = useState(null)
-  const [requestData, setRequestData]         = useState(null)
+  const [testMode, setTestMode] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [generationState, setGenerationState] = useState(null);
+  const [requestData, setRequestData] = useState(null);
 
   // Step 1
-  const [selectedTemplate, setSelectedTemplate] = useState(null)
-  const [videoPrompt, setVideoPrompt]           = useState('')
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [videoPrompt, setVideoPrompt] = useState('');
   // Step 2
-  const [selectedLanguage, setSelectedLanguage] = useState('en')
-  const [dialogueText, setDialogueText]         = useState('')
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [dialogueText, setDialogueText] = useState('');
   // Step 3
-  const [selectedCharacter, setSelectedCharacter]   = useState(null)
-  const [characterImageFile, setCharacterImageFile] = useState(null)
+  const [selectedCharacter, setSelectedCharacter] = useState(null);
+  const [characterImageFile, setCharacterImageFile] = useState(null);
   // Step 4
-  const [selectedAudio, setSelectedAudio] = useState(null)
-  const [audioFile, setAudioFile]         = useState(null)
+  const [selectedAudio, setSelectedAudio] = useState(null);
+  const [audioFile, setAudioFile] = useState(null);
 
   const canGoNext = useCallback(() => {
-    if (currentStep === 1) return !!selectedTemplate && videoPrompt.trim().length >= 10
-    if (currentStep === 2) return true  // dialogue is optional
-    if (currentStep === 3) return !!selectedCharacter || !!characterImageFile
-    if (currentStep === 4) return true  // audio is optional
-    return true
-  }, [currentStep, selectedTemplate, videoPrompt, selectedCharacter, characterImageFile, selectedAudio, audioFile])
+    if (currentStep === 1) return !!selectedTemplate && videoPrompt.trim().length >= 10;
+    if (currentStep === 2) return true; // dialogue is optional
+    if (currentStep === 3) return !!selectedCharacter || !!characterImageFile;
+    if (currentStep === 4) return true; // audio is optional
+    return true;
+  }, [
+    currentStep,
+    selectedTemplate,
+    videoPrompt,
+    selectedCharacter,
+    characterImageFile,
+    selectedAudio,
+    audioFile,
+  ]);
 
   /**
    * Fetches a public asset URL and returns it as a File object.
@@ -50,46 +58,42 @@ export default function Home() {
    */
   async function fetchAsFile(url, filename, mimeType) {
     try {
-      const resp = await fetch(url)
-      if (!resp.ok) return null
-      const blob = await resp.blob()
-      return new File([blob], filename, { type: mimeType })
+      const resp = await fetch(url);
+      if (!resp.ok) return null;
+      const blob = await resp.blob();
+      return new File([blob], filename, { type: mimeType });
     } catch {
-      return null
+      return null;
     }
   }
 
   const handleGenerate = async () => {
-    setGenerationState('submitting')
+    setGenerationState('submitting');
     try {
-      // Resolve preset character → actual image file if user didn't capture/upload
-      let resolvedCharacterImage = characterImageFile
-      if (!resolvedCharacterImage && selectedCharacter?.img) {
-        const ext = selectedCharacter.img.split('.').pop()
-        const mime = ext === 'svg' ? 'image/svg+xml' : 'image/png'
-        resolvedCharacterImage = await fetchAsFile(
-          selectedCharacter.img,
-          `${selectedCharacter.id}.${ext}`,
-          mime,
-        )
-      }
-
-      // Resolve preset audio → actual audio file if user didn't record/upload
-      let resolvedAudioFile = audioFile
-      if (!resolvedAudioFile && selectedAudio?.src) {
-        const ext = selectedAudio.src.split('.').pop()
-        const mime = ext === 'mp3' ? 'audio/mpeg' : `audio/${ext}`
-        resolvedAudioFile = await fetchAsFile(
-          selectedAudio.src,
-          `${selectedAudio.id}.${ext}`,
-          mime,
-        )
-      }
+      // Resolve preset character and audio in parallel (eliminating network waterfall)
+      const [resolvedCharacterImage, resolvedAudioFile] = await Promise.all([
+        (async () => {
+          if (!characterImageFile && selectedCharacter?.img) {
+            const ext = selectedCharacter.img.split('.').pop();
+            const mime = ext === 'svg' ? 'image/svg+xml' : 'image/png';
+            return fetchAsFile(selectedCharacter.img, `${selectedCharacter.id}.${ext}`, mime);
+          }
+          return characterImageFile;
+        })(),
+        (async () => {
+          if (!audioFile && selectedAudio?.src) {
+            const ext = selectedAudio.src.split('.').pop();
+            const mime = ext === 'mp3' ? 'audio/mpeg' : `audio/${ext}`;
+            return fetchAsFile(selectedAudio.src, `${selectedAudio.id}.${ext}`, mime);
+          }
+          return audioFile;
+        })(),
+      ]);
 
       // Append dialogue to prompt if provided
       const finalPrompt = dialogueText.trim()
         ? `${videoPrompt}\n\nSpoken dialogue (exact line): "${dialogueText.trim()}"`
-        : videoPrompt
+        : videoPrompt;
 
       const result = await generateVideo({
         prompt: finalPrompt,
@@ -99,21 +103,27 @@ export default function Home() {
         audioPresetId: selectedAudio?.id,
         characterImage: resolvedCharacterImage,
         audioFile: resolvedAudioFile,
-      })
-      setRequestData(result)
-      setGenerationState('done')
+      });
+      setRequestData(result);
+      setGenerationState('done');
     } catch {
-      setGenerationState('error')
+      setGenerationState('error');
     }
-  }
+  };
 
   const handleReset = () => {
-    setCurrentStep(1); setGenerationState(null); setRequestData(null)
-    setSelectedTemplate(null); setVideoPrompt('')
-    setSelectedLanguage('en'); setDialogueText('')
-    setSelectedCharacter(null); setCharacterImageFile(null)
-    setSelectedAudio(null); setAudioFile(null)
-  }
+    setCurrentStep(1);
+    setGenerationState(null);
+    setRequestData(null);
+    setSelectedTemplate(null);
+    setVideoPrompt('');
+    setSelectedLanguage('en');
+    setDialogueText('');
+    setSelectedCharacter(null);
+    setCharacterImageFile(null);
+    setSelectedAudio(null);
+    setAudioFile(null);
+  };
 
   if (generationState === 'submitting') {
     return (
@@ -123,7 +133,7 @@ export default function Home() {
           <p className="text-sm text-white/45">Preparing your request…</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (generationState === 'done' && requestData) {
@@ -136,12 +146,11 @@ export default function Home() {
         testMode={testMode}
         onReset={handleReset}
       />
-    )
+    );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0A0A0A]">
-
       {/* Google brand stripe — 3px only, at the very top */}
       <div className="g-rainbow-bar" />
 
@@ -151,11 +160,27 @@ export default function Home() {
           <div className="flex items-center gap-3">
             {/* Portal icon — clean, single-color blue */}
             <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
-              <rect width="34" height="34" rx="9" fill="#111"/>
-              <circle cx="17" cy="17" r="10" fill="none" stroke="#4285F4" strokeWidth="1" opacity="0.25"/>
-              <circle cx="17" cy="17" r="7" fill="none" stroke="#4285F4" strokeWidth="1.5" opacity="0.6"/>
-              <circle cx="17" cy="17" r="3.5" fill="#4285F4" opacity="0.9"/>
-              <circle cx="17" cy="17" r="1.5" fill="white"/>
+              <rect width="34" height="34" rx="9" fill="#111" />
+              <circle
+                cx="17"
+                cy="17"
+                r="10"
+                fill="none"
+                stroke="#4285F4"
+                strokeWidth="1"
+                opacity="0.25"
+              />
+              <circle
+                cx="17"
+                cy="17"
+                r="7"
+                fill="none"
+                stroke="#4285F4"
+                strokeWidth="1.5"
+                opacity="0.6"
+              />
+              <circle cx="17" cy="17" r="3.5" fill="#4285F4" opacity="0.9" />
+              <circle cx="17" cy="17" r="1.5" fill="white" />
             </svg>
             <span className="text-[15px] font-semibold text-white tracking-tight">
               The Omni Portal
@@ -173,10 +198,10 @@ export default function Home() {
             {/* GCP badge — G-dot only, subtle */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.04]">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <circle cx="2.5" cy="2.5" r="2.5" fill="#4285F4"/>
-                <circle cx="7.5" cy="2.5" r="2.5" fill="#EA4335"/>
-                <circle cx="2.5" cy="7.5" r="2.5" fill="#34A853"/>
-                <circle cx="7.5" cy="7.5" r="2.5" fill="#FBBC05"/>
+                <circle cx="2.5" cy="2.5" r="2.5" fill="#4285F4" />
+                <circle cx="7.5" cy="2.5" r="2.5" fill="#EA4335" />
+                <circle cx="2.5" cy="7.5" r="2.5" fill="#34A853" />
+                <circle cx="7.5" cy="7.5" r="2.5" fill="#FBBC05" />
               </svg>
               <span className="text-[11px] text-white/40 font-medium">GCP</span>
             </div>
@@ -190,7 +215,8 @@ export default function Home() {
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: 'radial-gradient(ellipse 55% 90% at 8% 60%, rgba(66,133,244,0.10) 0%, transparent 70%)',
+            background:
+              'radial-gradient(ellipse 55% 90% at 8% 60%, rgba(66,133,244,0.10) 0%, transparent 70%)',
           }}
         />
 
@@ -282,7 +308,7 @@ export default function Home() {
         {currentStep < 5 && (
           <div className="flex justify-between mt-10">
             <button
-              onClick={() => setCurrentStep(s => Math.max(1, s - 1))}
+              onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
               className={`btn-outlined ${currentStep === 1 ? 'invisible' : ''}`}
             >
               Back
@@ -291,14 +317,14 @@ export default function Home() {
               {/* Skip button on optional steps */}
               {(currentStep === 2 || currentStep === 4) && (
                 <button
-                  onClick={() => setCurrentStep(s => s + 1)}
+                  onClick={() => setCurrentStep((s) => s + 1)}
                   className="text-sm text-[rgba(255,255,255,0.35)] hover:text-[rgba(255,255,255,0.60)] transition-colors"
                 >
                   Skip
                 </button>
               )}
               <button
-                onClick={() => setCurrentStep(s => Math.min(5, s + 1))}
+                onClick={() => setCurrentStep((s) => Math.min(5, s + 1))}
                 disabled={!canGoNext()}
                 className="btn-primary px-8"
               >
@@ -309,5 +335,5 @@ export default function Home() {
         )}
       </div>
     </div>
-  )
+  );
 }

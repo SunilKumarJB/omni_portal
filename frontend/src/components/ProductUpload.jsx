@@ -1,40 +1,53 @@
-import React, { useRef, useState } from 'react'
-import { ImagePlus, X, Sparkles, Loader2, CloudUpload } from 'lucide-react'
-import { suggestPrompts } from '../lib/api.js'
+import { CloudUpload, ImagePlus, Loader2, Sparkles, X } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { suggestPrompts } from '../lib/api.js';
 
 export default function ProductUpload({
-  testMode, productImage, setProductImage,
-  setProductImageFile, aiSuggestions, setAiSuggestions,
+  testMode,
+  productImage,
+  setProductImage,
+  setProductImageFile,
+  aiSuggestions,
+  setAiSuggestions,
 }) {
-  const fileRef   = useRef()
-  const [dragging, setDragging]   = useState(false)
-  const [analyzing, setAnalyzing] = useState(false)
+  const fileRef = useRef();
+  const [dragging, setDragging] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   function handleFile(file) {
-    if (!file || !file.type.startsWith('image/')) return
-    setProductImage(URL.createObjectURL(file))
-    setProductImageFile(file)
-    setAiSuggestions(null)
-    analyzeImage(file)
+    if (!file || !file.type.startsWith('image/')) return;
+    setProductImage(URL.createObjectURL(file));
+    setProductImageFile(file);
+    setAiSuggestions(null);
+    analyzeImage(file);
   }
 
   async function analyzeImage(file) {
-    setAnalyzing(true)
+    setAnalyzing(true);
     try {
-      setAiSuggestions(await suggestPrompts(file))
-    } catch { /* silent — step 2 falls back to presets */ }
-    finally { setAnalyzing(false) }
+      setAiSuggestions(await suggestPrompts(file));
+    } catch {
+      /* silent — step 2 falls back to presets */
+    } finally {
+      setAnalyzing(false);
+    }
   }
 
   const dropProps = {
-    onDragOver:  (e) => { e.preventDefault(); setDragging(true)  },
-    onDragLeave: ()  => setDragging(false),
-    onDrop: (e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]) },
-  }
+    onDragOver: (e) => {
+      e.preventDefault();
+      setDragging(true);
+    },
+    onDragLeave: () => setDragging(false),
+    onDrop: (e) => {
+      e.preventDefault();
+      setDragging(false);
+      handleFile(e.dataTransfer.files[0]);
+    },
+  };
 
   return (
     <div className="max-w-lg mx-auto animate-slide-up">
-
       <div className="mb-6">
         <h2 className="text-xl font-normal text-[#E3E3E3] mb-1">Upload your product image</h2>
         <p className="text-sm text-[rgba(255,255,255,0.50)]">
@@ -67,8 +80,10 @@ export default function ProductUpload({
             {/* Remove button */}
             <button
               onClick={(e) => {
-                e.stopPropagation()
-                setProductImage(null); setProductImageFile(null); setAiSuggestions(null)
+                e.stopPropagation();
+                setProductImage(null);
+                setProductImageFile(null);
+                setAiSuggestions(null);
               }}
               className="absolute top-2 right-2 w-7 h-7 rounded-full bg-[#212121] border border-[#373737]
                          flex items-center justify-center hover:border-[#555] transition-colors"
@@ -93,7 +108,10 @@ export default function ProductUpload({
           </div>
         ) : (
           <>
-            <CloudUpload className="w-10 h-10 text-[rgba(255,255,255,0.25)] mb-4" strokeWidth={1.5} />
+            <CloudUpload
+              className="w-10 h-10 text-[rgba(255,255,255,0.25)] mb-4"
+              strokeWidth={1.5}
+            />
             <p className="text-sm text-[#E3E3E3] mb-1">Drop image here or click to browse</p>
             <p className="text-xs text-[rgba(255,255,255,0.38)]">JPEG · PNG · WebP · Max 10 MB</p>
           </>
@@ -114,5 +132,5 @@ export default function ProductUpload({
         </p>
       )}
     </div>
-  )
+  );
 }

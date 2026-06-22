@@ -2,11 +2,18 @@
 Core generation endpoints: prompt suggestion and video generation.
 Video generation uses the Omni Interactions API (gemini-omni-flash-preview).
 """
+
 import uuid
 import asyncio
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
-from app.models.schemas import PromptsResponse, GenerateVideoRequest, VideoRequestStatus
-from app.services import gemini_service, omni_service, storage_service, db_service, qr_service
+from app.models.schemas import PromptsResponse, VideoRequestStatus
+from app.services import (
+    gemini_service,
+    omni_service,
+    storage_service,
+    db_service,
+    qr_service,
+)
 from app.config import settings
 
 router = APIRouter(prefix="/generate", tags=["generate"])
@@ -35,8 +42,8 @@ async def generate_video(
     theme_id: str = Form(...),
     character_preset_id: str = Form(None),
     audio_preset_id: str = Form(None),
-    aspect_ratio: str = Form(None),       # "16:9" | "9:16" — defaults to config
-    duration_seconds: int = Form(None),   # 1-10  — defaults to config
+    aspect_ratio: str = Form(None),  # "16:9" | "9:16" — defaults to config
+    duration_seconds: int = Form(None),  # 1-10  — defaults to config
     product_image: UploadFile = File(None),
     character_image: UploadFile = File(None),
     audio_file: UploadFile = File(None),
@@ -72,41 +79,59 @@ async def generate_video(
     source_video_local = None
     source_video_mime = None
 
-    if product_image and product_image.filename:
-        img_data = await product_image.read()
-        url, local_path = await storage_service.upload_bytes(
-            img_data, f"{request_id}/product.jpg", product_image.content_type
-        )
-        product_image_local = local_path
-        product_image_mime = product_image.content_type
-        record["product_image_url"] = url
+    # Define upload coroutines to run concurrently in parallel
+    async def upload_product():
+        nonlocal product_image_local, product_image_mime
+        if product_image and product_image.filename:
+            img_data = await product_image.read()
+            url, local_path = await storage_service.upload_bytes(
+                img_data, f"{request_id}/product.jpg", product_image.content_type
+            )
+            product_image_local = local_path
+            product_image_mime = product_image.content_type
+            record["product_image_url"] = url
 
-    if character_image and character_image.filename:
-        img_data = await character_image.read()
-        url, local_path = await storage_service.upload_bytes(
-            img_data, f"{request_id}/character.png", character_image.content_type
-        )
-        character_image_local = local_path
-        character_image_mime = character_image.content_type
-        record["character_image_url"] = url
+    async def upload_character():
+        nonlocal character_image_local, character_image_mime
+        if character_image and character_image.filename:
+            img_data = await character_image.read()
+            url, local_path = await storage_service.upload_bytes(
+                img_data, f"{request_id}/character.png", character_image.content_type
+            )
+            character_image_local = local_path
+            character_image_mime = character_image.content_type
+            record["character_image_url"] = url
 
-    if audio_file and audio_file.filename:
-        audio_data = await audio_file.read()
-        url, local_path = await storage_service.upload_bytes(
-            audio_data, f"{request_id}/audio{_ext(audio_file.filename)}", audio_file.content_type
-        )
-        audio_local = local_path
-        audio_mime = audio_file.content_type
-        record["audio_url"] = url
+    async def upload_audio():
+        nonlocal audio_local, audio_mime
+        if audio_file and audio_file.filename:
+            audio_data = await audio_file.read()
+            url, local_path = await storage_service.upload_bytes(
+                audio_data,
+                f"{request_id}/audio{_ext(audio_file.filename)}",
+                audio_file.content_type,
+            )
+            audio_local = local_path
+            audio_mime = audio_file.content_type
+            record["audio_url"] = url
 
-    if source_video and source_video.filename:
-        video_data = await source_video.read()
-        url, local_path = await storage_service.upload_bytes(
-            video_data, f"{request_id}/source_video{_ext(source_video.filename)}", source_video.content_type
-        )
-        source_video_local = local_path
-        source_video_mime = source_video.content_type
-        record["source_video_url"] = url
+    async def upload_video():
+        nonlocal source_video_local, source_video_mime
+        if source_video and source_video.filename:
+            video_data = await source_video.read()
+            url, local_path = await storage_service.upload_bytes(
+                video_data,
+                f"{request_id}/source_video{_ext(source_video.filename)}",
+                source_video.content_type,
+            )
+            source_video_local = local_path
+            source_video_mime = source_video.content_type
+            record["source_video_url"] = url
+
+    # Run independent file uploads in parallel
+    await asyncio.gather(
+        upload_product(), upload_character(), upload_audio(), upload_video()
+    )
 
     # Generate and store QR code immediately
     video_page = qr_service.video_page_url(request_id)
@@ -122,7 +147,9 @@ async def generate_video(
     record["video_page_url"] = video_page
 
     if settings.TEST_MODE:
-        record["video_url"] = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        record["video_url"] = (
+            "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        )
         record["status"] = "processing"
         record["progress"] = 5
 
@@ -175,26 +202,37 @@ async def _run_generation(
     source_video_mime: str = None,
 ):
     try:
-        await db_service.update_request(request_id, {"status": "processing", "progress": 10})
+        await db_service.update_request(
+            request_id, {"status": "processing", "progress": 10}
+        )
 
         if settings.TEST_MODE:
             for pct in [25, 50, 75, 90]:
                 await asyncio.sleep(2)
                 await db_service.update_request(request_id, {"progress": pct})
-            await db_service.update_request(request_id, {
-                "status": "completed",
-                "progress": 100,
-                "video_url": "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-            })
+            await db_service.update_request(
+                request_id,
+                {
+                    "status": "completed",
+                    "progress": 100,
+                    "video_url": "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                },
+            )
             return
 
         await db_service.update_request(request_id, {"progress": 20})
 
         # Read stored asset bytes for Omni media inputs
-        product_bytes, prod_mime = await _read_asset(product_image_local, product_image_mime)
-        character_bytes, char_mime = await _read_asset(character_image_local, character_image_mime)
+        product_bytes, prod_mime = await _read_asset(
+            product_image_local, product_image_mime
+        )
+        character_bytes, char_mime = await _read_asset(
+            character_image_local, character_image_mime
+        )
         audio_bytes, aud_mime = await _read_asset(audio_local, audio_mime)
-        source_video_bytes, src_mime = await _read_asset(source_video_local, source_video_mime)
+        source_video_bytes, src_mime = await _read_asset(
+            source_video_local, source_video_mime
+        )
 
         await db_service.update_request(request_id, {"progress": 30})
 
@@ -226,17 +264,23 @@ async def _run_generation(
         else:
             video_url = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
-        await db_service.update_request(request_id, {
-            "status": "completed",
-            "progress": 100,
-            "video_url": video_url,
-        })
+        await db_service.update_request(
+            request_id,
+            {
+                "status": "completed",
+                "progress": 100,
+                "video_url": video_url,
+            },
+        )
 
     except Exception as e:
-        await db_service.update_request(request_id, {
-            "status": "failed",
-            "error": str(e),
-        })
+        await db_service.update_request(
+            request_id,
+            {
+                "status": "failed",
+                "error": str(e),
+            },
+        )
 
 
 async def _read_asset(path: str, override_mime: str = None):

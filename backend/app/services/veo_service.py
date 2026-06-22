@@ -1,8 +1,8 @@
 """
 Omni video generation service via google-genai SDK.
 """
+
 import asyncio
-import time
 from typing import Optional
 from app.config import settings
 
@@ -13,6 +13,7 @@ def _get_client():
     global _client
     if _client is None:
         from google import genai
+
         _client = genai.Client(
             vertexai=True,
             project=settings.GCP_PROJECT_ID,
@@ -38,7 +39,6 @@ async def generate_video(
         await asyncio.sleep(3)
         return "TEST_MODE_PLACEHOLDER_VIDEO"
 
-    from google import genai
     from google.genai import types
 
     client = _get_client()
@@ -65,14 +65,18 @@ async def generate_video(
     )
 
     if image_parts:
-        operation = client.models.generate_videos(
+        # Wrap blocking generate_videos call in asyncio.to_thread
+        operation = await asyncio.to_thread(
+            client.models.generate_videos,
             model=settings.VEO_MODEL,
             prompt=enriched_prompt,
             image=image_parts[0] if len(image_parts) == 1 else image_parts,
             config=generate_config,
         )
     else:
-        operation = client.models.generate_videos(
+        # Wrap blocking generate_videos call in asyncio.to_thread
+        operation = await asyncio.to_thread(
+            client.models.generate_videos,
             model=settings.VEO_MODEL,
             prompt=enriched_prompt,
             config=generate_config,
@@ -86,7 +90,8 @@ async def generate_video(
     while not operation.done:
         await asyncio.sleep(poll_interval)
         elapsed += poll_interval
-        operation = client.operations.get(operation)
+        # Wrap blocking operation status polling in asyncio.to_thread
+        operation = await asyncio.to_thread(client.operations.get, operation)
         if elapsed >= max_wait:
             raise TimeoutError("Video generation timed out after 10 minutes")
 

@@ -1,58 +1,98 @@
-import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import QRCode from 'react-qr-code'
-import { Download, Share2, RotateCcw, ExternalLink, Copy, Check, MapPin, Loader2, Quote } from 'lucide-react'
-import { getStatus } from '../lib/api.js'
+import {
+  Check,
+  Copy,
+  Download,
+  ExternalLink,
+  Loader2,
+  MapPin,
+  Quote,
+  RotateCcw,
+  Share2,
+} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import QRCode from 'react-qr-code';
+import { Link } from 'react-router-dom';
+import { getStatus } from '../lib/api.js';
 
 const LANG_NAMES = {
-  en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu',
-  kn: 'Kannada', ml: 'Malayalam', bn: 'Bengali',
-  mr: 'Marathi', gu: 'Gujarati', pa: 'Punjabi',
-}
+  en: 'English',
+  hi: 'Hindi',
+  ta: 'Tamil',
+  te: 'Telugu',
+  kn: 'Kannada',
+  ml: 'Malayalam',
+  bn: 'Bengali',
+  mr: 'Marathi',
+  gu: 'Gujarati',
+  pa: 'Punjabi',
+};
 
-export default function ResultPanel({ requestData: initial, selectedTemplate, dialogueText, selectedLanguage, onReset }) {
-  const [data, setData]     = useState(initial)
-  const [copied, setCopied] = useState(false)
+export default function ResultPanel({
+  requestData: initial,
+  selectedTemplate,
+  dialogueText,
+  selectedLanguage,
+  onReset,
+}) {
+  const [data, setData] = useState(initial);
+  const [copied, setCopied] = useState(false);
 
-  const isDone       = data.status === 'completed' || data.status === 'failed'
-  const videoUrl     = data.video_url
-  const qrUrl        = data.qr_code_url
-  const videoPageUrl = data.video_page_url || `${window.location.origin}/video/${data.request_id}`
+  const isDone = data.status === 'completed' || data.status === 'failed';
+  const videoUrl = data.video_url;
+  const qrUrl = data.qr_code_url;
+  const videoPageUrl = data.video_page_url || `${window.location.origin}/video/${data.request_id}`;
 
   useEffect(() => {
-    if (isDone) return
+    if (isDone) return;
     const t = setInterval(async () => {
       try {
-        const updated = await getStatus(data.request_id)
-        setData(updated)
-        if (updated.status === 'completed' || updated.status === 'failed') clearInterval(t)
+        const updated = await getStatus(data.request_id);
+        setData(updated);
+        if (updated.status === 'completed' || updated.status === 'failed') clearInterval(t);
       } catch {}
-    }, 5000)
-    return () => clearInterval(t)
-  }, [data.request_id, isDone])
+    }, 5000);
+    return () => clearInterval(t);
+  }, [data.request_id, isDone]);
 
   function copyLink() {
-    navigator.clipboard.writeText(videoPageUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2500)
+    navigator.clipboard.writeText(videoPageUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   }
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
-
       {/* Header */}
       <div className="g-rainbow-bar" />
       <header className="bg-[#0A0A0A]/95 border-b border-white/[0.06] sticky top-0 z-50 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <svg width="32" height="32" viewBox="0 0 34 34" fill="none">
-              <rect width="34" height="34" rx="9" fill="#111"/>
-              <circle cx="17" cy="17" r="10" fill="none" stroke="#4285F4" strokeWidth="1" opacity="0.25"/>
-              <circle cx="17" cy="17" r="7" fill="none" stroke="#4285F4" strokeWidth="1.5" opacity="0.6"/>
-              <circle cx="17" cy="17" r="3.5" fill="#4285F4" opacity="0.9"/>
-              <circle cx="17" cy="17" r="1.5" fill="white"/>
+              <rect width="34" height="34" rx="9" fill="#111" />
+              <circle
+                cx="17"
+                cy="17"
+                r="10"
+                fill="none"
+                stroke="#4285F4"
+                strokeWidth="1"
+                opacity="0.25"
+              />
+              <circle
+                cx="17"
+                cy="17"
+                r="7"
+                fill="none"
+                stroke="#4285F4"
+                strokeWidth="1.5"
+                opacity="0.6"
+              />
+              <circle cx="17" cy="17" r="3.5" fill="#4285F4" opacity="0.9" />
+              <circle cx="17" cy="17" r="1.5" fill="white" />
             </svg>
-            <span className="text-[15px] font-semibold text-white tracking-tight">The Omni Portal</span>
+            <span className="text-[15px] font-semibold text-white tracking-tight">
+              The Omni Portal
+            </span>
           </div>
           <button onClick={onReset} className="btn-outlined text-sm gap-2">
             <RotateCcw className="w-3.5 h-3.5" /> Create another
@@ -61,22 +101,21 @@ export default function ResultPanel({ requestData: initial, selectedTemplate, di
       </header>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
-
         {/* Status banner */}
         <StatusBanner status={data.status} progress={data.progress} requestId={data.request_id} />
 
         <div className="grid lg:grid-cols-3 gap-8 mt-6">
-
           {/* Left: Video + details */}
           <div className="lg:col-span-2 space-y-4">
-
             {/* Video player */}
             <div className="relative aspect-video bg-[#0D0D0D] rounded-2xl overflow-hidden border border-white/[0.07]">
               {videoUrl ? (
                 <>
                   <video
                     src={videoUrl}
-                    controls autoPlay loop
+                    controls
+                    autoPlay
+                    loop
                     className="w-full h-full object-contain"
                   />
                   {!isDone && (
@@ -87,10 +126,15 @@ export default function ResultPanel({ requestData: initial, selectedTemplate, di
                             <Loader2 className="w-3 h-3 inline animate-spin text-[#4285F4]" />
                             Generating your video with Omni…
                           </span>
-                          <span className="text-xs text-white/35 tabular-nums">{data.progress ?? 0}%</span>
+                          <span className="text-xs text-white/35 tabular-nums">
+                            {data.progress ?? 0}%
+                          </span>
                         </div>
                         <div className="g-progress-track">
-                          <div className="g-progress-fill" style={{ width: `${data.progress ?? 5}%` }} />
+                          <div
+                            className="g-progress-fill"
+                            style={{ width: `${data.progress ?? 5}%` }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -100,8 +144,12 @@ export default function ResultPanel({ requestData: initial, selectedTemplate, di
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
                   <div className="w-12 h-12 border-2 border-[#4285F4] border-t-transparent rounded-full animate-spin" />
                   <div className="text-center">
-                    <p className="text-sm text-white/65 font-medium">Omni is generating your video</p>
-                    <p className="text-xs text-white/30 mt-1">{data.progress ?? 0}% · Takes 3–8 minutes</p>
+                    <p className="text-sm text-white/65 font-medium">
+                      Omni is generating your video
+                    </p>
+                    <p className="text-xs text-white/30 mt-1">
+                      {data.progress ?? 0}% · Takes 3–8 minutes
+                    </p>
                   </div>
                   {(data.progress ?? 0) > 0 && (
                     <div className="w-48">
@@ -140,10 +188,15 @@ export default function ResultPanel({ requestData: initial, selectedTemplate, di
                   <p className="g-label">Scenario</p>
                   <div className="flex items-center gap-2.5">
                     <span className="text-xl">{selectedTemplate.emoji}</span>
-                    <span className="text-sm font-semibold text-white">{selectedTemplate.title}</span>
+                    <span className="text-sm font-semibold text-white">
+                      {selectedTemplate.title}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-white/38">
-                    <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: selectedTemplate.accent }} />
+                    <MapPin
+                      className="w-3 h-3 flex-shrink-0"
+                      style={{ color: selectedTemplate.accent }}
+                    />
                     {selectedTemplate.location}
                   </div>
                 </div>
@@ -183,13 +236,14 @@ export default function ResultPanel({ requestData: initial, selectedTemplate, di
 
           {/* Right: QR + details */}
           <div className="space-y-4">
-
             {/* QR code */}
             <div className="g-card text-center space-y-4">
               <div>
                 <p className="text-sm font-semibold text-white mb-1">Scan to view &amp; download</p>
                 <p className="text-xs text-white/35">
-                  {isDone ? 'Video is ready on any device' : 'QR ready — video generates in background'}
+                  {isDone
+                    ? 'Video is ready on any device'
+                    : 'QR ready — video generates in background'}
                 </p>
               </div>
 
@@ -227,16 +281,15 @@ export default function ResultPanel({ requestData: initial, selectedTemplate, di
             <div className="g-card space-y-2.5">
               <p className="g-label">Details</p>
               <Row label="Request ID" value={data.request_id?.slice(0, 12) + '…'} mono />
-              <Row label="Status"     value={data.status}   status={data.status} />
-              <Row label="Progress"   value={`${data.progress ?? 0}%`} />
-              <Row label="Created"    value={formatDate(data.created_at)} />
+              <Row label="Status" value={data.status} status={data.status} />
+              <Row label="Progress" value={`${data.progress ?? 0}%`} />
+              <Row label="Created" value={formatDate(data.created_at)} />
             </div>
-
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function StatusBanner({ status, progress, requestId }) {
@@ -265,7 +318,12 @@ function StatusBanner({ status, progress, requestId }) {
       color: '#EA4335',
       msg: 'Generation failed',
     },
-  }[status] ?? { bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.08)', color: '#EBEBEB', msg: status }
+  }[status] ?? {
+    bg: 'rgba(255,255,255,0.04)',
+    border: 'rgba(255,255,255,0.08)',
+    color: '#EBEBEB',
+    msg: status,
+  };
 
   return (
     <div
@@ -279,7 +337,9 @@ function StatusBanner({ status, progress, requestId }) {
         <Check className="w-4 h-4 flex-shrink-0" style={{ color: cfg.color }} />
       )}
       <div className="flex-1">
-        <p className="text-sm font-semibold" style={{ color: cfg.color }}>{cfg.msg}</p>
+        <p className="text-sm font-semibold" style={{ color: cfg.color }}>
+          {cfg.msg}
+        </p>
         <p className="text-xs text-white/30 font-mono mt-0.5">{requestId}</p>
       </div>
       {status === 'processing' && (
@@ -288,16 +348,16 @@ function StatusBanner({ status, progress, requestId }) {
         </span>
       )}
     </div>
-  )
+  );
 }
 
 function Row({ label, value, mono, status }) {
   const statusColor = {
-    completed:  '#34A853',
-    failed:     '#EA4335',
+    completed: '#34A853',
+    failed: '#EA4335',
     processing: '#4285F4',
-    pending:    '#FBBC05',
-  }[status]
+    pending: '#FBBC05',
+  }[status];
 
   return (
     <div className="flex justify-between items-center text-sm">
@@ -309,10 +369,10 @@ function Row({ label, value, mono, status }) {
         {value}
       </span>
     </div>
-  )
+  );
 }
 
 function formatDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString()
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString();
 }

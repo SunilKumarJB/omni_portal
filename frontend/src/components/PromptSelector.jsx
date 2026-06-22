@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react'
-import clsx from 'clsx'
-import { MapPin, PenLine, ChevronDown, ChevronUp, Check, Play } from 'lucide-react'
+import clsx from 'clsx';
+import { Check, ChevronDown, ChevronUp, MapPin, PenLine, Play } from 'lucide-react';
+import React, { useRef, useState } from 'react';
 
 export const VIDEO_TEMPLATES = [
   {
@@ -10,7 +10,8 @@ export const VIDEO_TEMPLATES = [
     style: 'Cyberpunk · 8K · Drone tracking',
     location: 'Times Square, NYC — 2099',
     dialogue: 'They said the city never sleeps. Good… neither do I.',
-    prompt: 'One continuous tracking shot on a 35mm lens, gliding in front of [REF_Character] as they walk confidently through a futuristic Times Square at night. The scene has a cinematic style, illuminated by high-contrast cyan and magenta lighting that reflects off the rain-slicked streets and glowing holographic billboards. [REF_Character] wears sleek, modern streetwear with LED accents, moving smoothly and looking directly into the camera with a smirk. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
+    prompt:
+      'One continuous tracking shot on a 35mm lens, gliding in front of [REF_Character] as they walk confidently through a futuristic Times Square at night. The scene has a cinematic style, illuminated by high-contrast cyan and magenta lighting that reflects off the rain-slicked streets and glowing holographic billboards. [REF_Character] wears sleek, modern streetwear with LED accents, moving smoothly and looking directly into the camera with a smirk. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
     accent: '#00D4FF',
     emoji: '🌆',
     videoSrc: '/assets/videos/template_cyberpunk.mp4',
@@ -22,8 +23,9 @@ export const VIDEO_TEMPLATES = [
     title: 'The Epic Action Hero',
     style: 'Action blockbuster · Slow-mo · IMAX',
     location: 'The Colosseum, Rome, Italy',
-    dialogue: 'Are you not entertained? Because I\'m just getting started.',
-    prompt: 'A slow push-in, low-angle medium shot of [REF_Character] standing in the center of the historically accurate Roman Colosseum. Crisp golden hour backlighting casts warm, volumetric sun rays that illuminate floating dust particles in the air. [REF_Character] holds a victorious pose and performs a single, deliberate action: smoothly dusting off their right shoulder. They are wearing a heavy, battle-worn leather coat that billows consistently in a steady breeze. Shot on IMAX 70mm film, photorealistic style, with grounded, cinematic color grading. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
+    dialogue: "Are you not entertained? Because I'm just getting started.",
+    prompt:
+      'A slow push-in, low-angle medium shot of [REF_Character] standing in the center of the historically accurate Roman Colosseum. Crisp golden hour backlighting casts warm, volumetric sun rays that illuminate floating dust particles in the air. [REF_Character] holds a victorious pose and performs a single, deliberate action: smoothly dusting off their right shoulder. They are wearing a heavy, battle-worn leather coat that billows consistently in a steady breeze. Shot on IMAX 70mm film, photorealistic style, with grounded, cinematic color grading. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
     accent: '#F59E0B',
     emoji: '⚔️',
     videoSrc: '/assets/videos/template_action_hero.mp4',
@@ -36,7 +38,8 @@ export const VIDEO_TEMPLATES = [
     style: '1940s Film Noir · B&W · 35mm grain',
     location: 'Eiffel Tower, Paris — Rainy 1920s',
     dialogue: 'Romance is just a myth we tell ourselves to survive the rain.',
-    prompt: 'A cinematic 1940s black-and-white film noir shot. Locked-off camera, medium shot. [REF_Character] is framed in the center, leaning casually against a vintage streetlamp, leaving the left side of the frame open with clear negative space. Set on a foggy cobblestone street in Paris, with the Eiffel Tower glowing dimly in the background. Deep shadows and dramatic rim lighting from the streetlamp illuminate [REF_Character]\'s face. Shot on vintage 35mm film with cinematic depth of field, evoking a moody and mysterious atmosphere.  The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
+    prompt:
+      "A cinematic 1940s black-and-white film noir shot. Locked-off camera, medium shot. [REF_Character] is framed in the center, leaning casually against a vintage streetlamp, leaving the left side of the frame open with clear negative space. Set on a foggy cobblestone street in Paris, with the Eiffel Tower glowing dimly in the background. Deep shadows and dramatic rim lighting from the streetlamp illuminate [REF_Character]'s face. Shot on vintage 35mm film with cinematic depth of field, evoking a moody and mysterious atmosphere.  The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.",
     accent: '#94A3B8',
     emoji: '🕵️',
     videoSrc: '/assets/videos/template_film_noir.mp4',
@@ -49,7 +52,8 @@ export const VIDEO_TEMPLATES = [
     style: 'Pixar / Disney 3D · Vibrant · Soft lighting',
     location: 'Mount Fuji, Japan — Cherry blossom season',
     dialogue: 'Spring is here, the blossoms are blooming, and nothing is going to plan!',
-    prompt: 'Medium shot with a slow, gentle push-in camera movement.A high-quality, high-end 3D computer-animated Pixar shot featuring rich textures, expressive character design, and a cinematic feel. [REF_Character] is standing in a lush, vibrant field of pink cherry blossom trees, with the majestic, snow-capped peak of Mount Fuji towering clearly in the background.Crisp, warm sunlight comes from off-screen, casting soft, flattering shadows and highlighting the vibrant, cheerful colors of the environment. [REF_Character] is initially looking away, then performs a sudden, snappy, comedic double-take directly toward the camera lens as a dynamic gust of wind blows cherry blossom petals rapidly across the foreground. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
+    prompt:
+      'Medium shot with a slow, gentle push-in camera movement.A high-quality, high-end 3D computer-animated Pixar shot featuring rich textures, expressive character design, and a cinematic feel. [REF_Character] is standing in a lush, vibrant field of pink cherry blossom trees, with the majestic, snow-capped peak of Mount Fuji towering clearly in the background.Crisp, warm sunlight comes from off-screen, casting soft, flattering shadows and highlighting the vibrant, cheerful colors of the environment. [REF_Character] is initially looking away, then performs a sudden, snappy, comedic double-take directly toward the camera lens as a dynamic gust of wind blows cherry blossom petals rapidly across the foreground. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
     accent: '#F472B6',
     emoji: '🌸',
     videoSrc: '/assets/videos/template_animated.mp4',
@@ -62,7 +66,8 @@ export const VIDEO_TEMPLATES = [
     style: 'Adventure-fantasy · Drone · Unreal Engine 5',
     location: 'Great Pyramids of Giza, Egypt',
     dialogue: 'Some secrets are meant to stay buried. Too bad I brought a shovel.',
-    prompt: 'A continuous, sweeping wide-angle drone shot smoothly circles [REF_Character], who is standing atop a towering sand dune. In the background, the Great Pyramids of Giza loom majestically. [REF_Character] is dressed in rugged, textured explorer gear and holds an ancient artifact emitting a soft, ethereal light. The scene is lit by a blazing high-noon sun that casts sharp, realistic shadows across the sand, while visible heat distortion waves ripple naturally in the dry air. The aesthetic is a cinematic, hyper-realistic 3D Unreal Engine animation style with a rich, warm orange and teal color grading. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
+    prompt:
+      'A continuous, sweeping wide-angle drone shot smoothly circles [REF_Character], who is standing atop a towering sand dune. In the background, the Great Pyramids of Giza loom majestically. [REF_Character] is dressed in rugged, textured explorer gear and holds an ancient artifact emitting a soft, ethereal light. The scene is lit by a blazing high-noon sun that casts sharp, realistic shadows across the sand, while visible heat distortion waves ripple naturally in the dry air. The aesthetic is a cinematic, hyper-realistic 3D Unreal Engine animation style with a rich, warm orange and teal color grading. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
     accent: '#F97316',
     emoji: '🏺',
     videoSrc: '/assets/videos/template_treasure_hunter.mp4',
@@ -81,15 +86,15 @@ export const VIDEO_TEMPLATES = [
     videoSrc: null,
     poster: null,
   },
-]
+];
 
 function TemplateThumbnail({ tpl, selected }) {
-  const videoRef = useRef(null)
-  const [videoReady, setVideoReady] = useState(false)
+  const videoRef = useRef(null);
+  const [videoReady, setVideoReady] = useState(false);
 
   if (!tpl.videoSrc) {
     /* Custom card — just show the accent strip */
-    return <div className="h-0.5 w-full" style={{ background: tpl.accent }} />
+    return <div className="h-0.5 w-full" style={{ background: tpl.accent }} />;
   }
 
   return (
@@ -116,7 +121,9 @@ function TemplateThumbnail({ tpl, selected }) {
         <>
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{ background: `linear-gradient(to bottom, transparent 40%, ${tpl.accent}28 100%)` }}
+            style={{
+              background: `linear-gradient(to bottom, transparent 40%, ${tpl.accent}28 100%)`,
+            }}
           />
           <div
             className="absolute bottom-1.5 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
@@ -130,19 +137,24 @@ function TemplateThumbnail({ tpl, selected }) {
         </>
       )}
     </div>
-  )
+  );
 }
 
-export default function PromptSelector({ selectedTemplate, setSelectedTemplate, videoPrompt, setVideoPrompt }) {
-  const [expanded, setExpanded] = useState(null)
+export default function PromptSelector({
+  selectedTemplate,
+  setSelectedTemplate,
+  videoPrompt,
+  setVideoPrompt,
+}) {
+  const [expanded, setExpanded] = useState(null);
 
   function selectTemplate(tpl) {
-    setSelectedTemplate(tpl)
-    if (tpl.id !== 'custom') setVideoPrompt(tpl.prompt)
-    else setVideoPrompt('')
+    setSelectedTemplate(tpl);
+    if (tpl.id !== 'custom') setVideoPrompt(tpl.prompt);
+    else setVideoPrompt('');
   }
 
-  const isCustom = selectedTemplate?.id === 'custom'
+  const isCustom = selectedTemplate?.id === 'custom';
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -161,8 +173,8 @@ export default function PromptSelector({ selectedTemplate, setSelectedTemplate, 
       {/* Template grid */}
       <div className="grid sm:grid-cols-2 gap-3 mb-8">
         {VIDEO_TEMPLATES.map((tpl) => {
-          const selected = selectedTemplate?.id === tpl.id
-          const isOpen   = expanded === tpl.id
+          const selected = selectedTemplate?.id === tpl.id;
+          const isOpen = expanded === tpl.id;
 
           return (
             <div key={tpl.id} className="flex flex-col">
@@ -171,19 +183,21 @@ export default function PromptSelector({ selectedTemplate, setSelectedTemplate, 
                 className="text-left rounded-2xl border transition-all duration-200 overflow-hidden"
                 style={{
                   borderColor: selected ? tpl.accent : 'rgba(255,255,255,0.07)',
-                  background:  selected ? `color-mix(in srgb, ${tpl.accent} 8%, #111)` : '#111',
-                  boxShadow:   selected ? `0 0 0 1px ${tpl.accent}28, 0 6px 40px ${tpl.accent}0C` : 'none',
+                  background: selected ? `color-mix(in srgb, ${tpl.accent} 8%, #111)` : '#111',
+                  boxShadow: selected
+                    ? `0 0 0 1px ${tpl.accent}28, 0 6px 40px ${tpl.accent}0C`
+                    : 'none',
                 }}
                 onMouseEnter={(e) => {
                   if (!selected) {
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.13)'
-                    e.currentTarget.style.background  = '#161616'
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.13)';
+                    e.currentTarget.style.background = '#161616';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!selected) {
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
-                    e.currentTarget.style.background  = '#111'
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                    e.currentTarget.style.background = '#111';
                   }
                 }}
               >
@@ -196,8 +210,12 @@ export default function PromptSelector({ selectedTemplate, setSelectedTemplate, 
                     <div className="flex items-center gap-2.5">
                       <span className="text-xl leading-none">{tpl.emoji}</span>
                       <div>
-                        <div className="text-[10px] text-white/25 font-mono mb-0.5">{tpl.number}</div>
-                        <div className="text-sm font-semibold text-white leading-tight">{tpl.title}</div>
+                        <div className="text-[10px] text-white/25 font-mono mb-0.5">
+                          {tpl.number}
+                        </div>
+                        <div className="text-sm font-semibold text-white leading-tight">
+                          {tpl.title}
+                        </div>
                       </div>
                     </div>
                     {selected && (
@@ -237,10 +255,17 @@ export default function PromptSelector({ selectedTemplate, setSelectedTemplate, 
                   {/* Expand prompt toggle */}
                   {tpl.id !== 'custom' && tpl.prompt && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); setExpanded(isOpen ? null : tpl.id) }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpanded(isOpen ? null : tpl.id);
+                      }}
                       className="flex items-center gap-1 text-[10px] text-white/28 hover:text-white/55 transition-colors"
                     >
-                      {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      {isOpen ? (
+                        <ChevronUp className="w-3 h-3" />
+                      ) : (
+                        <ChevronDown className="w-3 h-3" />
+                      )}
                       {isOpen ? 'Hide prompt' : 'Preview prompt'}
                     </button>
                   )}
@@ -254,7 +279,7 @@ export default function PromptSelector({ selectedTemplate, setSelectedTemplate, 
                 </div>
               </button>
             </div>
-          )
+          );
         })}
       </div>
 
@@ -281,7 +306,9 @@ export default function PromptSelector({ selectedTemplate, setSelectedTemplate, 
           <textarea
             value={videoPrompt}
             onChange={(e) => setVideoPrompt(e.target.value)}
-            placeholder={isCustom ? 'Describe your video: setting, action, camera style, lighting, mood…' : ''}
+            placeholder={
+              isCustom ? 'Describe your video: setting, action, camera style, lighting, mood…' : ''
+            }
             rows={5}
             maxLength={1500}
             className="g-input resize-none leading-relaxed"
@@ -290,7 +317,8 @@ export default function PromptSelector({ selectedTemplate, setSelectedTemplate, 
           <div className="flex justify-between items-center">
             {!isCustom && videoPrompt.includes('[REF_Character]') && (
               <span className="text-[10px] text-white/28 flex items-center gap-1">
-                <code className="text-[#4285F4] not-italic">[REF_Character]</code> will be replaced by your character image
+                <code className="text-[#4285F4] not-italic">[REF_Character]</code> will be replaced
+                by your character image
               </span>
             )}
             {isCustom && videoPrompt.length < 20 && (
@@ -301,5 +329,5 @@ export default function PromptSelector({ selectedTemplate, setSelectedTemplate, 
         </div>
       )}
     </div>
-  )
+  );
 }

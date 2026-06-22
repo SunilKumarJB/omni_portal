@@ -1,9 +1,8 @@
 """
 Unified database service: Firestore or local JSON files.
 """
+
 import json
-import os
-import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -18,6 +17,7 @@ def _get_firestore():
     global _firestore_client
     if _firestore_client is None:
         from google.cloud import firestore
+
         _firestore_client = firestore.Client(project=settings.GCP_PROJECT_ID)
     return _firestore_client
 

@@ -2,8 +2,11 @@
 Omni video generation via Vertex Interactions API (gemini-omni-flash-preview).
 Supports T2V with reference images, audio-driven generation, and V2V editing.
 """
+
 import asyncio
 import base64
+import time
+from datetime import timezone
 from typing import Optional, Tuple
 
 import httpx
@@ -49,16 +52,44 @@ def _api_endpoint() -> str:
     return f"https://{host}/v1beta1/projects/{project}/locations/{settings.OMNI_REGION}/interactions"
 
 
-def _get_token() -> str:
-    """Refresh and return a Google OAuth2 access token (blocking — run via asyncio.to_thread)."""
-    creds, _ = google.auth.default()
-    auth_req = google.auth.transport.requests.Request()
-    creds.refresh(auth_req)
-    return creds.token
+# Thread-safe async-safe Google OAuth2 Token Cache
+_token_cache = None
+_token_expiry = 0.0
+_token_lock = asyncio.Lock()
+
+
+async def _get_cached_token() -> str:
+    global _token_cache, _token_expiry
+    now = time.time()
+    # Return cached token if valid (with a 5-minute buffer)
+    if _token_cache and now < (_token_expiry - 300):
+        return _token_cache
+
+    async with _token_lock:
+        # Double check after acquiring lock
+        now = time.time()
+        if _token_cache and now < (_token_expiry - 300):
+            return _token_cache
+
+        def refresh():
+            creds, _ = google.auth.default()
+            auth_req = google.auth.transport.requests.Request()
+            creds.refresh(auth_req)
+            expiry_ts = (
+                creds.expiry.replace(tzinfo=timezone.utc).timestamp()
+                if creds.expiry
+                else time.time() + 3600
+            )
+            return creds.token, expiry_ts
+
+        token, expiry = await asyncio.to_thread(refresh)
+        _token_cache = token
+        _token_expiry = expiry
+        return token
 
 
 async def _auth_headers() -> dict:
-    token = await asyncio.to_thread(_get_token)
+    token = await _get_cached_token()
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
 
@@ -142,7 +173,9 @@ def _extract_video_bytes(response: dict) -> Tuple[Optional[bytes], str]:
 
     for output in contents:
         if output.get("type") == "video" and "data" in output:
-            return base64.b64decode(output["data"]), output.get("mime_type", "video/mp4")
+            return base64.b64decode(output["data"]), output.get(
+                "mime_type", "video/mp4"
+            )
 
     return None, "video/mp4"
 
@@ -172,7 +205,9 @@ async def generate_video(
         return b"", "video/mp4"
 
     enriched_prompt = _enrich_prompt(
-        prompt, style_id, theme_id,
+        prompt,
+        style_id,
+        theme_id,
         has_product=bool(product_image_bytes),
         has_character=bool(character_image_bytes),
         has_audio=bool(audio_bytes),
@@ -182,11 +217,15 @@ async def generate_video(
     media_inputs = []
     if product_image_bytes:
         media_inputs.append(
-            _media_payload(product_image_bytes, "image", product_image_mime or "image/png")
+            _media_payload(
+                product_image_bytes, "image", product_image_mime or "image/png"
+            )
         )
     if character_image_bytes:
         media_inputs.append(
-            _media_payload(character_image_bytes, "image", character_image_mime or "image/png")
+            _media_payload(
+                character_image_bytes, "image", character_image_mime or "image/png"
+            )
         )
     if audio_bytes:
         media_inputs.append(
@@ -194,46 +233,59 @@ async def generate_video(
         )
     if source_video_bytes:
         media_inputs.append(
-            _media_payload(source_video_bytes, "video", source_video_mime or "video/mp4")
+            _media_payload(
+                source_video_bytes, "video", source_video_mime or "video/mp4"
+            )
         )
 
-    payload = _compose_request(enriched_prompt, media_inputs, aspect_ratio, duration_seconds)
+    payload = _compose_request(
+        enriched_prompt, media_inputs, aspect_ratio, duration_seconds
+    )
     endpoint = _api_endpoint()
 
+    # Reuse a single AsyncClient session for the entire lifecycle of the request and polling
     async with httpx.AsyncClient(timeout=60.0) as client:
         headers = await _auth_headers()
         resp = await client.post(endpoint, headers=headers, json=payload)
         resp.raise_for_status()
         data = resp.json()
 
-    if "error" in data:
-        raise RuntimeError(f"Omni API error: {data['error']}")
+        if "error" in data:
+            raise RuntimeError(f"Omni API error: {data['error']}")
 
-    interaction_id = data.get("id")
-    status = data.get("status")
-    elapsed = 0
-    poll_interval = 10
+        interaction_id = data.get("id")
+        status = data.get("status")
+        elapsed = 0
+        poll_interval = 10
 
-    while status == "in_progress":
-        await asyncio.sleep(poll_interval)
-        elapsed += poll_interval
-        if elapsed >= settings.OMNI_MAX_WAIT_SECONDS:
-            raise TimeoutError(
-                f"Omni video generation timed out after {settings.OMNI_MAX_WAIT_SECONDS}s"
-            )
+        while status == "in_progress":
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+            if elapsed >= settings.OMNI_MAX_WAIT_SECONDS:
+                raise TimeoutError(
+                    f"Omni video generation timed out after {settings.OMNI_MAX_WAIT_SECONDS}s"
+                )
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
             headers = await _auth_headers()
+            # Reuse the same client session
             poll_resp = await client.get(
                 f"{endpoint}/{interaction_id}", headers=headers
             )
             poll_resp.raise_for_status()
             data = poll_resp.json()
 
-        if "error" in data:
-            raise RuntimeError(f"Omni API error: {data['error']}")
+            if "error" in data:
+                raise RuntimeError(f"Omni API error: {data['error']}")
 
-        status = data.get("status")
+            status = data.get("status")
+
+    if status == "failed":
+        fail_msg = (
+            data.get("error")
+            or data.get("failure_reason")
+            or "Omni generation failed on the model endpoint"
+        )
+        raise RuntimeError(f"Omni generation failed: {fail_msg}")
 
     video_bytes, mime_type = _extract_video_bytes(data)
     if not video_bytes:

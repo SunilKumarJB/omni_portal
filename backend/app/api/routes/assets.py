@@ -1,6 +1,7 @@
 """
 Asset upload endpoints (product image, character image, audio).
 """
+
 import uuid
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from app.models.schemas import UploadResponse, PRESET_CHARACTERS, PRESET_AUDIO
@@ -10,8 +11,8 @@ router = APIRouter(prefix="/assets", tags=["assets"])
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 ALLOWED_AUDIO_TYPES = {"audio/mpeg", "audio/wav", "audio/ogg", "audio/webm"}
-MAX_IMAGE_SIZE = 10 * 1024 * 1024   # 10 MB
-MAX_AUDIO_SIZE = 20 * 1024 * 1024   # 20 MB
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_AUDIO_SIZE = 20 * 1024 * 1024  # 20 MB
 
 
 @router.post("/upload/image", response_model=UploadResponse)
@@ -31,7 +32,9 @@ async def upload_image(
     ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "jpg"
     path = f"{rid}/{asset_type}_{uuid.uuid4().hex[:8]}.{ext}"
 
-    url, storage_path = await storage_service.upload_bytes(data, path, file.content_type)
+    url, storage_path = await storage_service.upload_bytes(
+        data, path, file.content_type
+    )
     return UploadResponse(url=url, path=storage_path, asset_type=asset_type)
 
 
@@ -51,7 +54,9 @@ async def upload_audio(
     ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "webm"
     path = f"{rid}/audio_{uuid.uuid4().hex[:8]}.{ext}"
 
-    url, storage_path = await storage_service.upload_bytes(data, path, file.content_type)
+    url, storage_path = await storage_service.upload_bytes(
+        data, path, file.content_type
+    )
     return UploadResponse(url=url, path=storage_path, asset_type="audio")
 
 

@@ -1,46 +1,46 @@
-import React, { useEffect, useState } from 'react'
-import clsx from 'clsx'
-import { Pencil, RotateCcw, Volume2, Quote } from 'lucide-react'
+import clsx from 'clsx';
+import { Pencil, Quote, RotateCcw, Volume2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
 interface Language {
-  code: string
-  name: string
-  native: string
-  script: string
+  code: string;
+  name: string;
+  native: string;
+  script: string;
 }
 
 interface Template {
-  id: string
-  title: string
-  emoji: string
-  accent: string
-  dialogue: string
+  id: string;
+  title: string;
+  emoji: string;
+  accent: string;
+  dialogue: string;
 }
 
 interface Props {
-  selectedTemplate: Template | null
-  selectedLanguage: string
-  setSelectedLanguage: (code: string) => void
-  dialogueText: string
-  setDialogueText: (text: string) => void
+  selectedTemplate: Template | null;
+  selectedLanguage: string;
+  setSelectedLanguage: (code: string) => void;
+  dialogueText: string;
+  setDialogueText: (text: string) => void;
 }
 
 /* ── Language list ─────────────────────────────────────────── */
 
 const LANGUAGES: Language[] = [
-  { code: 'en', name: 'English',   native: 'English',    script: 'Latin'      },
-  { code: 'hi', name: 'Hindi',     native: 'हिन्दी',      script: 'Devanagari' },
-  { code: 'ta', name: 'Tamil',     native: 'தமிழ்',      script: 'Tamil'      },
-  { code: 'te', name: 'Telugu',    native: 'తెలుగు',     script: 'Telugu'     },
-  { code: 'kn', name: 'Kannada',   native: 'ಕನ್ನಡ',      script: 'Kannada'    },
-  { code: 'ml', name: 'Malayalam', native: 'മലയാളം',    script: 'Malayalam'  },
-  { code: 'bn', name: 'Bengali',   native: 'বাংলা',      script: 'Bengali'    },
-  { code: 'mr', name: 'Marathi',   native: 'मराठी',      script: 'Devanagari' },
-  { code: 'gu', name: 'Gujarati',  native: 'ગુજરાતી',   script: 'Gujarati'   },
-  { code: 'pa', name: 'Punjabi',   native: 'ਪੰਜਾਬੀ',    script: 'Gurmukhi'   },
-]
+  { code: 'en', name: 'English', native: 'English', script: 'Latin' },
+  { code: 'hi', name: 'Hindi', native: 'हिन्दी', script: 'Devanagari' },
+  { code: 'ta', name: 'Tamil', native: 'தமிழ்', script: 'Tamil' },
+  { code: 'te', name: 'Telugu', native: 'తెలుగు', script: 'Telugu' },
+  { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', script: 'Kannada' },
+  { code: 'ml', name: 'Malayalam', native: 'മലയാളം', script: 'Malayalam' },
+  { code: 'bn', name: 'Bengali', native: 'বাংলা', script: 'Bengali' },
+  { code: 'mr', name: 'Marathi', native: 'मराठी', script: 'Devanagari' },
+  { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', script: 'Gujarati' },
+  { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', script: 'Gurmukhi' },
+];
 
 /* ── Dialogue translations per template ─────────────────────── */
 
@@ -94,7 +94,7 @@ const DIALOGUES: Record<string, Record<string, string>> = {
     pa: 'ਬਸੰਤ ਆ ਗਿਆ, ਫੁੱਲ ਖਿੜ ਰਹੇ ਹਨ, ਅਤੇ ਕੁਝ ਵੀ ਯੋਜਨਾ ਅਨੁਸਾਰ ਨਹੀਂ ਹੋ ਰਿਹਾ!',
   },
   treasure_hunter: {
-    en: "Some secrets are meant to stay buried. Too bad I brought a shovel.",
+    en: 'Some secrets are meant to stay buried. Too bad I brought a shovel.',
     hi: 'कुछ राज़ दफ़न ही रहने के लिए होते हैं। बुरा हुआ कि मैं फावड़ा ले आया।',
     ta: 'சில இரகசியங்கள் புதைந்தே இருக்க வேண்டியவை. துரதிர்ஷ்டவசமாக நான் கொத்தாளி கொண்டு வந்தேன்.',
     te: 'కొన్ని రహస్యాలు పూడ్చిపెట్టబడే ఉండాలి. పాపం నేను పార తీసుకొచ్చాను.',
@@ -106,9 +106,18 @@ const DIALOGUES: Record<string, Record<string, string>> = {
     pa: 'ਕੁਝ ਰਾਜ਼ ਦੱਬੇ ਹੀ ਰਹਿਣੇ ਚਾਹੀਦੇ ਹਨ। ਬੁਰਾ ਹੋਇਆ ਕਿ ਮੈਂ ਕਹੀ ਲੈ ਆਇਆ।',
   },
   custom: {
-    en: '', hi: '', ta: '', te: '', kn: '', ml: '', bn: '', mr: '', gu: '', pa: '',
+    en: '',
+    hi: '',
+    ta: '',
+    te: '',
+    kn: '',
+    ml: '',
+    bn: '',
+    mr: '',
+    gu: '',
+    pa: '',
   },
-}
+};
 
 /* ── Component ─────────────────────────────────────────────── */
 
@@ -119,37 +128,36 @@ export default function DialogueSelector({
   dialogueText,
   setDialogueText,
 }: Props) {
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(false);
 
-  const templateId  = selectedTemplate?.id ?? 'custom'
-  const translations = DIALOGUES[templateId] ?? DIALOGUES.custom
-  const original    = translations['en'] ?? ''
-  const translated  = translations[selectedLanguage] ?? original
-  const currentLang = LANGUAGES.find(l => l.code === selectedLanguage)!
+  const templateId = selectedTemplate?.id ?? 'custom';
+  const translations = DIALOGUES[templateId] ?? DIALOGUES.custom;
+  const original = translations['en'] ?? '';
+  const translated = translations[selectedLanguage] ?? original;
+  const currentLang = LANGUAGES.find((l) => l.code === selectedLanguage)!;
 
   // When language changes, auto-fill the textarea with the translation
   useEffect(() => {
     if (!editing) {
-      setDialogueText(translated)
+      setDialogueText(translated);
     }
-  }, [selectedLanguage, templateId])
+  }, [selectedLanguage, templateId]);
 
   function handleLanguageSelect(code: string) {
-    setSelectedLanguage(code)
-    setEditing(false)
-    setDialogueText(translations[code] ?? '')
+    setSelectedLanguage(code);
+    setEditing(false);
+    setDialogueText(translations[code] ?? '');
   }
 
   function handleReset() {
-    setDialogueText(translated)
-    setEditing(false)
+    setDialogueText(translated);
+    setEditing(false);
   }
 
-  const isEdited = dialogueText !== translated && dialogueText !== ''
+  const isEdited = dialogueText !== translated && dialogueText !== '';
 
   return (
     <div className="max-w-3xl mx-auto animate-slide-up space-y-7">
-
       <div>
         <span className="g-step-label">Step 2 of 5</span>
         <h2 className="g-step-title">Choose your dialogue</h2>
@@ -160,12 +168,13 @@ export default function DialogueSelector({
 
       {/* ── Original English dialogue card ──────────────── */}
       {selectedTemplate && selectedTemplate.id !== 'custom' && (
-        <div
-          className="rounded-2xl border border-white/[0.07] bg-[#111] overflow-hidden"
-        >
+        <div className="rounded-2xl border border-white/[0.07] bg-[#111] overflow-hidden">
           <div className="h-0.5" style={{ background: selectedTemplate.accent }} />
           <div className="px-5 py-4 flex gap-3">
-            <Quote className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: selectedTemplate.accent }} />
+            <Quote
+              className="w-4 h-4 flex-shrink-0 mt-0.5"
+              style={{ color: selectedTemplate.accent }}
+            />
             <div>
               <p className="g-label mb-1">Original · English</p>
               <p className="text-sm text-[rgba(255,255,255,0.80)] leading-relaxed italic">
@@ -181,9 +190,12 @@ export default function DialogueSelector({
         <p className="g-label mb-3">Select language</p>
 
         {/* Scrollable chip row */}
-        <div className="flex gap-2 pb-2" style={{ overflowX: 'auto', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+        <div
+          className="flex gap-2 pb-2"
+          style={{ overflowX: 'auto', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
+        >
           {LANGUAGES.map((lang) => {
-            const active = selectedLanguage === lang.code
+            const active = selectedLanguage === lang.code;
             return (
               <button
                 key={lang.code}
@@ -195,20 +207,21 @@ export default function DialogueSelector({
                     : 'border-white/[0.08] bg-[#111] hover:border-white/[0.15] hover:bg-[#161616]',
                 )}
               >
-                <span className={clsx(
-                  'text-base font-medium leading-none',
-                  active ? 'text-[#4285F4]' : 'text-white',
-                )}>
+                <span
+                  className={clsx(
+                    'text-base font-medium leading-none',
+                    active ? 'text-[#4285F4]' : 'text-white',
+                  )}
+                >
                   {lang.native}
                 </span>
-                <span className={clsx(
-                  'text-[10px]',
-                  active ? 'text-[#4285F4]/65' : 'text-white/35',
-                )}>
+                <span
+                  className={clsx('text-[10px]', active ? 'text-[#4285F4]/65' : 'text-white/35')}
+                >
                   {lang.name}
                 </span>
               </button>
-            )
+            );
           })}
         </div>
       </div>
@@ -218,7 +231,9 @@ export default function DialogueSelector({
         <div className="rounded-2xl border border-white/[0.07] bg-[#111] px-5 py-4 space-y-1">
           <div className="flex items-center gap-2 mb-2">
             <Volume2 className="w-3.5 h-3.5 text-[#4285F4]" />
-            <p className="g-label mb-0">Translation · {currentLang.name} ({currentLang.script} script)</p>
+            <p className="g-label mb-0">
+              Translation · {currentLang.name} ({currentLang.script} script)
+            </p>
           </div>
           <p
             className="text-base text-[rgba(255,255,255,0.85)] leading-relaxed"
@@ -253,7 +268,10 @@ export default function DialogueSelector({
 
         <textarea
           value={dialogueText}
-          onChange={(e) => { setDialogueText(e.target.value); setEditing(true) }}
+          onChange={(e) => {
+            setDialogueText(e.target.value);
+            setEditing(true);
+          }}
           placeholder={
             selectedTemplate?.id === 'custom'
               ? `Write the spoken dialogue in ${currentLang.name}…`
@@ -274,7 +292,9 @@ export default function DialogueSelector({
               This line will be spoken by your character in the video
             </span>
           )}
-          <span className="text-[10px] text-[rgba(255,255,255,0.25)]">{dialogueText.length}/500</span>
+          <span className="text-[10px] text-[rgba(255,255,255,0.25)]">
+            {dialogueText.length}/500
+          </span>
         </div>
       </div>
 
@@ -285,5 +305,5 @@ export default function DialogueSelector({
         </p>
       )}
     </div>
-  )
+  );
 }

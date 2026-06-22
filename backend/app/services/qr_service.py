@@ -1,12 +1,12 @@
 """
 QR code generation service.
 """
+
 import io
 import qrcode
 from qrcode.image.styledpil import StyledPilImage
 from qrcode.image.styles.moduledrawers.pil import RoundedModuleDrawer
 from qrcode.image.styles.colormasks import RadialGradiantColorMask
-from PIL import Image
 from app.config import settings
 
 

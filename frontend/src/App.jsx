@@ -1,7 +1,7 @@
-import React from 'react'
-import { Routes, Route } from 'react-router-dom'
-import Home from './pages/Home.jsx'
-import VideoView from './pages/VideoView.jsx'
+import React from 'react';
+import { Route, Routes } from 'react-router-dom';
+import Home from './pages/Home.jsx';
+import VideoView from './pages/VideoView.jsx';
 
 export default function App() {
   return (
@@ -11,5 +11,5 @@ export default function App() {
         <Route path="/video/:requestId" element={<VideoView />} />
       </Routes>
     </div>
-  )
+  );
 }

@@ -46,7 +46,7 @@ graph TD
 
     subgraph UIState [4. Frontend Status Polling]
         M --> W["ResultPanel Component mounts"]
-        W -->|Poll GET /api/generate/status/{id} every 5s| X{"Check Backend DB Status"}
+        W -->|Poll GET /api/generate/status/id every 5s| X{"Check Backend DB Status"}
         X -->|processing| Y["Update progress bar (30% to 90%)"]
         Y --> X
         X -->|completed| Z["Render interactive Video Player & Action buttons"]
@@ -96,7 +96,7 @@ sequenceDiagram
     FE->>FE: Mounts ResultPanel (progress=30%)
     
     loop Every 5 seconds
-        FE->>BE: GET /api/generate/status/{request_id}
+        FE->>BE: GET /api/generate/status/request_id
         BE-->>FE: Return current record (status & progress)
     end
     
@@ -111,7 +111,7 @@ sequenceDiagram
         Vertex-->>BE: Return Interaction ID & status=in_progress
         
         loop Every 10 seconds
-            BE->>Vertex: GET /locations/global/interactions/{id} (Thread-offloaded)
+            BE->>Vertex: GET /locations/global/interactions/id (Thread-offloaded)
             Vertex-->>BE: Return status (in_progress / completed / failed)
         end
         
@@ -128,7 +128,7 @@ sequenceDiagram
     end
     deactivate BE
     
-    FE->>BE: GET /api/generate/status/{request_id} (Final status)
+    FE->>BE: GET /api/generate/status/request_id (Final status)
     BE-->>FE: Return completed status & video_url
     FE->>User: Renders Video Player / Error Banner
     deactivate FE

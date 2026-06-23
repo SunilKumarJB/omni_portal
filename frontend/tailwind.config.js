@@ -1,33 +1,85 @@
+import tailwindcssAnimate from 'tailwindcss-animate';
+
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: ['class'],
   content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        'g-bg': '#0F0F0F',
-        'g-s1': '#1A1A1A',
-        'g-s2': '#212121',
-        'g-s3': '#2A2A2A',
-        'g-s4': '#333333',
-        'g-ol': '#373737',
-        'g-ol-v': '#282828',
-        'g-blue': '#8AB4F8',
-        'g-blue-c': '#0842A0',
-        'g-green': '#81C995',
-        'g-red': '#F28B82',
-        'g-yellow': '#FDD663',
-        'g-hi': '#E3E3E3',
-        'g-med': 'rgba(255,255,255,0.60)',
-        'g-low': 'rgba(255,255,255,0.38)',
+        border: 'hsl(var(--border) / <alpha-value>)',
+        input: 'hsl(var(--input) / <alpha-value>)',
+        ring: 'hsl(var(--ring) / <alpha-value>)',
+        background: 'hsl(var(--background) / <alpha-value>)',
+        foreground: 'hsl(var(--foreground) / <alpha-value>)',
+        primary: {
+          DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
+          foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',
+          foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
+          foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+          foreground: 'hsl(var(--accent-foreground) / <alpha-value>)',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive) / <alpha-value>)',
+          foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)',
+        },
+        success: {
+          DEFAULT: 'hsl(var(--success) / <alpha-value>)',
+          foreground: 'hsl(var(--success-foreground) / <alpha-value>)',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning) / <alpha-value>)',
+          foreground: 'hsl(var(--warning-foreground) / <alpha-value>)',
+        },
+        card: {
+          DEFAULT: 'hsl(var(--card) / <alpha-value>)',
+          foreground: 'hsl(var(--card-foreground) / <alpha-value>)',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover) / <alpha-value>)',
+          foreground: 'hsl(var(--popover-foreground) / <alpha-value>)',
+        },
+        // GML four-color AI gradient — brand constants, theme-independent
+        ai: {
+          blue: '#2986FF',
+          red: '#EA4335',
+          yellow: '#FFC30E',
+          green: '#2EBA53',
+        },
+      },
+      borderRadius: {
+        xl: 'calc(var(--radius) + 4px)',
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 4px)',
+        sm: 'calc(var(--radius) - 8px)',
       },
       fontFamily: {
-        sans: ['"Google Sans"', '"Product Sans"', 'system-ui', 'sans-serif'],
+        display: [
+          '"Google Sans Display"',
+          '"Google Sans"',
+          'Poppins',
+          'system-ui',
+          'sans-serif',
+        ],
+        sans: ['"Google Sans Text"', '"Google Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['"Google Sans Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',
         'slide-up': 'slideUp 0.25s ease-out',
         'spin-slow': 'spin 1.4s linear infinite',
         indeterminate: 'indeterminate 1.5s ease-in-out infinite',
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -43,8 +95,16 @@ export default {
           '60%': { left: '107%', right: '-8%' },
           '100%': { left: '107%', right: '-8%' },
         },
+        'accordion-down': {
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
+        },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
+        },
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindcssAnimate],
 };

@@ -1,15 +1,32 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import Home from './pages/Home.jsx';
-import VideoView from './pages/VideoView.jsx';
+
+// Standalone share/QR target — code-split so it stays out of the landing bundle.
+const VideoView = lazy(() => import('./pages/VideoView.jsx'));
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
+    </div>
+  );
+}
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/video/:requestId" element={<VideoView />} />
-      </Routes>
-    </div>
+    <TooltipProvider delayDuration={200}>
+      <div className="min-h-screen bg-background text-foreground">
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/video/:requestId" element={<VideoView />} />
+          </Routes>
+        </Suspense>
+      </div>
+      <Toaster />
+    </TooltipProvider>
   );
 }

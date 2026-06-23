@@ -1,5 +1,9 @@
 import { FlaskConical } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
+import { toast } from 'sonner';
+import AppHeader from '@/components/AppHeader';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import AudioSelector from '../components/AudioSelector.jsx';
 import CharacterSelector from '../components/CharacterSelector.jsx';
 import DialogueSelector from '../components/DialogueSelector.tsx';
@@ -108,6 +112,7 @@ export default function Home() {
       setGenerationState('done');
     } catch {
       setGenerationState('error');
+      toast.error('Something went wrong starting your video. Please try again.');
     }
   };
 
@@ -127,10 +132,10 @@ export default function Home() {
 
   if (generationState === 'submitting') {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-10 h-10 border-2 border-[#4285F4] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-white/45">Preparing your request…</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="space-y-4 text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Preparing your request…</p>
         </div>
       </div>
     );
@@ -150,112 +155,57 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0A0A0A]">
-      {/* Google brand stripe — 3px only, at the very top */}
-      <div className="g-rainbow-bar" />
+    <div className="flex min-h-screen flex-col bg-background">
+      <AppHeader
+        actions={
+          <div className="flex select-none items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1.5">
+            <FlaskConical className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
+              Test mode
+            </span>
+            <Switch
+              checked={testMode}
+              onCheckedChange={setTestMode}
+              aria-label="Toggle test mode"
+            />
+          </div>
+        }
+      />
 
-      {/* ── Header ─────────────────────────────────────── */}
-      <header className="bg-[#0A0A0A]/95 border-b border-white/[0.06] sticky top-0 z-50 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Portal icon — clean, single-color blue */}
-            <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
-              <rect width="34" height="34" rx="9" fill="#111" />
-              <circle
-                cx="17"
-                cy="17"
-                r="10"
-                fill="none"
-                stroke="#4285F4"
-                strokeWidth="1"
-                opacity="0.25"
-              />
-              <circle
-                cx="17"
-                cy="17"
-                r="7"
-                fill="none"
-                stroke="#4285F4"
-                strokeWidth="1.5"
-                opacity="0.6"
-              />
-              <circle cx="17" cy="17" r="3.5" fill="#4285F4" opacity="0.9" />
-              <circle cx="17" cy="17" r="1.5" fill="white" />
-            </svg>
-            <span className="text-[15px] font-semibold text-white tracking-tight">
-              The Omni Portal
+      {/* ── Hero — the one place the AI-gradient brand moment appears ─────── */}
+      <div className="relative w-full overflow-hidden">
+        {/* Confined four-color corner wash (top-left), per GML gradient rules */}
+        <div className="ai-gradient-corner" aria-hidden />
+
+        <div className="relative mx-auto w-full max-w-5xl px-6 pb-8 pt-14">
+          <div className="mb-5 flex items-center gap-2.5">
+            <span className="h-px w-6 bg-foreground/50" />
+            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Gemini Enterprise Agent Platform
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setTestMode(!testMode)}
-              className={`g-chip text-xs ${testMode ? 'g-chip-active' : ''}`}
-            >
-              <FlaskConical className="w-3.5 h-3.5" />
-              {testMode ? 'Test on' : 'Test mode'}
-            </button>
-            {/* GCP badge — G-dot only, subtle */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.04]">
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <circle cx="2.5" cy="2.5" r="2.5" fill="#4285F4" />
-                <circle cx="7.5" cy="2.5" r="2.5" fill="#EA4335" />
-                <circle cx="2.5" cy="7.5" r="2.5" fill="#34A853" />
-                <circle cx="7.5" cy="7.5" r="2.5" fill="#FBBC05" />
-              </svg>
-              <span className="text-[11px] text-white/40 font-medium">GCP</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* ── Hero ────────────────────────────────────────── */}
-      <div className="relative w-full">
-        {/* Full-width ambient glow — no clipping */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(ellipse 55% 90% at 8% 60%, rgba(66,133,244,0.10) 0%, transparent 70%)',
-          }}
-        />
-
-        <div className="relative max-w-5xl mx-auto w-full px-6 pt-12 pb-8">
-          {/* Eyebrow */}
-          <div className="flex items-center gap-2.5 mb-5">
-            <div className="h-px w-5 bg-[#4285F4]/60" />
-            <span className="text-[11px] text-white/55 uppercase tracking-[0.18em] font-medium">
-              Google Cloud Gemini Enterprise Agent Platform
-            </span>
-          </div>
-
-          {/* Main title */}
-          <h1
-            className="text-5xl sm:text-6xl font-black text-white leading-[0.95] tracking-tight mb-4"
-            style={{ textShadow: '0 0 80px rgba(66,133,244,0.18)' }}
-          >
+          <h1 className="mb-4 font-display text-5xl font-extrabold leading-[0.95] tracking-tight text-foreground sm:text-6xl">
             The Omni Portal
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-lg sm:text-xl text-white/60 font-light tracking-wide mb-4">
-            Step Inside Your Imagination
+          <p className="mb-3 font-display text-lg font-light tracking-wide text-muted-foreground sm:text-xl">
+            Step inside your imagination
           </p>
 
-          {/* Tagline */}
-          <p className="text-sm text-[#4285F4]/90 font-medium tracking-wide">
+          <p className="text-sm font-medium tracking-wide text-foreground/80">
             Type a prompt. Transport yourself anywhere.
           </p>
         </div>
       </div>
 
       {/* ── Stepper ─────────────────────────────────────── */}
-      <div className="max-w-5xl mx-auto w-full px-6 pb-8">
+      <div className="mx-auto w-full max-w-5xl px-6 pb-8">
         <StepIndicator steps={STEPS} currentStep={currentStep} />
       </div>
 
       {/* ── Step content ────────────────────────────────── */}
-      <div className="flex-1 max-w-5xl mx-auto w-full px-6 pb-16">
+      <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-16">
         {currentStep === 1 && (
           <PromptSelector
             selectedTemplate={selectedTemplate}
@@ -306,30 +256,27 @@ export default function Home() {
 
         {/* Navigation */}
         {currentStep < 5 && (
-          <div className="flex justify-between mt-10">
-            <button
+          <div className="mt-10 flex justify-between">
+            <Button
+              variant="outline"
               onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
-              className={`btn-outlined ${currentStep === 1 ? 'invisible' : ''}`}
+              className={currentStep === 1 ? 'invisible' : ''}
             >
               Back
-            </button>
+            </Button>
             <div className="flex items-center gap-3">
-              {/* Skip button on optional steps */}
               {(currentStep === 2 || currentStep === 4) && (
-                <button
-                  onClick={() => setCurrentStep((s) => s + 1)}
-                  className="text-sm text-[rgba(255,255,255,0.35)] hover:text-[rgba(255,255,255,0.60)] transition-colors"
-                >
+                <Button variant="ghost" onClick={() => setCurrentStep((s) => s + 1)}>
                   Skip
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 onClick={() => setCurrentStep((s) => Math.min(5, s + 1))}
                 disabled={!canGoNext()}
-                className="btn-primary px-8"
+                className="px-8"
               >
                 Continue
-              </button>
+              </Button>
             </div>
           </div>
         )}

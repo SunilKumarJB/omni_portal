@@ -1,6 +1,6 @@
-import clsx from 'clsx';
 import { Check } from 'lucide-react';
 import React from 'react';
+import { cn } from '@/lib/utils';
 
 const StepIndicator = React.memo(function StepIndicator({ steps, currentStep }) {
   return (
@@ -12,41 +12,26 @@ const StepIndicator = React.memo(function StepIndicator({ steps, currentStep }) 
 
         return (
           <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center gap-2 shrink-0">
+            <div className="flex shrink-0 flex-col items-center gap-2">
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-250"
-                style={
-                  done
-                    ? {
-                        background: '#34A853',
-                        color: '#fff',
-                        boxShadow: '0 0 12px rgba(52,168,83,0.30)',
-                      }
-                    : active
-                      ? {
-                          border: '2px solid #4285F4',
-                          color: '#4285F4',
-                          background: 'rgba(66,133,244,0.08)',
-                          boxShadow: '0 0 16px rgba(66,133,244,0.25)',
-                        }
-                      : {
-                          border: '1px solid rgba(255,255,255,0.18)',
-                          color: 'rgba(255,255,255,0.40)',
-                          background: 'transparent',
-                        }
-                }
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-all duration-300',
+                  done && 'bg-success text-success-foreground',
+                  active && 'border-2 border-foreground bg-foreground/5 text-foreground',
+                  !done && !active && 'border border-border bg-transparent text-muted-foreground',
+                )}
               >
-                {done ? <Check className="w-3.5 h-3.5" strokeWidth={2.5} /> : step.id}
+                {done ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : step.id}
               </div>
               <span
-                className="text-[11px] hidden sm:block font-medium transition-colors duration-200 tracking-wide"
-                style={
+                className={cn(
+                  'hidden text-[11px] font-medium tracking-wide transition-colors duration-200 sm:block',
                   active
-                    ? { color: '#4285F4' }
+                    ? 'text-foreground'
                     : done
-                      ? { color: 'rgba(255,255,255,0.60)' }
-                      : { color: 'rgba(255,255,255,0.38)' }
-                }
+                      ? 'text-muted-foreground'
+                      : 'text-muted-foreground/60',
+                )}
               >
                 {step.label}
               </span>
@@ -54,12 +39,10 @@ const StepIndicator = React.memo(function StepIndicator({ steps, currentStep }) 
 
             {!last && (
               <div
-                className="flex-1 h-px mx-3 mb-5 sm:mb-0 transition-all duration-400"
-                style={{
-                  background: done
-                    ? 'linear-gradient(90deg, #34A853, #4285F4)'
-                    : 'rgba(255,255,255,0.07)',
-                }}
+                className={cn(
+                  'mx-3 mb-5 h-px flex-1 transition-colors duration-300 sm:mb-0',
+                  done ? 'bg-foreground/40' : 'bg-border',
+                )}
               />
             )}
           </React.Fragment>

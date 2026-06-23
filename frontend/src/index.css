@@ -2,157 +2,183 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  GML 2026 brand tokens.
+  The brand is bi-tonal — "45% Black on White" and "45% White on Black" — so the
+  same semantic tokens are defined for both polarities. :root = light, .dark = dark.
+  Hue/sat are 0 0% everywhere (pure neutral) by design: the brand speaks in B/W;
+  color enters only through the AI gradient + functional status hues below.
+*/
 @layer base {
-  * { box-sizing: border-box; }
+  :root {
+    color-scheme: light;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
 
-  body {
-    background: #0A0A0A;
-    color: #EBEBEB;
-    font-family: 'Google Sans', 'Product Sans', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%; /* 45% Black accent text */
+
+    --accent: 0 0% 95%;
+    --accent-foreground: 0 0% 9%;
+
+    --destructive: 4 80% 58%; /* #EA4335 */
+    --destructive-foreground: 0 0% 100%;
+    --success: 137 62% 46%; /* #2EBA53 */
+    --success-foreground: 0 0% 100%;
+    --warning: 44 100% 53%; /* #FFC30E */
+    --warning-foreground: 0 0% 0%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 20%;
+
+    /* GML AI gradient — four core colors, theme-independent */
+    --ai-blue: 213 100% 58%; /* #2986FF */
+    --ai-red: 4 80% 58%; /* #EA4335 */
+    --ai-yellow: 44 100% 53%; /* #FFC30E */
+    --ai-green: 137 62% 46%; /* #2EBA53 */
+    --gml-ai-gradient: linear-gradient(
+      115deg,
+      hsl(var(--ai-green)),
+      hsl(var(--ai-yellow)),
+      hsl(var(--ai-red)),
+      hsl(var(--ai-blue))
+    );
+
+    --radius: 1rem;
   }
 
-  ::-webkit-scrollbar            { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track      { background: transparent; }
-  ::-webkit-scrollbar-thumb      { background: rgba(255,255,255,0.12); border-radius: 99px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
+  .dark {
+    color-scheme: dark;
+    --background: 0 0% 4%; /* #0A0A0A */
+    --foreground: 0 0% 92%; /* #EBEBEB */
+
+    --card: 0 0% 7%; /* ~#111 */
+    --card-foreground: 0 0% 92%;
+
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 92%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 92%;
+
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 63%; /* 45% White accent text */
+
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 4 80% 63%; /* #F28B82-ish, brighter on dark */
+    --destructive-foreground: 0 0% 0%;
+    --success: 137 50% 64%; /* #81C995-ish */
+    --success-foreground: 0 0% 0%;
+    --warning: 44 97% 69%; /* #FDD663-ish */
+    --warning-foreground: 0 0% 0%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 0 0% 83%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  /* Themed scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--foreground) / 0.14);
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--foreground) / 0.24);
+  }
+
+  /* Consistent, monochrome keyboard focus across the app */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
-
-  /* ── Surfaces ─────────────────────────────────────────── */
-  .g-card {
-    @apply rounded-2xl border border-white/[0.07] bg-[#111] p-5;
+  /*
+    The single brand signature: the AI gradient confined to one corner.
+    Per the guidelines it must stay in a corner and not exceed ~15% of canvas height.
+    Defaults to top-left; add `.ai-gradient-corner--br` to flip to bottom-right.
+  */
+  .ai-gradient-corner {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      120% 80% at 0% 0%,
+      hsl(var(--ai-blue) / 0.22) 0%,
+      hsl(var(--ai-red) / 0.14) 22%,
+      hsl(var(--ai-yellow) / 0.1) 38%,
+      hsl(var(--ai-green) / 0.08) 52%,
+      transparent 72%
+    );
   }
-  .g-card-hover {
-    @apply g-card transition-all duration-200 cursor-pointer
-           hover:bg-[#161616] hover:border-white/[0.12];
-  }
-  .g-card-selected {
-    border-color: #4285F4 !important;
-    background: rgba(66,133,244,0.08) !important;
-    box-shadow: 0 0 0 1px rgba(66,133,244,0.25), 0 4px 32px rgba(66,133,244,0.08);
-  }
-
-  /* ── Buttons ──────────────────────────────────────────── */
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2
-           text-white font-semibold text-sm tracking-wide
-           px-6 py-2.5 rounded-full
-           transition-all duration-200
-           disabled:opacity-30 disabled:cursor-not-allowed;
-    background: #4285F4;
-  }
-  .btn-primary:hover:not(:disabled) {
-    background: #3b7ae8;
-    box-shadow: 0 4px 28px rgba(66,133,244,0.45);
-    transform: translateY(-1px);
-  }
-  .btn-primary:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: 0 2px 10px rgba(66,133,244,0.30);
-  }
-  .btn-tonal {
-    @apply inline-flex items-center justify-center gap-2
-           text-[#4285F4] font-medium text-sm
-           px-5 py-2.5 rounded-full border border-[#4285F4]/25
-           bg-[#4285F4]/10
-           hover:bg-[#4285F4]/20 active:bg-[#4285F4]/25
-           transition-all duration-150
-           disabled:opacity-40 disabled:cursor-not-allowed;
-  }
-  .btn-outlined {
-    @apply inline-flex items-center justify-center gap-2
-           border border-white/[0.15] text-white/80 font-medium text-sm
-           px-5 py-2.5 rounded-full
-           hover:bg-white/[0.05] hover:border-white/[0.20] hover:text-white
-           active:bg-white/[0.08]
-           transition-all duration-150
-           disabled:opacity-40 disabled:cursor-not-allowed;
-  }
-  .btn-text {
-    @apply inline-flex items-center justify-center gap-2
-           text-[#4285F4] font-medium text-sm px-4 py-2 rounded-full
-           hover:bg-[#4285F4]/10 transition-colors duration-150;
+  .ai-gradient-corner--br {
+    background: radial-gradient(
+      120% 80% at 100% 100%,
+      hsl(var(--ai-blue) / 0.22) 0%,
+      hsl(var(--ai-red) / 0.14) 22%,
+      hsl(var(--ai-yellow) / 0.1) 38%,
+      hsl(var(--ai-green) / 0.08) 52%,
+      transparent 72%
+    );
   }
 
-  /* ── Filter chips ─────────────────────────────────────── */
-  .g-chip {
-    @apply inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm
-           border border-white/[0.15] text-white/70 bg-transparent
-           cursor-pointer hover:bg-white/[0.05] hover:border-white/[0.25]
-           transition-all duration-150 select-none;
+  /* The crisp 4-color brand line, used as a thin hairline accent (e.g. atop the hero card) */
+  .ai-gradient-line {
+    background: var(--gml-ai-gradient);
   }
-  .g-chip-active {
-    @apply border-[#4285F4]/50 bg-[#4285F4]/10 text-[#4285F4];
-  }
+}
 
-  /* ── Tab bar ──────────────────────────────────────────── */
-  .g-tab-bar {
-    @apply flex border-b border-white/[0.07];
-  }
-  .g-tab {
-    @apply px-5 py-3 text-sm font-medium text-white/55
-           border-b-2 border-transparent -mb-px
-           hover:text-white/85 hover:bg-white/[0.04]
-           transition-all duration-150 cursor-pointer whitespace-nowrap select-none;
-  }
-  .g-tab-active {
-    @apply text-[#4285F4] border-[#4285F4] hover:bg-[#4285F4]/[0.06];
-  }
-
-  /* ── Labels ───────────────────────────────────────────── */
-  .g-label {
-    @apply text-white/45 text-[10px] font-semibold
-           uppercase tracking-[0.14em] mb-2 block;
-  }
-
-  /* ── Inputs ───────────────────────────────────────────── */
-  .g-input {
-    @apply w-full bg-[#0D0D0D] border border-white/[0.09] rounded-xl px-4 py-3
-           text-white/90 placeholder-white/20 text-sm
-           focus:outline-none focus:border-[#4285F4]/60 focus:bg-[#4285F4]/[0.025]
-           transition-all duration-150;
-  }
-
-  /* ── Progress ─────────────────────────────────────────── */
-  .g-progress-track {
-    @apply h-1 rounded-full overflow-hidden relative;
-    background: rgba(255,255,255,0.07);
-  }
-  .g-progress-fill {
-    @apply absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out;
-    background: linear-gradient(90deg, #4285F4 0%, #5BA3F5 100%);
-  }
-
-  /* ── Section heading ──────────────────────────────────── */
-  .g-step-label {
-    @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50 mb-2 block;
-  }
-  .g-step-title {
-    @apply text-2xl font-bold text-white leading-tight mb-1;
-  }
-  .g-step-sub {
-    @apply text-sm text-white/60 leading-relaxed;
-  }
-
-  /* ── Google brand stripe ──────────────────────────────── */
-  .g-rainbow-bar {
-    height: 3px;
-    background: linear-gradient(90deg,
-      #4285F4 0%,   #4285F4 25%,
-      #EA4335 25%,  #EA4335 50%,
-      #FBBC05 50%,  #FBBC05 75%,
-      #34A853 75%,  #34A853 100%);
-    flex-shrink: 0;
-  }
-
-  /* ── Divider ──────────────────────────────────────────── */
-  .g-divider { border-top: 1px solid rgba(255,255,255,0.07); }
-
-  /* ── Status badge ─────────────────────────────────────── */
-  .g-badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -1,6 +1,8 @@
-import clsx from 'clsx';
 import { Pencil, Quote, RotateCcw, Volume2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import StepHeading, { FieldLabel } from './StepHeading.jsx';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -157,29 +159,23 @@ export default function DialogueSelector({
   const isEdited = dialogueText !== translated && dialogueText !== '';
 
   return (
-    <div className="max-w-3xl mx-auto animate-slide-up space-y-7">
-      <div>
-        <span className="g-step-label">Step 2 of 5</span>
-        <h2 className="g-step-title">Choose your dialogue</h2>
-        <p className="g-step-sub">
-          Select a language — then edit the dialogue if you want to customise it.
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl animate-slide-up space-y-7">
+      <StepHeading eyebrow="Step 2 of 5" title="Choose your dialogue" className="mb-0">
+        Select a language — then edit the dialogue if you want to customise it.
+      </StepHeading>
 
       {/* ── Original English dialogue card ──────────────── */}
       {selectedTemplate && selectedTemplate.id !== 'custom' && (
-        <div className="rounded-2xl border border-white/[0.07] bg-[#111] overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
           <div className="h-0.5" style={{ background: selectedTemplate.accent }} />
-          <div className="px-5 py-4 flex gap-3">
+          <div className="flex gap-3 px-5 py-4">
             <Quote
-              className="w-4 h-4 flex-shrink-0 mt-0.5"
+              className="mt-0.5 h-4 w-4 flex-shrink-0"
               style={{ color: selectedTemplate.accent }}
             />
             <div>
-              <p className="g-label mb-1">Original · English</p>
-              <p className="text-sm text-[rgba(255,255,255,0.80)] leading-relaxed italic">
-                {original}
-              </p>
+              <FieldLabel className="mb-1">Original · English</FieldLabel>
+              <p className="text-sm italic leading-relaxed text-foreground/80">{original}</p>
             </div>
           </div>
         </div>
@@ -187,9 +183,8 @@ export default function DialogueSelector({
 
       {/* ── Language selector ───────────────────────────── */}
       <div>
-        <p className="g-label mb-3">Select language</p>
+        <FieldLabel className="mb-3">Select language</FieldLabel>
 
-        {/* Scrollable chip row */}
         <div
           className="flex gap-2 pb-2"
           style={{ overflowX: 'auto', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
@@ -200,26 +195,22 @@ export default function DialogueSelector({
               <button
                 key={lang.code}
                 onClick={() => handleLanguageSelect(lang.code)}
-                className={clsx(
-                  'flex-shrink-0 flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl border transition-all duration-150 cursor-pointer select-none min-w-[72px]',
+                className={cn(
+                  'flex min-w-[72px] flex-shrink-0 select-none flex-col items-center gap-1 rounded-md border px-4 py-2.5 transition-all duration-150',
                   active
-                    ? 'border-[#4285F4]/60 bg-[#4285F4]/10'
-                    : 'border-white/[0.08] bg-[#111] hover:border-white/[0.15] hover:bg-[#161616]',
+                    ? 'border-foreground bg-foreground/5'
+                    : 'border-border bg-card hover:border-foreground/30 hover:bg-accent/40',
                 )}
               >
                 <span
-                  className={clsx(
+                  className={cn(
                     'text-base font-medium leading-none',
-                    active ? 'text-[#4285F4]' : 'text-white',
+                    active ? 'text-foreground' : 'text-foreground/90',
                   )}
                 >
                   {lang.native}
                 </span>
-                <span
-                  className={clsx('text-[10px]', active ? 'text-[#4285F4]/65' : 'text-white/35')}
-                >
-                  {lang.name}
-                </span>
+                <span className="text-[10px] text-muted-foreground">{lang.name}</span>
               </button>
             );
           })}
@@ -228,17 +219,14 @@ export default function DialogueSelector({
 
       {/* ── Translated dialogue display ─────────────────── */}
       {selectedLanguage !== 'en' && selectedTemplate?.id !== 'custom' && translated && (
-        <div className="rounded-2xl border border-white/[0.07] bg-[#111] px-5 py-4 space-y-1">
-          <div className="flex items-center gap-2 mb-2">
-            <Volume2 className="w-3.5 h-3.5 text-[#4285F4]" />
-            <p className="g-label mb-0">
+        <div className="space-y-1 rounded-lg border border-border bg-card px-5 py-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+            <FieldLabel className="mb-0">
               Translation · {currentLang.name} ({currentLang.script} script)
-            </p>
+            </FieldLabel>
           </div>
-          <p
-            className="text-base text-[rgba(255,255,255,0.85)] leading-relaxed"
-            lang={selectedLanguage}
-          >
+          <p className="text-base leading-relaxed text-foreground/90" lang={selectedLanguage}>
             {translated}
           </p>
         </div>
@@ -248,25 +236,25 @@ export default function DialogueSelector({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Pencil className="w-3.5 h-3.5 text-[rgba(255,255,255,0.40)]" />
-            <p className="g-label mb-0">
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+            <FieldLabel className="mb-0">
               {selectedTemplate?.id === 'custom'
                 ? `Write dialogue in ${currentLang.name}`
                 : `Edit dialogue · ${currentLang.name}`}
-            </p>
+            </FieldLabel>
           </div>
           {isEdited && (
             <button
               onClick={handleReset}
-              className="flex items-center gap-1.5 text-xs text-white/30 hover:text-[#4285F4] transition-colors"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw className="h-3 w-3" />
               Reset
             </button>
           )}
         </div>
 
-        <textarea
+        <Textarea
           value={dialogueText}
           onChange={(e) => {
             setDialogueText(e.target.value);
@@ -280,27 +268,24 @@ export default function DialogueSelector({
           rows={3}
           maxLength={500}
           lang={selectedLanguage}
-          className="g-input resize-none text-base"
-          style={{ fontFamily: selectedLanguage === 'en' ? 'inherit' : 'inherit' }}
+          className="resize-none text-base"
         />
 
         <div className="flex items-center justify-between">
           {isEdited ? (
-            <span className="text-[10px] text-[#FBBC05]">Customised</span>
+            <span className="text-[10px] text-warning">Customised</span>
           ) : (
-            <span className="text-[10px] text-[rgba(255,255,255,0.25)]">
+            <span className="text-[10px] text-muted-foreground">
               This line will be spoken by your character in the video
             </span>
           )}
-          <span className="text-[10px] text-[rgba(255,255,255,0.25)]">
-            {dialogueText.length}/500
-          </span>
+          <span className="text-[10px] text-muted-foreground">{dialogueText.length}/500</span>
         </div>
       </div>
 
       {/* Skip note */}
       {!dialogueText.trim() && (
-        <p className="text-xs text-[rgba(255,255,255,0.30)] text-center">
+        <p className="text-center text-xs text-muted-foreground">
           Leave blank to generate the video without spoken dialogue
         </p>
       )}

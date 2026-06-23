@@ -1,7 +1,12 @@
-import clsx from 'clsx';
 import { Camera, Check, RefreshCcw, Upload, X } from 'lucide-react';
-import React, { useCallback, useRef, useState } from 'react';
-import Webcam from 'react-webcam';
+import React, { lazy, Suspense, useCallback, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+import StepHeading from './StepHeading.jsx';
+
+// Heavy dependency — only loaded when the user opens the camera tab.
+const Webcam = lazy(() => import('react-webcam'));
 
 const PRESET_CHARS = [
   {
@@ -110,197 +115,205 @@ export default function CharacterSelector({
   const hasCustom = !!captured || !!uploadPreview;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-8">
-        <span className="g-step-label">Step 3 of 5</span>
-        <h2 className="g-step-title">Choose your presenter</h2>
-        <p className="g-step-sub">
-          Select a preset avatar or use your own photo via camera or upload.
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl">
+      <StepHeading eyebrow="Step 3 of 5" title="Choose your presenter">
+        Select a preset avatar or use your own photo via camera or upload.
+      </StepHeading>
 
-      {/* Tabs */}
-      <div className="g-tab-bar mb-6">
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => switchTab(id)}
-            className={clsx('g-tab flex items-center gap-1.5', tab === id && 'g-tab-active')}
-          >
-            {Icon && <Icon className="w-3.5 h-3.5" />}
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={switchTab}>
+        <TabsList className="mb-6">
+          {TABS.map(({ id, label, Icon }) => (
+            <TabsTrigger key={id} value={id}>
+              {Icon && <Icon className="h-3.5 w-3.5" />}
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {/* Preset grid */}
-      {tab === 'preset' && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {PRESET_CHARS.map((c) => {
-            const selected = selectedCharacter?.id === c.id;
-            return (
-              <button
-                key={c.id}
-                onClick={() => {
-                  setSelectedCharacter(c);
-                  resetCustom();
-                }}
-                className={clsx(
-                  'g-card-hover flex flex-col items-center gap-3 text-center p-4',
-                  selected && 'g-card-selected',
-                )}
-              >
-                {/* Avatar: SVG image with emoji fallback */}
-                <div
-                  className="relative w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0"
-                  style={{ background: c.bg }}
+        {/* Preset grid */}
+        <TabsContent value="preset">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {PRESET_CHARS.map((c) => {
+              const selected = selectedCharacter?.id === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setSelectedCharacter(c);
+                    resetCustom();
+                  }}
+                  className={cn(
+                    'flex flex-col items-center gap-3 rounded-lg border bg-card p-4 text-center transition-all duration-200',
+                    selected
+                      ? 'border-foreground ring-1 ring-foreground'
+                      : 'border-border hover:border-foreground/30 hover:bg-accent/40',
+                  )}
                 >
-                  <img
-                    src={c.img}
-                    alt={`${c.name} ${c.gender}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.nextSibling.style.display = 'flex';
-                    }}
-                  />
                   <div
-                    className="absolute inset-0 items-center justify-center text-3xl"
-                    style={{ display: 'none' }}
+                    className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl"
+                    style={{ background: c.bg }}
                   >
-                    {c.avatar}
+                    <img
+                      src={c.img}
+                      alt={`${c.name} ${c.gender}`}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div
+                      className="absolute inset-0 items-center justify-center text-3xl"
+                      style={{ display: 'none' }}
+                    >
+                      {c.avatar}
+                    </div>
+                    {selected && (
+                      <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-foreground">
+                        <Check className="h-3 w-3 text-background" strokeWidth={3} />
+                      </div>
+                    )}
                   </div>
-                  {selected && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#4285F4] flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                  <div className="w-full min-w-0">
+                    <div className="text-sm font-medium leading-tight text-foreground">
+                      {c.name}
                     </div>
-                  )}
-                </div>
-                <div className="min-w-0 w-full">
-                  <div className="text-sm text-white font-medium leading-tight">{c.name}</div>
-                  {c.gender && (
-                    <div className="text-xs text-white/38 mt-0.5">
-                      {c.gender === 'M' ? 'Male' : 'Female'}
-                    </div>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+                    {c.gender && (
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        {c.gender === 'M' ? 'Male' : 'Female'}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </TabsContent>
 
-      {/* Camera */}
-      {tab === 'camera' && (
-        <div className="max-w-sm mx-auto text-center space-y-4">
-          {!captured && !cameraActive && (
-            <div className="g-card py-12 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto">
-                <Camera className="w-7 h-7 text-white/30" strokeWidth={1.5} />
+        {/* Camera */}
+        <TabsContent value="camera">
+          <div className="mx-auto max-w-sm space-y-4 text-center">
+            {!captured && !cameraActive && (
+              <div className="space-y-4 rounded-lg border border-border bg-card py-12">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-border bg-muted/50">
+                  <Camera className="h-7 w-7 text-muted-foreground" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p className="mb-1 font-medium text-foreground">Use your camera</p>
+                  <p className="text-sm text-muted-foreground">
+                    Take a photo to use as the presenter
+                  </p>
+                </div>
+                <Button variant="secondary" onClick={() => setCameraActive(true)}>
+                  Open camera
+                </Button>
               </div>
-              <div>
-                <p className="text-white font-medium mb-1">Use your camera</p>
-                <p className="text-sm text-white/40">Take a photo to use as the presenter</p>
-              </div>
-              <button onClick={() => setCameraActive(true)} className="btn-tonal">
-                Open camera
-              </button>
-            </div>
-          )}
+            )}
 
-          {cameraActive && (
-            <div className="space-y-3">
-              <div className="rounded-2xl overflow-hidden border border-white/[0.08]">
-                <Webcam
-                  ref={webcamRef}
-                  screenshotFormat="image/jpeg"
-                  className="w-full"
-                  mirrored
-                  videoConstraints={{ facingMode: 'user' }}
+            {cameraActive && (
+              <div className="space-y-3">
+                <div className="overflow-hidden rounded-lg border border-border">
+                  <Suspense
+                    fallback={
+                      <div className="flex aspect-video items-center justify-center bg-muted/40">
+                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
+                      </div>
+                    }
+                  >
+                    <Webcam
+                      ref={webcamRef}
+                      screenshotFormat="image/jpeg"
+                      className="w-full"
+                      mirrored
+                      videoConstraints={{ facingMode: 'user' }}
+                    />
+                  </Suspense>
+                </div>
+                <div className="flex justify-center gap-2">
+                  <Button onClick={capture}>
+                    <Camera className="h-4 w-4" /> Capture
+                  </Button>
+                  <Button variant="outline" onClick={() => setCameraActive(false)}>
+                    <X className="h-4 w-4" /> Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {captured && (
+              <div className="space-y-3">
+                <div className="overflow-hidden rounded-lg border border-border">
+                  <img src={captured} alt="Captured" className="w-full" />
+                </div>
+                <div className="flex items-center justify-center gap-1.5 text-sm text-success">
+                  <Check className="h-4 w-4" /> Photo captured
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCaptured(null);
+                    setCameraActive(true);
+                  }}
+                >
+                  <RefreshCcw className="h-3.5 w-3.5" /> Retake
+                </Button>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Upload */}
+        <TabsContent value="upload">
+          <div
+            className="mx-auto max-w-sm cursor-pointer rounded-lg border border-dashed border-border bg-card text-center transition-all duration-200 hover:border-foreground/30 hover:bg-accent/40"
+            onClick={() => fileRef.current?.click()}
+          >
+            {!uploadPreview ? (
+              <div className="space-y-3 px-6 py-14">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-border bg-muted/50">
+                  <Upload className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
+                </div>
+                <p className="font-medium text-foreground">Upload character image</p>
+                <p className="text-xs text-muted-foreground">JPEG · PNG · WebP · Max 10 MB</p>
+              </div>
+            ) : (
+              <div className="space-y-3 px-6 py-6">
+                <img
+                  src={uploadPreview}
+                  alt="Character"
+                  className="mx-auto h-28 w-28 rounded-2xl border border-border object-cover"
                 />
+                <div className="flex items-center justify-center gap-1.5 text-sm text-success">
+                  <Check className="h-4 w-4" /> Image ready
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resetCustom();
+                  }}
+                >
+                  Change image
+                </Button>
               </div>
-              <div className="flex gap-2 justify-center">
-                <button onClick={capture} className="btn-primary">
-                  <Camera className="w-4 h-4" /> Capture
-                </button>
-                <button onClick={() => setCameraActive(false)} className="btn-outlined">
-                  <X className="w-4 h-4" /> Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {captured && (
-            <div className="space-y-3">
-              <div className="rounded-2xl overflow-hidden border border-white/[0.08]">
-                <img src={captured} alt="Captured" className="w-full" />
-              </div>
-              <div className="flex items-center justify-center gap-1.5 text-[#34A853] text-sm">
-                <Check className="w-4 h-4" /> Photo captured
-              </div>
-              <button
-                onClick={() => {
-                  setCaptured(null);
-                  setCameraActive(true);
-                }}
-                className="btn-text"
-              >
-                <RefreshCcw className="w-3.5 h-3.5" /> Retake
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Upload */}
-      {tab === 'upload' && (
-        <div
-          className="max-w-sm mx-auto rounded-2xl border border-dashed border-white/[0.10] bg-[#111] text-center cursor-pointer hover:border-white/[0.20] hover:bg-[#161616] transition-all duration-200"
-          onClick={() => fileRef.current?.click()}
-        >
-          {!uploadPreview ? (
-            <div className="py-14 px-6 space-y-3">
-              <div className="w-14 h-14 rounded-full bg-white/[0.04] border border-white/[0.07] flex items-center justify-center mx-auto">
-                <Upload className="w-6 h-6 text-white/28" strokeWidth={1.5} />
-              </div>
-              <p className="text-white font-medium">Upload character image</p>
-              <p className="text-xs text-white/35">JPEG · PNG · WebP · Max 10 MB</p>
-            </div>
-          ) : (
-            <div className="py-6 px-6 space-y-3">
-              <img
-                src={uploadPreview}
-                alt="Character"
-                className="w-28 h-28 object-cover rounded-2xl mx-auto border border-white/[0.08]"
-              />
-              <div className="flex items-center justify-center gap-1.5 text-[#34A853] text-sm">
-                <Check className="w-4 h-4" /> Image ready
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  resetCustom();
-                }}
-                className="btn-text text-xs"
-              >
-                Change image
-              </button>
-            </div>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleUpload(e.target.files[0])}
-          />
-        </div>
-      )}
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleUpload(e.target.files[0])}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Selection confirmation */}
       {(selectedCharacter || hasCustom) && (
-        <div className="mt-6 flex items-center gap-2 text-[#34A853] text-sm">
-          <Check className="w-4 h-4 flex-shrink-0" />
+        <div className="mt-6 flex items-center gap-2 text-sm text-success">
+          <Check className="h-4 w-4 flex-shrink-0" />
           <span>
             {selectedCharacter
               ? `${selectedCharacter.name}${selectedCharacter.gender ? ' (' + (selectedCharacter.gender === 'M' ? 'Male' : 'Female') + ')' : ''} selected`

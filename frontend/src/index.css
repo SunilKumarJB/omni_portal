@@ -147,22 +147,22 @@
     inset: 0;
     pointer-events: none;
     background: radial-gradient(
-      120% 80% at 0% 0%,
-      hsl(var(--ai-blue) / 0.22) 0%,
-      hsl(var(--ai-red) / 0.14) 22%,
-      hsl(var(--ai-yellow) / 0.1) 38%,
-      hsl(var(--ai-green) / 0.08) 52%,
-      transparent 72%
+      62% 48% at 0% 0%,
+      hsl(var(--ai-blue) / 0.26) 0%,
+      hsl(var(--ai-red) / 0.15) 24%,
+      hsl(var(--ai-yellow) / 0.1) 40%,
+      hsl(var(--ai-green) / 0.07) 54%,
+      transparent 68%
     );
   }
   .ai-gradient-corner--br {
     background: radial-gradient(
-      120% 80% at 100% 100%,
-      hsl(var(--ai-blue) / 0.22) 0%,
-      hsl(var(--ai-red) / 0.14) 22%,
-      hsl(var(--ai-yellow) / 0.1) 38%,
-      hsl(var(--ai-green) / 0.08) 52%,
-      transparent 72%
+      62% 48% at 100% 100%,
+      hsl(var(--ai-blue) / 0.26) 0%,
+      hsl(var(--ai-red) / 0.15) 24%,
+      hsl(var(--ai-yellow) / 0.1) 40%,
+      hsl(var(--ai-green) / 0.07) 54%,
+      transparent 68%
     );
   }
 

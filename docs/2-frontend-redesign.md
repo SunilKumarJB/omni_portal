@@ -212,6 +212,39 @@ capture, and mobile breakpoints.
 
 ---
 
+## 6a. Layout v2 — fixed-viewport "control deck" (for casting)
+
+The app is shown live by casting a Chromebook to a big screen, so the wizard is now a
+**fixed-viewport, no-page-scroll** layout — the page size is constant and only inner
+containers scroll. This replaced the earlier top-header + tall-hero + vertical stack that
+forced the user to scroll before reaching "Continue."
+
+- **`Home` is a two-pane shell:** `flex h-dvh overflow-hidden`.
+  - **`SideRail` (left, `lg+`, `src/components/SideRail.jsx`)** holds the brand, the tagline,
+    and a **vertical stepper**, plus test-mode + theme toggle at the bottom. The AI-gradient
+    brand moment lives in the rail's **top-left corner**. There is **no top header bar** on the
+    wizard — the brand *is* the rail, which is what makes it "blend" (per feedback that the old
+    header "looked like a header").
+  - **Right pane** = step content in the **only scroll region** (`min-h-0 flex-1 overflow-y-auto`)
+    + a **pinned footer** (Back / Skip / Continue). Below `lg`, the rail collapses to a compact
+    top bar + a thin progress strip.
+- **Wide-canvas usage:** template grid is 3 columns at `xl` with shorter (150px) thumbnails so
+  all scenarios fit one screen; content max-width widened (`max-w-6xl`).
+- **`ResultPanel` / `VideoView`** are also fixed-viewport (`h-dvh` / `min-h-dvh`) with the
+  **AI gradient now present on the generation/result page** (bottom-right corner, behind a
+  `z-10` scroll layer), addressing feedback that the gradient only showed during selection.
+- **`AppHeader` is now "blended"** (no border, transparent, non-sticky; exports `PortalMark`)
+  and used only by the non-wizard pages. The horizontal `StepIndicator` was removed (replaced
+  by the rail's vertical stepper).
+- **Gradient tuning:** `.ai-gradient-corner{,--br}` radials were tightened (`62% 48%`) so they
+  read as a **corner glow**, not a full-width band.
+
+**Rule for new screens:** wrap full-page views in `h-dvh`/`min-h-dvh` with `overflow-hidden`,
+keep header/rail/footer as `shrink-0`, and put scroll on the middle container
+(`min-h-0 flex-1 overflow-y-auto`). Never let the page body scroll on the wizard.
+
+---
+
 ## 7. Quick revert / safety
 
 All changes are `frontend/`-scoped and isolated from backend. To revert the whole redesign,

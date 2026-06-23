@@ -79,7 +79,10 @@ export default function VideoView() {
     );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-dvh overflow-hidden bg-background">
+      {/* Brand moment — confined four-color wash in the bottom-right corner */}
+      <div className="ai-gradient-corner ai-gradient-corner--br" aria-hidden />
+
       <AppHeader
         actions={
           <Button variant="outline" size="sm" asChild>
@@ -90,7 +93,7 @@ export default function VideoView() {
         }
       />
 
-      <div className="mx-auto max-w-5xl px-6 py-8">
+      <div className="relative z-10 mx-auto max-w-5xl px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="font-display text-2xl font-bold text-foreground">Generated video</h1>
           <Badge variant={s.variant}>

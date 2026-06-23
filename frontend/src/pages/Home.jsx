@@ -1,7 +1,9 @@
 import { FlaskConical } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import AppHeader from '@/components/AppHeader';
+import { PortalMark } from '@/components/AppHeader';
+import SideRail from '@/components/SideRail';
+import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import AudioSelector from '../components/AudioSelector.jsx';
@@ -10,7 +12,6 @@ import DialogueSelector from '../components/DialogueSelector.tsx';
 import PromptSelector from '../components/PromptSelector.jsx';
 import ResultPanel from '../components/ResultPanel.jsx';
 import ReviewGenerate from '../components/ReviewGenerate.jsx';
-import StepIndicator from '../components/StepIndicator.jsx';
 import { generateVideo } from '../lib/api.js';
 
 const STEPS = [
@@ -46,15 +47,7 @@ export default function Home() {
     if (currentStep === 3) return !!selectedCharacter || !!characterImageFile;
     if (currentStep === 4) return true; // audio is optional
     return true;
-  }, [
-    currentStep,
-    selectedTemplate,
-    videoPrompt,
-    selectedCharacter,
-    characterImageFile,
-    selectedAudio,
-    audioFile,
-  ]);
+  }, [currentStep, selectedTemplate, videoPrompt, selectedCharacter, characterImageFile]);
 
   /**
    * Fetches a public asset URL and returns it as a File object.
@@ -132,7 +125,7 @@ export default function Home() {
 
   if (generationState === 'submitting') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex h-dvh items-center justify-center bg-background">
         <div className="space-y-4 text-center">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
           <p className="text-sm text-muted-foreground">Preparing your request…</p>
@@ -155,108 +148,102 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <AppHeader
-        actions={
-          <div className="flex select-none items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1.5">
-            <FlaskConical className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
-              Test mode
-            </span>
-            <Switch
-              checked={testMode}
-              onCheckedChange={setTestMode}
-              aria-label="Toggle test mode"
-            />
-          </div>
-        }
+    <div className="flex h-dvh overflow-hidden bg-background">
+      <SideRail
+        steps={STEPS}
+        currentStep={currentStep}
+        testMode={testMode}
+        setTestMode={setTestMode}
       />
 
-      {/* ── Hero — the one place the AI-gradient brand moment appears ─────── */}
-      <div className="relative w-full overflow-hidden">
-        {/* Confined four-color corner wash (top-left), per GML gradient rules */}
-        <div className="ai-gradient-corner" aria-hidden />
-
-        <div className="relative mx-auto w-full max-w-5xl px-6 pb-8 pt-14">
-          <div className="mb-5 flex items-center gap-2.5">
-            <span className="h-px w-6 bg-foreground/50" />
-            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              Gemini Enterprise Agent Platform
+      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        {/* Compact bar for small screens (rail is hidden < lg) */}
+        <div className="flex shrink-0 items-center justify-between px-6 py-4 lg:hidden">
+          <div className="flex items-center gap-3">
+            <PortalMark />
+            <span className="text-[15px] font-semibold tracking-tight text-foreground">
+              The Omni Portal
             </span>
           </div>
-
-          <h1 className="mb-4 font-display text-5xl font-extrabold leading-[0.95] tracking-tight text-foreground sm:text-6xl">
-            The Omni Portal
-          </h1>
-
-          <p className="mb-3 font-display text-lg font-light tracking-wide text-muted-foreground sm:text-xl">
-            Step inside your imagination
-          </p>
-
-          <p className="text-sm font-medium tracking-wide text-foreground/80">
-            Type a prompt. Transport yourself anywhere.
-          </p>
+          <div className="flex items-center gap-2.5">
+            <div className="flex select-none items-center gap-2">
+              <FlaskConical className="h-3.5 w-3.5 text-muted-foreground" />
+              <Switch
+                checked={testMode}
+                onCheckedChange={setTestMode}
+                aria-label="Toggle test mode"
+              />
+            </div>
+            <ThemeToggle />
+          </div>
         </div>
-      </div>
+        {/* Mobile progress strip */}
+        <div className="flex shrink-0 items-center gap-3 px-6 pb-3 lg:hidden">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Step {currentStep} / {STEPS.length}
+          </span>
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-foreground transition-all duration-300"
+              style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
+            />
+          </div>
+        </div>
 
-      {/* ── Stepper ─────────────────────────────────────── */}
-      <div className="mx-auto w-full max-w-5xl px-6 pb-8">
-        <StepIndicator steps={STEPS} currentStep={currentStep} />
-      </div>
+        {/* Scrollable step content — the only scroll region; page size stays constant */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 lg:px-12 lg:py-10">
+          {currentStep === 1 && (
+            <PromptSelector
+              selectedTemplate={selectedTemplate}
+              setSelectedTemplate={setSelectedTemplate}
+              videoPrompt={videoPrompt}
+              setVideoPrompt={setVideoPrompt}
+            />
+          )}
+          {currentStep === 2 && (
+            <DialogueSelector
+              selectedTemplate={selectedTemplate}
+              selectedLanguage={selectedLanguage}
+              setSelectedLanguage={setSelectedLanguage}
+              dialogueText={dialogueText}
+              setDialogueText={setDialogueText}
+            />
+          )}
+          {currentStep === 3 && (
+            <CharacterSelector
+              selectedCharacter={selectedCharacter}
+              setSelectedCharacter={setSelectedCharacter}
+              characterImageFile={characterImageFile}
+              setCharacterImageFile={setCharacterImageFile}
+            />
+          )}
+          {currentStep === 4 && (
+            <AudioSelector
+              selectedAudio={selectedAudio}
+              setSelectedAudio={setSelectedAudio}
+              audioFile={audioFile}
+              setAudioFile={setAudioFile}
+            />
+          )}
+          {currentStep === 5 && (
+            <ReviewGenerate
+              testMode={testMode}
+              selectedTemplate={selectedTemplate}
+              videoPrompt={videoPrompt}
+              dialogueText={dialogueText}
+              selectedLanguage={selectedLanguage}
+              selectedCharacter={selectedCharacter}
+              characterImageFile={characterImageFile}
+              selectedAudio={selectedAudio}
+              audioFile={audioFile}
+              onGenerate={handleGenerate}
+            />
+          )}
+        </div>
 
-      {/* ── Step content ────────────────────────────────── */}
-      <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-16">
-        {currentStep === 1 && (
-          <PromptSelector
-            selectedTemplate={selectedTemplate}
-            setSelectedTemplate={setSelectedTemplate}
-            videoPrompt={videoPrompt}
-            setVideoPrompt={setVideoPrompt}
-          />
-        )}
-        {currentStep === 2 && (
-          <DialogueSelector
-            selectedTemplate={selectedTemplate}
-            selectedLanguage={selectedLanguage}
-            setSelectedLanguage={setSelectedLanguage}
-            dialogueText={dialogueText}
-            setDialogueText={setDialogueText}
-          />
-        )}
-        {currentStep === 3 && (
-          <CharacterSelector
-            selectedCharacter={selectedCharacter}
-            setSelectedCharacter={setSelectedCharacter}
-            characterImageFile={characterImageFile}
-            setCharacterImageFile={setCharacterImageFile}
-          />
-        )}
-        {currentStep === 4 && (
-          <AudioSelector
-            selectedAudio={selectedAudio}
-            setSelectedAudio={setSelectedAudio}
-            audioFile={audioFile}
-            setAudioFile={setAudioFile}
-          />
-        )}
-        {currentStep === 5 && (
-          <ReviewGenerate
-            testMode={testMode}
-            selectedTemplate={selectedTemplate}
-            videoPrompt={videoPrompt}
-            dialogueText={dialogueText}
-            selectedLanguage={selectedLanguage}
-            selectedCharacter={selectedCharacter}
-            characterImageFile={characterImageFile}
-            selectedAudio={selectedAudio}
-            audioFile={audioFile}
-            onGenerate={handleGenerate}
-          />
-        )}
-
-        {/* Navigation */}
+        {/* Pinned action bar */}
         {currentStep < 5 && (
-          <div className="mt-10 flex justify-between">
+          <div className="flex shrink-0 items-center justify-between border-t border-border/60 px-6 py-4 lg:px-12">
             <Button
               variant="outline"
               onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
@@ -280,7 +267,7 @@ export default function Home() {
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

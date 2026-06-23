@@ -46,7 +46,6 @@ export default function ResultPanel({
   const [copied, setCopied] = useState(false);
 
   const isDone = data.status === 'completed' || data.status === 'failed';
-  const isCompleted = data.status === 'completed';
   const videoUrl = data.video_url;
   const qrUrl = data.qr_code_url;
   const videoPageUrl = data.video_page_url || `${window.location.origin}/video/${data.request_id}`;
@@ -71,7 +70,10 @@ export default function ResultPanel({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-background">
+      {/* Brand moment — confined four-color wash in the bottom-right corner */}
+      <div className="ai-gradient-corner ai-gradient-corner--br" aria-hidden />
+
       <AppHeader
         actions={
           <Button variant="outline" size="sm" onClick={onReset}>
@@ -80,11 +82,8 @@ export default function ResultPanel({
         }
       />
 
-      <div className="relative overflow-hidden">
-        {/* Success brand moment — confined four-color wash, bottom-right only */}
-        {isCompleted && <div className="ai-gradient-corner ai-gradient-corner--br" aria-hidden />}
-
-        <div className="relative mx-auto max-w-5xl px-6 py-8">
+      <div className="relative z-10 min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-6xl px-6 py-8 lg:px-10">
           <StatusBanner status={data.status} progress={data.progress} requestId={data.request_id} />
 
           <div className="mt-6 grid gap-8 lg:grid-cols-3">

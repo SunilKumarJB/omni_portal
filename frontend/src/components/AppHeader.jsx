@@ -5,7 +5,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 /**
  * Monochrome portal mark. Uses currentColor so it inverts cleanly with the theme.
  */
-function PortalMark() {
+export function PortalMark() {
   return (
     <span className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-foreground text-background">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -21,9 +21,9 @@ function PortalMark() {
  * The four-color accent, used here as the single sanctioned "pop of color" in an
  * otherwise black-and-white shell (GML "Four Color Accent" usage).
  */
-function GcpBadge() {
+export function GcpBadge() {
   return (
-    <span className="hidden sm:flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5">
+    <span className="hidden items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1.5 sm:flex">
       <svg width="11" height="11" viewBox="0 0 10 10" fill="none" aria-hidden>
         <circle cx="2.5" cy="2.5" r="2.5" fill="#2986FF" />
         <circle cx="7.5" cy="2.5" r="2.5" fill="#EA4335" />
@@ -36,14 +36,14 @@ function GcpBadge() {
 }
 
 /**
- * Shared application header used across Home, ResultPanel and VideoView.
- * `actions` renders custom controls (e.g. test-mode switch, "Create another")
- * to the left of the persistent theme toggle.
+ * Blended top bar for non-wizard pages (Result, Video). No border or solid fill —
+ * it sits transparently on the canvas so it reads as part of the page, not a chrome bar.
+ * Renders as a flex child (not sticky) so it composes inside fixed-viewport layouts.
  */
 export default function AppHeader({ actions = null, showGcpBadge = true }) {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
+    <header className="relative z-10 shrink-0">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-6 lg:px-10">
         <Link to="/" className="flex items-center gap-3 rounded-full focus-visible:outline-none">
           <PortalMark />
           <span className="text-[15px] font-semibold tracking-tight text-foreground">

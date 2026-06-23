@@ -101,7 +101,7 @@ function TemplateThumbnail({ tpl }) {
   }
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: videoReady ? 220 : 'auto' }}>
+    <div className="relative w-full overflow-hidden" style={{ height: videoReady ? 150 : 'auto' }}>
       {/* Accent strip shown until video loads (per-template "customer tone" nod) */}
       {!videoReady && <div className="h-0.5 w-full" style={{ background: tpl.accent }} />}
 
@@ -114,7 +114,7 @@ function TemplateThumbnail({ tpl }) {
         loop
         playsInline
         className="w-full object-cover transition-opacity duration-300"
-        style={{ height: 220, opacity: videoReady ? 1 : 0 }}
+        style={{ height: 150, opacity: videoReady ? 1 : 0 }}
         onCanPlay={() => setVideoReady(true)}
         onError={() => setVideoReady(false)}
       />
@@ -155,7 +155,7 @@ export default function PromptSelector({
   const isCustom = selectedTemplate?.id === 'custom';
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <StepHeading eyebrow="Step 1 of 5" title="Choose your scenario">
         Pick a cinematic world or write your own.{' '}
         <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] not-italic text-foreground">
@@ -165,7 +165,7 @@ export default function PromptSelector({
       </StepHeading>
 
       {/* Template grid */}
-      <div className="mb-8 grid gap-3 sm:grid-cols-2">
+      <div className="mb-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {VIDEO_TEMPLATES.map((tpl) => {
           const selected = selectedTemplate?.id === tpl.id;
           const isOpen = expanded === tpl.id;

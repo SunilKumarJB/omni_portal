@@ -132,19 +132,6 @@ export default function Home() {
     );
   }
 
-  if (generationState === 'done' && requestData) {
-    return (
-      <ResultPanel
-        requestData={requestData}
-        selectedTemplate={selectedTemplate}
-        dialogueText={dialogueText}
-        selectedLanguage={selectedLanguage}
-        testMode={testMode}
-        onReset={handleReset}
-      />
-    );
-  }
-
   return (
     <div className="relative flex h-dvh overflow-hidden bg-background">
       {/* Primary brand moment — four-color AI gradient hugging the top edge */}
@@ -152,7 +139,7 @@ export default function Home() {
 
       <SideRail
         steps={STEPS}
-        currentStep={currentStep}
+        currentStep={generationState === 'done' ? 6 : currentStep}
         testMode={testMode}
         setTestMode={setTestMode}
       />
@@ -192,55 +179,70 @@ export default function Home() {
         </div>
 
         {/* Scrollable step content — the only scroll region; page size stays constant */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 lg:px-16 lg:py-12">
-          {/* Keyed wrapper replays the entrance animation on each step change */}
-          <div key={currentStep} className="animate-step-in">
-            {currentStep === 1 && (
-              <PromptSelector
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 lg:px-16 lg:py-12 flex flex-col">
+          {/* Keyed wrapper replays the entrance animation on each step/result transition */}
+          <div
+            key={generationState === 'done' ? 'result' : currentStep}
+            className="animate-step-in my-auto w-full"
+          >
+            {generationState === 'done' && requestData ? (
+              <ResultPanel
+                requestData={requestData}
                 selectedTemplate={selectedTemplate}
-                setSelectedTemplate={setSelectedTemplate}
-                videoPrompt={videoPrompt}
-                setVideoPrompt={setVideoPrompt}
-              />
-            )}
-            {currentStep === 2 && (
-              <DialogueSelector
-                selectedTemplate={selectedTemplate}
-                selectedLanguage={selectedLanguage}
-                setSelectedLanguage={setSelectedLanguage}
-                dialogueText={dialogueText}
-                setDialogueText={setDialogueText}
-              />
-            )}
-            {currentStep === 3 && (
-              <CharacterSelector
-                selectedCharacter={selectedCharacter}
-                setSelectedCharacter={setSelectedCharacter}
-                characterImageFile={characterImageFile}
-                setCharacterImageFile={setCharacterImageFile}
-              />
-            )}
-            {currentStep === 4 && (
-              <AudioSelector
-                selectedAudio={selectedAudio}
-                setSelectedAudio={setSelectedAudio}
-                audioFile={audioFile}
-                setAudioFile={setAudioFile}
-              />
-            )}
-            {currentStep === 5 && (
-              <ReviewGenerate
-                testMode={testMode}
-                selectedTemplate={selectedTemplate}
-                videoPrompt={videoPrompt}
                 dialogueText={dialogueText}
                 selectedLanguage={selectedLanguage}
-                selectedCharacter={selectedCharacter}
-                characterImageFile={characterImageFile}
-                selectedAudio={selectedAudio}
-                audioFile={audioFile}
-                onGenerate={handleGenerate}
+                onReset={handleReset}
               />
+            ) : (
+              <>
+                {currentStep === 1 && (
+                  <PromptSelector
+                    selectedTemplate={selectedTemplate}
+                    setSelectedTemplate={setSelectedTemplate}
+                    videoPrompt={videoPrompt}
+                    setVideoPrompt={setVideoPrompt}
+                  />
+                )}
+                {currentStep === 2 && (
+                  <DialogueSelector
+                    selectedTemplate={selectedTemplate}
+                    selectedLanguage={selectedLanguage}
+                    setSelectedLanguage={setSelectedLanguage}
+                    dialogueText={dialogueText}
+                    setDialogueText={setDialogueText}
+                  />
+                )}
+                {currentStep === 3 && (
+                  <CharacterSelector
+                    selectedCharacter={selectedCharacter}
+                    setSelectedCharacter={setSelectedCharacter}
+                    characterImageFile={characterImageFile}
+                    setCharacterImageFile={setCharacterImageFile}
+                  />
+                )}
+                {currentStep === 4 && (
+                  <AudioSelector
+                    selectedAudio={selectedAudio}
+                    setSelectedAudio={setSelectedAudio}
+                    audioFile={audioFile}
+                    setAudioFile={setAudioFile}
+                  />
+                )}
+                {currentStep === 5 && (
+                  <ReviewGenerate
+                    testMode={testMode}
+                    selectedTemplate={selectedTemplate}
+                    videoPrompt={videoPrompt}
+                    dialogueText={dialogueText}
+                    selectedLanguage={selectedLanguage}
+                    selectedCharacter={selectedCharacter}
+                    characterImageFile={characterImageFile}
+                    selectedAudio={selectedAudio}
+                    audioFile={audioFile}
+                    onGenerate={handleGenerate}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>

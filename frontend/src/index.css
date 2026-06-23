@@ -97,6 +97,29 @@
 }
 
 @layer base {
+  html {
+    font-size: 16px;
+    transition: font-size 0.15s ease-in-out;
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      font-size: 18px;
+    }
+  }
+
+  @media (min-width: 1440px) {
+    html {
+      font-size: 19.5px;
+    }
+  }
+
+  @media (min-width: 1800px) {
+    html {
+      font-size: 21px;
+    }
+  }
+
   * {
     @apply border-border;
     box-sizing: border-box;
@@ -193,6 +216,129 @@
   /* The crisp 4-color brand line, used as a thin hairline accent (e.g. atop the hero card) */
   .ai-gradient-line {
     background: var(--gml-ai-gradient);
+  }
+
+  /* Google brand color glowing orb animation (for rendering states) */
+  .orb-container {
+    position: relative;
+    width: 208px;
+    height: 208px;
+    border-radius: 50%;
+    background: #000000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+      0 15px 35px -10px rgba(0, 0, 0, 0.8),
+      inset 0 0 20px rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .orb-blob {
+    position: absolute;
+    width: 170px;
+    height: 170px;
+    mix-blend-mode: screen;
+    opacity: 0.85;
+    filter: blur(10px);
+    will-change: border-radius, transform;
+  }
+
+  .orb-blob-blue {
+    background: radial-gradient(circle at 35% 35%, rgba(41, 130, 255, 0.95) 0%, rgba(0, 0, 0, 0) 70%);
+    animation: morph-blue 8s ease-in-out infinite, spin-clockwise 20s linear infinite;
+  }
+
+  .orb-blob-red {
+    background: radial-gradient(circle at 65% 65%, rgba(234, 67, 53, 0.95) 0%, rgba(0, 0, 0, 0) 70%);
+    animation: morph-red 9s ease-in-out infinite, spin-counter-clockwise 25s linear infinite;
+  }
+
+  .orb-blob-yellow {
+    background: radial-gradient(circle at 25% 75%, rgba(250, 180, 10, 0.85) 0%, rgba(0, 0, 0, 0) 70%);
+    animation: morph-yellow 7s ease-in-out infinite, spin-clockwise 18s linear infinite;
+  }
+
+  .orb-blob-green {
+    background: radial-gradient(circle at 75% 25%, rgba(46, 186, 83, 0.9) 0%, rgba(0, 0, 0, 0) 70%);
+    animation: morph-green 10s ease-in-out infinite, spin-counter-clockwise 22s linear infinite;
+  }
+
+  /* Bright central light-source overlay to create a 3D glass bulb effect */
+  .orb-core {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.3) 30%, rgba(41, 134, 255, 0.1) 60%, transparent 100%);
+    filter: blur(4px);
+    border-radius: 50%;
+    animation: pulse-core 4s ease-in-out infinite;
+    mix-blend-mode: overlay;
+    z-index: 5;
+  }
+
+  @keyframes morph-blue {
+    0%, 100% {
+      border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+      transform: scale(1);
+    }
+    33% {
+      border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%;
+      transform: scale(1.08) translate(6px, 6px);
+    }
+    66% {
+      border-radius: 50% 50% 30% 70% / 40% 60% 40% 60%;
+      transform: scale(0.92) translate(-6px, 3px);
+    }
+  }
+
+  @keyframes morph-red {
+    0%, 100% {
+      border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%;
+      transform: scale(1.05);
+    }
+    50% {
+      border-radius: 40% 60% 70% 30% / 45% 45% 55% 55%;
+      transform: scale(0.88) translate(-6px, -6px);
+    }
+  }
+
+  @keyframes morph-yellow {
+    0%, 100% {
+      border-radius: 50% 50% 30% 70% / 40% 60% 40% 60%;
+      transform: scale(0.88);
+    }
+    50% {
+      border-radius: 60% 40% 70% 30% / 50% 50% 50% 50%;
+      transform: scale(1.08) translate(5px, -5px);
+    }
+  }
+
+  @keyframes morph-green {
+    0%, 100% {
+      border-radius: 60% 40% 70% 30% / 50% 50% 50% 50%;
+      transform: scale(1);
+    }
+    50% {
+      border-radius: 42% 58% 30% 70% / 45% 45% 55% 55%;
+      transform: scale(1.12) translate(-4px, 4px);
+    }
+  }
+
+  @keyframes spin-clockwise {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes spin-counter-clockwise {
+    0% { transform: rotate(360deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  @keyframes pulse-core {
+    0%, 100% { transform: scale(1); opacity: 0.95; }
+    50% { transform: scale(1.12); opacity: 1; }
   }
 }
 

@@ -166,187 +166,260 @@ export default function AudioSelector({
       .padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <StepHeading eyebrow="Step 4 of 5 · Optional" title="Set the mood">
+    <div className="mx-auto max-w-[1360px] space-y-6">
+      <StepHeading eyebrow="Step 4 of 5 · Optional" title="Set the mood" className="mb-0">
         Choose a soundtrack or record / upload your own. Skip to generate without audio.
       </StepHeading>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="mb-6">
-          {TABS.map(({ id, label }) => (
-            <TabsTrigger key={id} value={id}>
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <div className="grid gap-6 lg:grid-cols-12 items-start">
+        {/* Left Column: Tabs & Selector */}
+        <div className="lg:col-span-7 space-y-4">
+          <Tabs value={tab} onValueChange={setTab} className="w-full">
+            <TabsList className="mb-4">
+              {TABS.map(({ id, label }) => (
+                <TabsTrigger key={id} value={id} className="text-xs py-2">
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-        {/* Presets */}
-        <TabsContent value="preset">
-          <div className="grid gap-2 sm:grid-cols-2">
-            {PRESET_AUDIO.map((a) => {
-              const active = selectedAudio?.id === a.id;
-              return (
-                <div key={a.id} className="flex flex-col gap-0">
-                  <button
-                    onClick={() => selectPreset(a)}
-                    className={cn(
-                      'flex items-center gap-4 rounded-lg border bg-card p-4 text-left transition-all duration-200',
-                      active
-                        ? 'border-foreground ring-1 ring-foreground'
-                        : 'border-border hover:border-foreground/30 hover:bg-accent/40 hover:shadow-lg hover:shadow-black/5',
-                      active && a.src && 'rounded-b-none border-b-0',
-                    )}
-                  >
-                    <div
+            {/* Presets */}
+            <TabsContent value="preset" className="mt-0 focus-visible:outline-none">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {PRESET_AUDIO.map((a) => {
+                  const active = selectedAudio?.id === a.id;
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => selectPreset(a)}
                       className={cn(
-                        'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border',
+                        'flex items-center gap-4 rounded-lg border bg-card p-4 text-left transition-all duration-200',
                         active
-                          ? 'border-foreground/40 bg-foreground/10'
-                          : 'border-border bg-muted/50',
+                          ? 'border-foreground ring-1 ring-foreground'
+                          : 'border-border hover:border-foreground/30 hover:bg-accent/40 hover:shadow-lg hover:shadow-black/5',
                       )}
                     >
                       <div
                         className={cn(
-                          'h-2.5 w-2.5 rounded-full',
-                          active ? 'bg-foreground' : 'bg-muted-foreground',
+                          'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border',
+                          active
+                            ? 'border-foreground/40 bg-foreground/10'
+                            : 'border-border bg-muted/50',
                         )}
-                      />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-foreground">{a.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {a.mood} · {a.bpm} BPM
+                      >
+                        <div
+                          className={cn(
+                            'h-2 w-2 rounded-full',
+                            active ? 'bg-foreground' : 'bg-muted-foreground',
+                          )}
+                        />
                       </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold text-foreground truncate">
+                          {a.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {a.mood} · {a.bpm} BPM
+                        </div>
+                      </div>
+
+                      <MiniWave active={active} />
+                    </button>
+                  );
+                })}
+              </div>
+            </TabsContent>
+
+            {/* Record */}
+            <TabsContent value="record" className="mt-0 focus-visible:outline-none">
+              <div className="mx-auto max-w-xs text-center">
+                {!recBlob ? (
+                  <div className="space-y-5 rounded-lg border border-border bg-card py-12">
+                    <div
+                      className={cn(
+                        'mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 transition-all',
+                        recording
+                          ? 'border-destructive bg-destructive/10 animate-pulse'
+                          : 'border-border bg-muted/50',
+                      )}
+                    >
+                      {recording ? (
+                        <MicOff className="h-8 w-8 text-destructive" />
+                      ) : (
+                        <Mic className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
+                      )}
                     </div>
 
-                    <MiniWave active={active} />
+                    {recording && (
+                      <div className="font-mono text-2xl tabular-nums text-destructive font-bold">
+                        {fmt(recTime)}
+                      </div>
+                    )}
 
-                    {active && <Check className="h-4 w-4 flex-shrink-0 text-foreground" />}
-                  </button>
+                    {recording ? (
+                      <Button variant="destructive" size="sm" onClick={stopRec}>
+                        Stop recording
+                      </Button>
+                    ) : (
+                      <Button size="sm" onClick={startRec}>
+                        Start recording
+                      </Button>
+                    )}
 
-                  {active && a.src && (
-                    <div className="rounded-b-lg border border-t-0 border-foreground/30 bg-foreground/[0.03] px-3 pb-3">
-                      <audio
-                        src={a.src}
-                        controls
-                        className="h-8 w-full"
-                        onError={(e) => {
-                          e.currentTarget.parentElement.style.display = 'none';
-                        }}
-                      />
+                    {recording && (
+                      <p className="text-xs xl:text-sm text-muted-foreground">
+                        Speak now — click Stop when done
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4 rounded-lg border border-border bg-card p-5">
+                    <div className="flex items-center justify-center gap-2 text-xs text-success font-semibold">
+                      <Check className="h-4 w-4" /> Recorded successfully ({fmt(recTime)})
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </TabsContent>
-
-        {/* Record */}
-        <TabsContent value="record">
-          <div className="mx-auto max-w-xs text-center">
-            {!recBlob ? (
-              <div className="space-y-5 rounded-lg border border-border bg-card py-12">
-                <div
-                  className={cn(
-                    'mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 transition-all',
-                    recording
-                      ? 'border-destructive bg-destructive/10'
-                      : 'border-border bg-muted/50',
-                  )}
-                >
-                  {recording ? (
-                    <MicOff className="h-8 w-8 text-destructive" />
-                  ) : (
-                    <Mic className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
-                  )}
-                </div>
-
-                {recording && (
-                  <div className="font-mono text-2xl tabular-nums text-destructive">
-                    {fmt(recTime)}
+                    <audio src={recBlob} controls className="h-8 w-full" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setRecBlob(null);
+                        setAudioFile(null);
+                        setRecTime(0);
+                      }}
+                    >
+                      Record again
+                    </Button>
                   </div>
                 )}
-
-                {recording ? (
-                  <Button variant="destructive" onClick={stopRec}>
-                    Stop recording
-                  </Button>
-                ) : (
-                  <Button onClick={startRec}>Start recording</Button>
-                )}
-
-                {recording && (
-                  <p className="text-xs text-muted-foreground">Speak now — click Stop when done</p>
-                )}
               </div>
-            ) : (
-              <div className="space-y-4 rounded-lg border border-border bg-card p-5">
-                <div className="flex items-center justify-center gap-2 text-sm text-success">
-                  <Check className="h-4 w-4" /> Recorded ({fmt(recTime)})
+            </TabsContent>
+
+            {/* Upload */}
+            <TabsContent value="upload" className="mt-0 focus-visible:outline-none">
+              <div
+                className="mx-auto max-w-xs cursor-pointer rounded-lg border border-dashed border-border bg-card text-center transition-all duration-200 hover:border-foreground/30 hover:bg-accent/40"
+                onClick={() => fileRef.current?.click()}
+              >
+                {!uploadUrl ? (
+                  <div className="space-y-3 px-6 py-14">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-border bg-muted/50">
+                      <Upload className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
+                    </div>
+                    <p className="font-semibold text-sm text-foreground">Upload audio file</p>
+                    <p className="text-xs text-muted-foreground">MP3 · WAV · OGG · WebM</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 px-6 py-8">
+                    <div className="flex items-center justify-center gap-2 text-xs text-success font-semibold">
+                      <Check className="h-4 w-4" /> Audio ready
+                    </div>
+                    <audio
+                      src={uploadUrl}
+                      controls
+                      className="h-8 w-full"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setUploadUrl(null);
+                        setAudioFile(null);
+                      }}
+                    >
+                      Change audio file
+                    </Button>
+                  </div>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={(e) => handleUpload(e.target.files[0])}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Right Column: Active soundtrack card (Aligns visually with the grid content, skipping the tab bar height) */}
+        <div className="lg:col-span-5 lg:sticky lg:top-4 lg:pt-[52px]">
+          {selectedAudio || audioFile ? (
+            <div className="rounded-lg border border-border bg-card p-5 space-y-4 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                Active Soundtrack
+              </div>
+
+              {selectedAudio && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-foreground/10 bg-foreground/5 text-foreground">
+                      <Mic className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-foreground">{selectedAudio.name}</h3>
+                      <p className="text-xs xl:text-sm text-muted-foreground mt-0.5">
+                        {selectedAudio.mood} · {selectedAudio.bpm} BPM
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-border bg-muted/20 p-2">
+                    <audio src={selectedAudio.src} controls className="h-8 w-full" />
+                  </div>
                 </div>
-                <audio src={recBlob} controls className="h-8 w-full" />
+              )}
+
+              {audioFile && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-success/10 bg-success/5 text-success">
+                      <Check className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-foreground">Custom Soundtrack</h3>
+                      <p className="text-xs xl:text-sm text-muted-foreground mt-0.5">
+                        {recBlob ? 'Recorded Voice Clip' : 'Uploaded File'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-border bg-muted/20 p-2">
+                    <audio src={recBlob || uploadUrl} controls className="h-8 w-full" />
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-border/60">
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="w-full text-xs text-muted-foreground hover:text-foreground"
                   onClick={() => {
-                    setRecBlob(null);
+                    setSelectedAudio(null);
                     setAudioFile(null);
-                    setRecTime(0);
+                    setRecBlob(null);
+                    setUploadUrl(null);
                   }}
                 >
-                  Record again
+                  Remove Audio
                 </Button>
               </div>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* Upload */}
-        <TabsContent value="upload">
-          <div
-            className="mx-auto max-w-xs cursor-pointer rounded-lg border border-dashed border-border bg-card text-center transition-all duration-200 hover:border-foreground/30 hover:bg-accent/40"
-            onClick={() => fileRef.current?.click()}
-          >
-            {!uploadUrl ? (
-              <div className="space-y-3 px-6 py-14">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-border bg-muted/50">
-                  <Upload className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
-                </div>
-                <p className="font-medium text-foreground">Upload audio file</p>
-                <p className="text-xs text-muted-foreground">MP3 · WAV · OGG · WebM</p>
-              </div>
-            ) : (
-              <div className="space-y-3 px-6 py-6">
-                <div className="flex items-center justify-center gap-2 text-sm text-success">
-                  <Check className="h-4 w-4" /> Audio ready
-                </div>
-                <audio
-                  src={uploadUrl}
-                  controls
-                  className="h-8 w-full"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="audio/*"
-              className="hidden"
-              onChange={(e) => handleUpload(e.target.files[0])}
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {(selectedAudio || audioFile) && (
-        <div className="mt-6 flex items-center gap-2 text-sm text-success">
-          <Check className="h-4 w-4 flex-shrink-0" />
-          {selectedAudio ? selectedAudio.name : 'Custom audio ready'}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/50 p-12 text-center min-h-[200px]">
+              <p className="font-semibold text-sm text-foreground">No audio selected</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[240px] leading-relaxed">
+                Choose a preset soundtrack or add your own audio. Skip if you want the generated
+                video to be silent.
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

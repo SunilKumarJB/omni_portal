@@ -63,13 +63,7 @@ export default {
         sm: 'calc(var(--radius) - 8px)',
       },
       fontFamily: {
-        display: [
-          '"Google Sans Display"',
-          '"Google Sans"',
-          'Poppins',
-          'system-ui',
-          'sans-serif',
-        ],
+        display: ['"Google Sans Display"', '"Google Sans"', 'Poppins', 'system-ui', 'sans-serif'],
         sans: ['"Google Sans Text"', '"Google Sans"', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['"Google Sans Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },

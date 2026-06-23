@@ -12,6 +12,32 @@ import { cn } from '@/lib/utils';
  * and the session controls. Transparent so the page's top brand gradient shows
  * through behind it.
  */
+const STEP_THEMES = {
+  1: {
+    color: '#2EBA53', // Google Green
+    bgDone: '#2EBA53',
+    textDone: '#ffffff',
+  },
+  2: {
+    color: '#FFC30E', // Google Yellow
+    bgDone: '#FFC30E',
+    textDone: '#000000',
+  },
+  3: {
+    color: '#EA4335', // Google Red
+    bgDone: '#EA4335',
+    textDone: '#ffffff',
+  },
+  4: {
+    color: '#2986FF', // Google Blue
+    bgDone: '#2986FF',
+    textDone: '#ffffff',
+  },
+  5: {
+    isGradient: true,
+  },
+};
+
 export default function SideRail({ steps, currentStep, testMode, setTestMode }) {
   return (
     <aside className="relative z-10 hidden w-80 shrink-0 flex-col border-r border-border/60 px-8 py-9 lg:flex xl:w-96">
@@ -32,42 +58,89 @@ export default function SideRail({ steps, currentStep, testMode, setTestMode }) 
           </p>
         </div>
 
-        <nav aria-label="Progress" className="mt-12 flex-1">
-          <ol>
+        <nav aria-label="Progress" className="my-8 flex flex-1 flex-col justify-center">
+          <ol className="space-y-1">
             {steps.map((step, i) => {
               const done = currentStep > step.id;
               const active = currentStep === step.id;
               const last = i === steps.length - 1;
+              const theme = STEP_THEMES[step.id];
+
               return (
-                <li key={step.id} className="flex gap-4">
+                <li key={step.id} className="flex gap-5">
                   <div className="flex flex-col items-center">
-                    <span
-                      className={cn(
-                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors duration-300',
-                        done && 'bg-success text-success-foreground',
-                        active && 'border-2 border-foreground bg-foreground/5 text-foreground',
-                        !done && !active && 'border border-border text-muted-foreground',
-                      )}
-                    >
-                      {done ? <Check className="h-4 w-4" strokeWidth={2.5} /> : step.id}
-                    </span>
-                    {!last && (
+                    {theme.isGradient ? (
                       <span
                         className={cn(
-                          'my-1.5 w-px flex-1 transition-colors duration-300',
-                          done ? 'bg-foreground/30' : 'bg-border',
+                          'relative flex h-11 w-11 shrink-0 rounded-full p-[2px] transition-all duration-300',
+                          active && 'scale-105 shadow-md shadow-foreground/5',
+                          done && 'scale-105',
                         )}
-                        style={{ minHeight: 26 }}
+                        style={{
+                          background:
+                            active || done
+                              ? 'linear-gradient(135deg, #2EBA53, #FFC30E, #EA4335, #2986FF)'
+                              : 'var(--border)',
+                        }}
+                      >
+                        <span
+                          className={cn(
+                            'flex h-full w-full items-center justify-center rounded-full text-base font-bold transition-colors duration-300',
+                            active
+                              ? 'bg-background text-foreground'
+                              : done
+                                ? 'bg-gradient-to-br from-[#2EBA53] via-[#EA4335] to-[#2986FF] text-white'
+                                : 'bg-background text-muted-foreground',
+                          )}
+                        >
+                          {done ? <Check className="h-5 w-5" strokeWidth={3} /> : step.id}
+                        </span>
+                      </span>
+                    ) : (
+                      <span
+                        className={cn(
+                          'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-bold transition-all duration-300',
+                          active && 'scale-105 shadow-md shadow-foreground/5',
+                          done && 'scale-105',
+                        )}
+                        style={{
+                          border: active
+                            ? `2px solid ${theme.color}`
+                            : done
+                              ? 'none'
+                              : '1px solid var(--border)',
+                          backgroundColor: active
+                            ? `${theme.color}14`
+                            : done
+                              ? theme.bgDone
+                              : 'transparent',
+                          color: active
+                            ? theme.color
+                            : done
+                              ? theme.textDone
+                              : 'var(--muted-foreground)',
+                        }}
+                      >
+                        {done ? <Check className="h-5 w-5" strokeWidth={3} /> : step.id}
+                      </span>
+                    )}
+                    {!last && (
+                      <span
+                        className="my-2 w-0.5 flex-1 transition-colors duration-300"
+                        style={{
+                          minHeight: 36,
+                          backgroundColor: done ? theme.color : 'var(--border)',
+                        }}
                       />
                     )}
                   </div>
-                  <div className={cn('pt-1.5', last ? 'pb-0' : 'pb-6')}>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+                  <div className={cn('pt-0.5', last ? 'pb-0' : 'pb-8')}>
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">
                       Step {step.id}
                     </div>
                     <div
                       className={cn(
-                        'text-[15px] font-medium leading-tight transition-colors',
+                        'text-lg font-bold tracking-tight transition-colors duration-200 mt-0.5',
                         active
                           ? 'text-foreground'
                           : done
@@ -84,7 +157,7 @@ export default function SideRail({ steps, currentStep, testMode, setTestMode }) 
           </ol>
         </nav>
 
-        <div className="mt-6 flex items-center justify-between border-t border-border/60 pt-6">
+        <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-6">
           <div className="flex select-none items-center gap-2">
             <FlaskConical className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">Test mode</span>

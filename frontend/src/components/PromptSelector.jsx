@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronUp, MapPin, PenLine, Play } from 'lucide-react';
+import { Check, MapPin, PenLine, Play, Sparkles } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -101,7 +101,7 @@ function TemplateThumbnail({ tpl }) {
   }
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: videoReady ? 168 : 'auto' }}>
+    <div className="relative w-full overflow-hidden aspect-video bg-muted/25">
       {/* Accent strip shown until video loads (per-template "customer tone" nod) */}
       {!videoReady && <div className="h-0.5 w-full" style={{ background: tpl.accent }} />}
 
@@ -113,8 +113,8 @@ function TemplateThumbnail({ tpl }) {
         autoPlay
         loop
         playsInline
-        className="w-full object-cover transition-opacity duration-300"
-        style={{ height: 168, opacity: videoReady ? 1 : 0 }}
+        className="w-full h-full object-cover transition-opacity duration-300"
+        style={{ opacity: videoReady ? 1 : 0 }}
         onCanPlay={() => setVideoReady(true)}
         onError={() => setVideoReady(false)}
       />
@@ -127,7 +127,7 @@ function TemplateThumbnail({ tpl }) {
               background: 'linear-gradient(to bottom, transparent 45%, rgba(0,0,0,0.55) 100%)',
             }}
           />
-          <div className="absolute bottom-1.5 right-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white">
+          <div className="absolute bottom-2.5 right-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs xl:text-sm font-bold text-white tracking-wider uppercase">
             <Play className="h-2.5 w-2.5 fill-current" />
             Preview
           </div>
@@ -144,8 +144,6 @@ export default function PromptSelector({
   videoPrompt,
   setVideoPrompt,
 }) {
-  const [expanded, setExpanded] = useState(null);
-
   function selectTemplate(tpl) {
     setSelectedTemplate(tpl);
     if (tpl.id !== 'custom') setVideoPrompt(tpl.prompt);
@@ -155,162 +153,189 @@ export default function PromptSelector({
   const isCustom = selectedTemplate?.id === 'custom';
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <StepHeading eyebrow="Step 1 of 5" title="Choose your scenario">
+    <div className="mx-auto max-w-[1360px] space-y-6">
+      <StepHeading eyebrow="Step 1 of 5" title="Choose your scenario" className="mb-0">
         Pick a cinematic world or write your own.{' '}
-        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] not-italic text-foreground">
+        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs xl:text-sm not-italic text-foreground">
           [REF_Character]
         </code>{' '}
         will be replaced by your character image.
       </StepHeading>
 
-      {/* Template grid */}
-      <div className="mb-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {VIDEO_TEMPLATES.map((tpl) => {
-          const selected = selectedTemplate?.id === tpl.id;
-          const isOpen = expanded === tpl.id;
+      <div className="grid gap-6 lg:grid-cols-12 items-start">
+        {/* Left Column: Dense grid of scenarios (3 columns on xl screens to fit 6 cards in 2 rows) */}
+        <div className="lg:col-span-7">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {VIDEO_TEMPLATES.map((tpl) => {
+              const selected = selectedTemplate?.id === tpl.id;
 
-          return (
-            <div
-              key={tpl.id}
-              className={cn(
-                'group relative flex flex-col overflow-hidden rounded-lg border bg-card transition-all duration-200',
-                'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background',
-                selected
-                  ? 'border-foreground ring-1 ring-foreground'
-                  : 'border-border hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-accent/40 hover:shadow-xl hover:shadow-black/5',
-              )}
-            >
-              {/* Stretched select button — covers the whole card, sits beneath the
-                  content layer so the nested "Preview prompt" button stays usable. */}
-              <button
-                type="button"
-                aria-label={`Select scenario: ${tpl.title}`}
-                aria-pressed={selected}
-                onClick={() => selectTemplate(tpl)}
-                className="absolute inset-0 z-0 cursor-pointer focus:outline-none"
-              />
+              return (
+                <div
+                  key={tpl.id}
+                  className={cn(
+                    'group relative flex flex-col overflow-hidden rounded-xl border bg-card transition-all duration-200',
+                    'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background',
+                    selected
+                      ? 'border-foreground ring-1 ring-foreground'
+                      : 'border-border hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-accent/40 hover:shadow-lg hover:shadow-black/5',
+                  )}
+                >
+                  <button
+                    type="button"
+                    aria-label={`Select scenario: ${tpl.title}`}
+                    aria-pressed={selected}
+                    onClick={() => selectTemplate(tpl)}
+                    className="absolute inset-0 z-0 cursor-pointer focus:outline-none"
+                  />
 
-              <div className="pointer-events-none relative z-10">
-                <TemplateThumbnail tpl={tpl} />
+                  <div className="pointer-events-none relative z-10">
+                    <TemplateThumbnail tpl={tpl} />
 
-                <div className="space-y-3 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-xl leading-none">{tpl.emoji}</span>
-                      <div>
-                        <div className="mb-0.5 font-mono text-[10px] text-muted-foreground/60">
-                          {tpl.number}
+                    <div className="space-y-2.5 p-4 xl:p-4.5">
+                      <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg xl:text-xl 2xl:text-2xl leading-none">
+                            {tpl.emoji}
+                          </span>
+                          <div>
+                            <div className="mb-0.5 font-mono text-xs text-muted-foreground/60">
+                              {tpl.number}
+                            </div>
+                            <div className="text-sm xl:text-base font-bold leading-tight text-foreground line-clamp-1">
+                              {tpl.title}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-[15px] font-semibold leading-tight text-foreground">
-                          {tpl.title}
-                        </div>
+                        {selected && (
+                          <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-foreground">
+                            <Check className="h-2.5 w-2.5 text-background" strokeWidth={3.5} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="inline-block rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          {tpl.style.split(' · ')[0]}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                        <MapPin className="h-3 w-3 flex-shrink-0" style={{ color: tpl.accent }} />
+                        <span className="truncate">{tpl.location}</span>
                       </div>
                     </div>
-                    {selected && (
-                      <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-foreground">
-                        <Check className="h-3 w-3 text-background" strokeWidth={3} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Column: Active details + Editor */}
+        <div className="lg:col-span-5 lg:sticky lg:top-4 space-y-4">
+          {selectedTemplate ? (
+            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+              <TemplateThumbnail tpl={selectedTemplate} />
+              <div className="p-4 xl:p-5 space-y-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl xl:text-3xl leading-none">
+                      {selectedTemplate.emoji}
+                    </span>
+                    <div>
+                      <div className="mb-0.5 font-mono text-xs xl:text-sm text-muted-foreground/60">
+                        Scenario {selectedTemplate.number}
                       </div>
+                      <h3 className="text-base xl:text-lg 2xl:text-xl font-bold leading-tight text-foreground">
+                        {selectedTemplate.title}
+                      </h3>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-medium">
+                  <span className="rounded-full border border-border bg-muted/30 px-2.5 py-0.5 text-muted-foreground">
+                    {selectedTemplate.style}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <MapPin
+                      className="h-3.5 w-3.5 flex-shrink-0"
+                      style={{ color: selectedTemplate.accent }}
+                    />
+                    {selectedTemplate.location}
+                  </div>
+                </div>
+
+                {selectedTemplate.id !== 'custom' && selectedTemplate.dialogue && (
+                  <p
+                    className="border-l-2 pl-3 text-xs xl:text-sm italic leading-relaxed text-muted-foreground/90 font-medium"
+                    style={{ borderColor: `${selectedTemplate.accent}80` }}
+                  >
+                    "{selectedTemplate.dialogue}"
+                  </p>
+                )}
+
+                {/* Prompt Editor */}
+                <div className="pt-3.5 border-t border-border/60 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <PenLine className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs xl:text-sm font-bold uppercase tracking-wider text-muted-foreground/80">
+                        {isCustom ? 'Write your prompt' : 'Prompt (editable)'}
+                      </span>
+                    </div>
+                    {!isCustom && (
+                      <button
+                        onClick={() => setVideoPrompt(selectedTemplate.prompt)}
+                        className="text-xs xl:text-sm text-muted-foreground transition-colors hover:text-foreground underline underline-offset-2"
+                      >
+                        Reset to original
+                      </button>
                     )}
                   </div>
 
-                  <span className="inline-block rounded-full border border-border px-2.5 py-0.5 text-[10px] text-muted-foreground">
-                    {tpl.style}
-                  </span>
+                  <Textarea
+                    value={videoPrompt}
+                    onChange={(e) => setVideoPrompt(e.target.value)}
+                    placeholder={
+                      isCustom
+                        ? 'Describe your video: setting, action, camera style, lighting, mood…'
+                        : ''
+                    }
+                    rows={5}
+                    maxLength={1500}
+                    className="resize-none text-sm xl:text-base leading-relaxed bg-background"
+                  />
 
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3 flex-shrink-0" style={{ color: tpl.accent }} />
-                    {tpl.location}
+                  <div className="flex items-center justify-between text-xs xl:text-sm text-muted-foreground font-medium">
+                    {!isCustom && videoPrompt.includes('[REF_Character]') ? (
+                      <span>
+                        <code className="font-mono not-italic text-foreground">
+                          [REF_Character]
+                        </code>{' '}
+                        gets replaced by presenter
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="tabular-nums font-medium">{videoPrompt.length} / 1500</span>
                   </div>
-
-                  {tpl.id !== 'custom' ? (
-                    <p
-                      className="border-l-2 pl-3 text-xs italic leading-relaxed text-muted-foreground"
-                      style={{ borderColor: `${tpl.accent}80` }}
-                    >
-                      "{tpl.dialogue}"
-                    </p>
-                  ) : (
-                    <p className="text-xs leading-relaxed text-muted-foreground">{tpl.dialogue}</p>
-                  )}
-
-                  {tpl.id !== 'custom' && tpl.prompt && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpanded(isOpen ? null : tpl.id);
-                      }}
-                      className="pointer-events-auto relative z-10 flex items-center gap-1 rounded text-[10px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      {isOpen ? (
-                        <ChevronUp className="h-3 w-3" />
-                      ) : (
-                        <ChevronDown className="h-3 w-3" />
-                      )}
-                      {isOpen ? 'Hide prompt' : 'Preview prompt'}
-                    </button>
-                  )}
-
-                  {isOpen && tpl.id !== 'custom' && (
-                    <div className="mt-1 rounded-md border border-border bg-muted/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
-                      {tpl.prompt}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Prompt editor */}
-      {selectedTemplate && (
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <PenLine className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-sm text-foreground/80">
-                {isCustom ? 'Write your prompt' : 'Prompt (editable)'}
-              </span>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 p-12 text-center min-h-[350px]">
+              <div className="rounded-full border border-border bg-muted/60 p-4 mb-3">
+                <Sparkles className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="font-bold text-sm xl:text-base text-foreground">No scenario selected</p>
+              <p className="text-xs xl:text-sm text-muted-foreground mt-1.5 max-w-[240px] xl:max-w-[280px] leading-relaxed">
+                Choose a cinematic scenario from the left to start editing your prompt.
+              </p>
             </div>
-            {!isCustom && (
-              <button
-                onClick={() => setVideoPrompt(selectedTemplate.prompt)}
-                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Reset to original
-              </button>
-            )}
-          </div>
-
-          <Textarea
-            value={videoPrompt}
-            onChange={(e) => setVideoPrompt(e.target.value)}
-            placeholder={
-              isCustom ? 'Describe your video: setting, action, camera style, lighting, mood…' : ''
-            }
-            rows={5}
-            maxLength={1500}
-            className="resize-none"
-          />
-
-          <div className="flex items-center justify-between">
-            {!isCustom && videoPrompt.includes('[REF_Character]') && (
-              <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <code className="font-mono not-italic text-foreground">[REF_Character]</code> will
-                be replaced by your character image
-              </span>
-            )}
-            {isCustom && videoPrompt.length < 20 && (
-              <span className="text-xs text-destructive">Add more detail for better results</span>
-            )}
-            <span className="ml-auto text-xs text-muted-foreground/60">
-              {videoPrompt.length} / 1500
-            </span>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

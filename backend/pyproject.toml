@@ -29,6 +29,10 @@ dev = [
 [tool.uv]
 package = false
 
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+default = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

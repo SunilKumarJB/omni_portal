@@ -268,6 +268,12 @@ async def _run_generation(
 
         await db_service.update_request(request_id, {"progress": 30})
 
+        # Map Omni's 0..1 generation fraction onto the 30..85% band so the bar
+        # advances during the multi-minute model call instead of freezing at 30%.
+        async def _omni_progress(fraction: float):
+            pct = 30 + int(55 * fraction)
+            await db_service.update_request(request_id, {"progress": pct})
+
         try:
             # Primary generation attempt
             video_bytes, mime_type = await omni_service.generate_video(
@@ -284,6 +290,7 @@ async def _run_generation(
                 audio_mime=aud_mime,
                 source_video_bytes=source_video_bytes_data,
                 source_video_mime=src_mime,
+                progress_callback=_omni_progress,
             )
         except Exception as primary_exc:
             # If audio was provided and it failed, retry without audio as a silent fallback
@@ -316,6 +323,7 @@ async def _run_generation(
                         audio_mime=None,
                         source_video_bytes=source_video_bytes_data,
                         source_video_mime=src_mime,
+                        progress_callback=_omni_progress,
                     )
                 except Exception as fallback_exc:
                     raise RuntimeError(

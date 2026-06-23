@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import ANY, AsyncMock, patch
 from app.api.routes import generate
 
 
@@ -63,6 +63,7 @@ async def test_run_generation_zero_copy():
             audio_mime=None,
             source_video_bytes=None,
             source_video_mime=None,
+            progress_callback=ANY,
         )
 
         # 3. Assert DB updates were called correctly

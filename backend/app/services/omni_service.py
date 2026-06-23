@@ -7,7 +7,7 @@ import asyncio
 import base64
 import time
 from datetime import timezone
-from typing import Optional, Tuple
+from typing import Awaitable, Callable, Optional, Tuple
 
 import httpx
 import google.auth
@@ -194,11 +194,16 @@ async def generate_video(
     audio_mime: Optional[str] = None,
     source_video_bytes: Optional[bytes] = None,
     source_video_mime: Optional[str] = None,
+    progress_callback: Optional[Callable[[float], Awaitable[None]]] = None,
 ) -> Tuple[bytes, str]:
     """
     Generates video via Omni Interactions API.
     Returns (video_bytes, mime_type).
     Raises RuntimeError / TimeoutError on failure.
+
+    progress_callback: optional async fn called with a fraction in [0.0, 1.0]
+    on each poll tick so callers can surface live progress during the
+    multi-minute generation instead of a frozen bar.
     """
     if settings.TEST_MODE:
         await asyncio.sleep(3)
@@ -265,6 +270,15 @@ async def generate_video(
                 raise TimeoutError(
                     f"Omni video generation timed out after {settings.OMNI_MAX_WAIT_SECONDS}s"
                 )
+
+            if progress_callback is not None:
+                # Cap below 1.0 so the bar keeps moving but never claims "done"
+                # before the model actually returns the video.
+                fraction = min(elapsed / settings.OMNI_MAX_WAIT_SECONDS, 0.95)
+                try:
+                    await progress_callback(fraction)
+                except Exception:
+                    pass  # progress reporting must never break generation
 
             headers = await _auth_headers()
             # Reuse the same client session

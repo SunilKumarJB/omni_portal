@@ -6,6 +6,12 @@
 integration guidance. Goal: make the live (non-`TEST_MODE`) path correct and
 demo-safe. All changes below are scoped to `backend/`.
 
+**Current local-demo note:** the preferred laptop smoke-test path is the frontend
+**Test Mode** toggle in the side rail. That mode creates a completed mock request
+without calling GCP. Backend `TEST_MODE` remains a backend configuration concept,
+but the live wizard demo no longer depends on placing real GCP credentials on the
+local laptop.
+
 This document exists so every change can be understood and **reverted
 independently** if a demo environment behaves unexpectedly.
 

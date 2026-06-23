@@ -1,35 +1,29 @@
 import { Pencil, Quote, RotateCcw, Volume2 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
+import type { LanguageCode, VideoTemplate } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import StepHeading, { FieldLabel } from './StepHeading.jsx';
+import StepHeading, { FieldLabel } from './StepHeading';
 
-/* ── Types ─────────────────────────────────────────────────── */
+/* Types */
 
 interface Language {
-  code: string;
+  code: LanguageCode;
   name: string;
   native: string;
   script: string;
 }
 
-interface Template {
-  id: string;
-  title: string;
-  emoji: string;
-  accent: string;
-  dialogue: string;
-}
-
 interface Props {
-  selectedTemplate: Template | null;
-  selectedLanguage: string;
-  setSelectedLanguage: (code: string) => void;
+  selectedTemplate: VideoTemplate | null;
+  selectedLanguage: LanguageCode;
+  setSelectedLanguage: React.Dispatch<React.SetStateAction<LanguageCode>>;
   dialogueText: string;
-  setDialogueText: (text: string) => void;
+  setDialogueText: React.Dispatch<React.SetStateAction<string>>;
 }
 
-/* ── Language list ─────────────────────────────────────────── */
+/* Language list */
 
 const LANGUAGES: Language[] = [
   { code: 'en', name: 'English', native: 'English', script: 'Latin' },
@@ -44,9 +38,9 @@ const LANGUAGES: Language[] = [
   { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', script: 'Gurmukhi' },
 ];
 
-/* ── Dialogue translations per template ─────────────────────── */
+/* Dialogue translations per template */
 
-const DIALOGUES: Record<string, Record<string, string>> = {
+const DIALOGUES: Record<string, Record<LanguageCode, string>> = {
   cyberpunk: {
     en: 'They said the city never sleeps. Good… neither do I.',
     hi: 'उन्होंने कहा शहर कभी नहीं सोता। अच्छा… मैं भी नहीं सोता।',
@@ -121,7 +115,7 @@ const DIALOGUES: Record<string, Record<string, string>> = {
   },
 };
 
-/* ── Component ─────────────────────────────────────────────── */
+/* Component */
 
 export default function DialogueSelector({
   selectedTemplate,
@@ -145,7 +139,7 @@ export default function DialogueSelector({
     }
   }, [selectedLanguage, templateId]);
 
-  function handleLanguageSelect(code: string) {
+  function handleLanguageSelect(code: LanguageCode) {
     setSelectedLanguage(code);
     setEditing(false);
     setDialogueText(translations[code] ?? '');
@@ -159,19 +153,18 @@ export default function DialogueSelector({
   const isEdited = dialogueText !== translated && dialogueText !== '';
 
   return (
-    <div className="mx-auto max-w-[1360px] space-y-6">
+    <div className="mx-auto flex h-full w-full max-w-[1360px] flex-col gap-4">
       <StepHeading eyebrow="Step 2 of 5" title="Choose your dialogue" className="mb-0">
         Select a language — then edit the dialogue if you want to customise it.
       </StepHeading>
 
-      <div className="grid gap-6 lg:grid-cols-12 items-start">
-        {/* Left Column: Rich, larger language selector grid */}
-        <div className="lg:col-span-5 space-y-4">
-          <FieldLabel className="block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+      <div className="grid min-h-0 flex-1 items-stretch gap-4 lg:grid-cols-12">
+        <div className="flex min-h-0 flex-col rounded-xl border border-border bg-card/70 p-4 shadow-sm lg:col-span-5">
+          <FieldLabel className="mb-3 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
             Select language
           </FieldLabel>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2">
+          <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-5 gap-2.5">
             {LANGUAGES.map((lang) => {
               const active = selectedLanguage === lang.code;
               return (
@@ -179,22 +172,22 @@ export default function DialogueSelector({
                   key={lang.code}
                   onClick={() => handleLanguageSelect(lang.code)}
                   className={cn(
-                    'flex flex-col items-center justify-center gap-1.5 rounded-xl border p-4.5 xl:p-6 text-center transition-all duration-200',
+                    'flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-lg border px-3 py-2 text-center transition-all duration-200',
                     'hover:scale-[1.02] active:scale-98',
                     active
                       ? 'border-foreground bg-foreground/5 ring-1 ring-foreground shadow-sm'
-                      : 'border-border bg-card hover:border-foreground/30 hover:bg-accent/40 hover:shadow-md hover:shadow-black/5',
+                      : 'border-border bg-background/35 hover:border-foreground/30 hover:bg-accent/40 hover:shadow-md hover:shadow-black/5',
                   )}
                 >
                   <span
                     className={cn(
-                      'text-lg xl:text-xl 2xl:text-2xl font-bold leading-none transition-colors duration-150',
+                      'text-sm font-bold leading-none transition-colors duration-150 xl:text-base',
                       active ? 'text-foreground' : 'text-foreground/90',
                     )}
                   >
                     {lang.native}
                   </span>
-                  <span className="text-xs xl:text-sm text-muted-foreground font-semibold tracking-wide uppercase">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     {lang.name}
                   </span>
                 </button>
@@ -203,19 +196,16 @@ export default function DialogueSelector({
           </div>
         </div>
 
-        {/* Right Column: Live speech bubble, Editor, and Reference (Aligns visually with the first row of language cards, skipping the label height) */}
-        <div className="lg:col-span-7 space-y-4 lg:pt-8">
-          {/* ── Live Presenter Speech Preview (Fills vertical space with rich visual feedback) ── */}
-          <div className="rounded-xl border border-border bg-card p-5 xl:p-6 shadow-sm space-y-3 w-full min-w-0">
+        <div className="flex min-h-0 flex-col gap-3 lg:col-span-7">
+          <div className="w-full min-w-0 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
             <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
               Spoken Preview
             </div>
 
-            <div className="flex items-start gap-4 pt-1 w-full min-w-0">
-              {/* Presenter Avatar */}
-              <div className="flex flex-col items-center gap-2 flex-shrink-0">
+            <div className="flex w-full min-w-0 items-center gap-4 pt-2">
+              <div className="flex flex-shrink-0 flex-col items-center gap-2">
                 <div
-                  className="flex h-16 w-16 xl:h-20 xl:w-20 items-center justify-center rounded-full text-3xl xl:text-4xl shadow-md border transition-all duration-300 relative bg-background"
+                  className="relative flex h-14 w-14 items-center justify-center rounded-full border bg-background text-2xl shadow-md transition-all duration-300"
                   style={{
                     borderColor: selectedTemplate ? selectedTemplate.accent : 'var(--border)',
                     boxShadow: selectedTemplate ? `0 0 16px ${selectedTemplate.accent}25` : 'none',
@@ -230,15 +220,13 @@ export default function DialogueSelector({
                 </span>
               </div>
 
-              {/* Speech Bubble */}
-              <div className="relative flex-1 bg-muted/30 border border-border/60 rounded-xl p-4.5 xl:p-6 min-h-[76px] xl:min-h-[96px] flex items-center shadow-inner min-w-0">
-                {/* Speech bubble pointer */}
-                <div className="absolute top-6 xl:top-8 -left-2.5 h-0 w-0 border-y-8 border-y-transparent border-r-8 border-r-border/60" />
-                <div className="absolute top-6 xl:top-8 -left-2 h-0 w-0 border-y-[7px] border-y-transparent border-r-[7px] border-r-muted/30" />
+              <div className="relative flex min-h-[72px] min-w-0 flex-1 items-center rounded-xl border border-border/60 bg-muted/30 p-4 shadow-inner">
+                <div className="-left-2.5 absolute top-6 h-0 w-0 border-y-8 border-y-transparent border-r-8 border-r-border/60" />
+                <div className="-left-2 absolute top-6 h-0 w-0 border-y-[7px] border-y-transparent border-r-[7px] border-r-muted/30" />
 
                 <p
                   className={cn(
-                    'text-base xl:text-lg 2xl:text-xl leading-relaxed transition-all duration-200 w-full',
+                    'line-clamp-2 w-full text-base leading-relaxed transition-all duration-200',
                     dialogueText.trim()
                       ? 'text-foreground font-medium italic font-display'
                       : 'text-muted-foreground/60 italic text-xs xl:text-sm',
@@ -251,8 +239,7 @@ export default function DialogueSelector({
             </div>
           </div>
 
-          {/* ── Editable dialogue textarea ──────────────────── */}
-          <div className="space-y-3 rounded-xl border border-border bg-card p-5 shadow-sm">
+          <div className="space-y-3 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
@@ -284,10 +271,10 @@ export default function DialogueSelector({
                   ? `Write the spoken dialogue in ${currentLang.name}…`
                   : `Dialogue in ${currentLang.name}…`
               }
-              rows={4}
+              rows={3}
               maxLength={500}
               lang={selectedLanguage}
-              className="resize-none text-base leading-relaxed bg-background"
+              className="resize-none overflow-hidden bg-background text-sm leading-relaxed"
             />
 
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -302,11 +289,10 @@ export default function DialogueSelector({
             </div>
           </div>
 
-          {/* ── Original English dialogue card ──────────────── */}
           {selectedTemplate && selectedTemplate.id !== 'custom' && (
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-border bg-card/70 shadow-sm">
               <div className="h-0.5" style={{ background: selectedTemplate.accent }} />
-              <div className="flex gap-3 px-5 py-4">
+              <div className="flex gap-3 px-4 py-3">
                 <Quote
                   className="mt-0.5 h-4 w-4 flex-shrink-0"
                   style={{ color: selectedTemplate.accent }}
@@ -315,15 +301,16 @@ export default function DialogueSelector({
                   <FieldLabel className="mb-1 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
                     Original Scenario Reference · English
                   </FieldLabel>
-                  <p className="text-sm italic leading-relaxed text-foreground/75">"{original}"</p>
+                  <p className="line-clamp-2 text-sm italic leading-relaxed text-foreground/75">
+                    "{original}"
+                  </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── Translated dialogue display ─────────────────── */}
           {selectedLanguage !== 'en' && selectedTemplate?.id !== 'custom' && translated && (
-            <div className="space-y-1 rounded-xl border border-border bg-card px-5 py-4 shadow-sm bg-muted/5">
+            <div className="space-y-1 rounded-xl border border-border bg-card/70 bg-muted/5 px-4 py-3 shadow-sm">
               <div className="mb-2 flex items-center gap-2">
                 <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
                 <FieldLabel className="mb-0 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
@@ -331,7 +318,7 @@ export default function DialogueSelector({
                 </FieldLabel>
               </div>
               <p
-                className="text-sm font-medium leading-relaxed text-foreground/80 pl-5.5"
+                className="line-clamp-2 pl-5 text-sm font-medium leading-relaxed text-foreground/80"
                 lang={selectedLanguage}
               >
                 {translated}
@@ -339,7 +326,6 @@ export default function DialogueSelector({
             </div>
           )}
 
-          {/* Skip note */}
           {!dialogueText.trim() && (
             <p className="text-center text-xs text-muted-foreground/70 italic pt-1">
               Leave blank to generate the video without spoken dialogue (only soundtrack and video)

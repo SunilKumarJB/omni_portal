@@ -19,8 +19,8 @@ convention in `docs/1-backend-optimizations.md`.
 
 | # | Change | Severity | File(s) | Reversible |
 |---|--------|----------|---------|------------|
-| A | Dialogue + language are first-class; style/theme modifiers dropped; `[REF_Character]` casing fixed | 🔴 Critical | `omni_service.py`, `api/routes/generate.py`, `lib/api.js`, `pages/Home.jsx` | Yes |
-| B | Remove orphaned product/Gemini/preset surface | 🟠 High | `gemini_service.py` (del), `api/routes/assets.py` (del), `main.py`, `schemas.py`, `config.py`, `.env.example`, `lib/api.js`, `pages/VideoView.jsx` | Yes |
+| A | Dialogue + language are first-class; style/theme modifiers dropped; `[REF_Character]` casing fixed | 🔴 Critical | `omni_service.py`, `api/routes/generate.py`, `frontend/src/lib/api.ts`, `frontend/src/pages/Home.tsx` | Yes |
+| B | Remove orphaned product/Gemini/preset surface | 🟠 High | `gemini_service.py` (del), `api/routes/assets.py` (del), `main.py`, `schemas.py`, `config.py`, `.env.example`, `frontend/src/lib/api.ts`, `frontend/src/pages/VideoView.tsx` | Yes |
 | C | Harden Cloud Run for multi-minute background jobs | 🟠 High | `deploy-cloud-run.sh` | Yes |
 
 ---
@@ -74,9 +74,11 @@ product-image threading, and most of `schemas.py`.
 - `config.py` + `.env.example`: removed `GEMINI_PRO_MODEL` / `GEMINI_FLASH_MODEL`
   (their only consumer was the deleted Gemini service). **`OMNI_MODEL` and all other
   model/endpoint settings remain env-driven via pydantic-settings.**
-- Frontend `lib/api.js`: removed `suggestPrompts`, `uploadImage`, `uploadAudio`,
-  `getPresetCharacters`, `getPresetAudio`. `VideoView.jsx`: removed the dead product
+- Frontend `src/lib/api.ts`: removed `suggestPrompts`, `uploadImage`, `uploadAudio`,
+  `getPresetCharacters`, `getPresetAudio`. `VideoView.tsx`: removed the dead product
   card/poster and `theme_id` badge.
+
+**Current UI note:** `[REF_Character]` remains valid as an internal generation placeholder, but result/review/video UI must format prompt text through `frontend/src/lib/prompt.ts` so the raw token does not appear to demo users.
 
 **To revert:** `git checkout <pre-change-commit> -- <the files above>`.
 

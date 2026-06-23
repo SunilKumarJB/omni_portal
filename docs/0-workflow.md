@@ -4,6 +4,16 @@ This document outlines the end-to-end full-stack architecture, user selection fl
 
 ---
 
+## Current Implementation Notes
+
+- Frontend is **React + Vite + strict TypeScript**. Source files under `frontend/src` are `.ts` / `.tsx`.
+- The wizard shell is a fixed-viewport, no-scroll control deck for 1280x720+ casted screens.
+- Local demo generation should use frontend **Test Mode** in the side rail. Test Mode creates a mock completed request without calling GCP.
+- Preset prompts can contain the internal `[REF_Character]` token, but UI prompt summaries must render through `formatPromptForDisplay()` so the token does not appear to users.
+- The Omni Portal brand control in the side rail resets the wizard back to Step 1.
+
+---
+
 ## 1. Full-Stack Architecture & User Selection Flow
 
 This diagram illustrates the step-by-step wizard flow in the React frontend, how the selections are packed and dispatched, and how the FastAPI backend orchestrates parallel file transfers, background tasks, and Google Vertex AI model interactions.
@@ -49,7 +59,7 @@ graph TD
         W -->|Poll GET /api/generate/status/id every 5s| X{"Check Backend DB Status"}
         X -->|processing| Y["Update progress bar (30% to 90%)"]
         Y --> X
-        X -->|completed| Z["Render interactive Video Player & Action buttons"]
+        X -->|completed| Z["Render video player, delivery panel, QR, and actions"]
         X -->|failed| AA["Render clean model failure banner with exact cause"]
     end
 ```

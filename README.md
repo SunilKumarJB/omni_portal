@@ -6,9 +6,29 @@ The current product target is **Google Marketing Live India**, shown on a large 
 
 ## Current UI
 
-### Scenario Selection
+### Step 1: Scenario Selection
 
 ![Step 1 scenario cards](docs/assets/screenshots/step-1-scenario-cards.png)
+
+### Step 1: Selected Scenario
+
+![Step 1 selected scenario](docs/assets/screenshots/step-1-scenario-selected.png)
+
+### Step 2: Dialogue
+
+![Step 2 dialogue](docs/assets/screenshots/step-2-dialogue.png)
+
+### Step 3: Presenter
+
+![Step 3 presenter](docs/assets/screenshots/step-3-presenter.png)
+
+### Step 4: Audio
+
+![Step 4 audio](docs/assets/screenshots/step-4-audio.png)
+
+### Step 5: Review & Generate
+
+![Step 5 review and generate](docs/assets/screenshots/step-5-review-generate.png)
 
 ### Result Delivery
 

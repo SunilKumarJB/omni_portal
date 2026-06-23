@@ -111,6 +111,11 @@ Do not expect real Omni generation to work locally unless the backend has intent
 Current documentation screenshots:
 
 - [Step 1 scenario cards](assets/screenshots/step-1-scenario-cards.png)
+- [Step 1 selected scenario](assets/screenshots/step-1-scenario-selected.png)
+- [Step 2 dialogue](assets/screenshots/step-2-dialogue.png)
+- [Step 3 presenter](assets/screenshots/step-3-presenter.png)
+- [Step 4 audio](assets/screenshots/step-4-audio.png)
+- [Step 5 review and generate](assets/screenshots/step-5-review-generate.png)
 - [Result delivery layout](assets/screenshots/result-delivery-layout.png)
 - [Portal brand reset](assets/screenshots/portal-brand-reset.png)
 

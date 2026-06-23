@@ -188,6 +188,26 @@ Screenshots live in `docs/assets/screenshots/`.
 
 ![Step 1 scenario cards](assets/screenshots/step-1-scenario-cards.png)
 
+### Step 1 Selected Scenario
+
+![Step 1 selected scenario](assets/screenshots/step-1-scenario-selected.png)
+
+### Step 2 Dialogue
+
+![Step 2 dialogue](assets/screenshots/step-2-dialogue.png)
+
+### Step 3 Presenter
+
+![Step 3 presenter](assets/screenshots/step-3-presenter.png)
+
+### Step 4 Audio
+
+![Step 4 audio](assets/screenshots/step-4-audio.png)
+
+### Step 5 Review & Generate
+
+![Step 5 review and generate](assets/screenshots/step-5-review-generate.png)
+
 ### Result Delivery Layout
 
 ![Result delivery layout](assets/screenshots/result-delivery-layout.png)

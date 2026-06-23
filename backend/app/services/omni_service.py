@@ -116,7 +116,7 @@ def _enrich_prompt(
     if dialogue and dialogue.strip():
         lang_name = _LANGUAGE_NAMES.get(language or "en", "English")
         parts.append(
-            f'The character speaks the following line in {lang_name}, '
+            f"The character speaks the following line in {lang_name}, "
             f'with natural, accurate lip-sync: "{dialogue.strip()}"'
         )
 

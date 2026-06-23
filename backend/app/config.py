@@ -9,7 +9,6 @@ class Settings(BaseSettings):
 
     GEMINI_PRO_MODEL: str = "gemini-2.5-pro"
     GEMINI_FLASH_MODEL: str = "gemini-2.0-flash"
-    VEO_MODEL: str = "veo-3.0-generate-preview"
 
     # Omni (Vertex Interactions API) settings
     OMNI_MODEL: str = "gemini-omni-flash-preview"

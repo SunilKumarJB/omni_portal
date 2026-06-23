@@ -40,7 +40,7 @@ async def health():
         "models": {
             "gemini_pro": settings.GEMINI_PRO_MODEL,
             "gemini_flash": settings.GEMINI_FLASH_MODEL,
-            "veo": settings.VEO_MODEL,
+            "omni": settings.OMNI_MODEL,
         },
     }
 

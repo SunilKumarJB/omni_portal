@@ -29,4 +29,7 @@ async def test_upload_to_gcs_offloading():
                 b"fake_data",
                 content_type="image/jpeg",
             )
-            mock_to_thread.assert_any_call(mock_blob.make_public)
+            # We now mint a v4 signed URL (offloaded to a thread) instead of
+            # make_public(), which 403s on Uniform Bucket-Level Access buckets.
+            mock_to_thread.assert_any_call(storage_service._signed_url, mock_blob)
+            mock_blob.make_public.assert_not_called()

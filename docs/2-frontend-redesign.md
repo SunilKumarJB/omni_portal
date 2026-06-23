@@ -185,8 +185,8 @@ next-themes, sonner`, Radix primitives. **Removed:** `framer-motion`. **Upgraded
 
 **DON'T**
 - Don't hardcode hex or `text-white/NN` / `bg-[#…]` — it won't flip to light mode.
-- Don't expand the AI gradient beyond the two sanctioned corner moments, and never beyond one
-  corner / ~15% height. If you need "more color," you probably want a **status hue** or a
+- Don't spread the AI gradient everywhere. It lives in ONE place per page: the top band
+  (`.ai-gradient-top`). If you need "more color," you probably want a **status hue** or a
   **customer tone**, not the AI gradient.
 - Don't reintroduce Google-blue as chrome. Primary = foreground (black/white).
 
@@ -242,6 +242,36 @@ forced the user to scroll before reaching "Continue."
 **Rule for new screens:** wrap full-page views in `h-dvh`/`min-h-dvh` with `overflow-hidden`,
 keep header/rail/footer as `shrink-0`, and put scroll on the middle container
 (`min-h-0 flex-1 overflow-y-auto`). Never let the page body scroll on the wizard.
+
+---
+
+## 6b. Layout v3 — top gradient, motion, fuller scale
+
+Refinements after casting-screen review:
+
+- **Gradient moved to the TOP.** New `.ai-gradient-top` utility (in `index.css`) renders the
+  four-color band hugging the top edge (green→yellow→red→blue, left→right), masked to fade
+  downward, spanning the full width of the app — not just the rail. Used on `Home`, `ResultPanel`
+  and `VideoView` as the single brand moment per page. The old `.ai-gradient-corner{,--br}`
+  utilities remain defined but are no longer used. Alphas are tuned to read on the **dark default**
+  (they're stronger than they look on light).
+- **Subtle motion** (CSS only, all under the global `prefers-reduced-motion` kill-switch):
+  - `animate-step-in` on the keyed step wrapper in `Home` — content fades/slides up on each step
+    change (the wrapper is `key={currentStep}` so it replays).
+  - `animate-rise-in` on the `SideRail` contents (page-load entrance).
+  - `animate-gradient-pulse` on `.ai-gradient-top` — a slow 16s opacity/position drift.
+  - Card hover lift (`hover:-translate-y-0.5` + soft shadow) on template / character / audio cards;
+    buttons already lift on hover.
+  - Keyframes live in `tailwind.config.js` (`stepIn`, `riseIn`, `gradientPulse`).
+- **Fuller scale / wider canvas:** rail widened (`w-80`→`xl:w-96`); `StepHeading` titles are
+  `text-3xl lg:text-4xl`; content padding `lg:px-16 lg:py-12`; step-1 grid container `max-w-7xl`
+  with taller (168px) thumbnails; form steps widened to `max-w-4xl`/`max-w-5xl`.
+- **Accessibility fix:** the template card was a `<button>` containing the "Preview prompt"
+  `<button>` (invalid nested buttons → hydration error). Reworked to the **stretched-button**
+  pattern: the card is a `<div>` with a transparent full-card `<button>` (z-0) for selection and a
+  `pointer-events-none` content layer above it; the "Preview prompt" button re-enables pointer
+  events. Card focus shows via `focus-within`. Also opted into React Router v7 future flags in
+  `main.jsx` to clear console warnings.
 
 ---
 

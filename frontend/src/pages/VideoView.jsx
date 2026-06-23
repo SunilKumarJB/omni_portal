@@ -80,8 +80,8 @@ export default function VideoView() {
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-background">
-      {/* Brand moment — confined four-color wash in the bottom-right corner */}
-      <div className="ai-gradient-corner ai-gradient-corner--br" aria-hidden />
+      {/* Brand moment — four-color AI gradient hugging the top edge */}
+      <div className="ai-gradient-top" aria-hidden />
 
       <AppHeader
         actions={

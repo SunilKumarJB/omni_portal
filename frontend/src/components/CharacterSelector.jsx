@@ -115,7 +115,7 @@ export default function CharacterSelector({
   const hasCustom = !!captured || !!uploadPreview;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-5xl">
       <StepHeading eyebrow="Step 3 of 5" title="Choose your presenter">
         Select a preset avatar or use your own photo via camera or upload.
       </StepHeading>
@@ -146,7 +146,7 @@ export default function CharacterSelector({
                     'flex flex-col items-center gap-3 rounded-lg border bg-card p-4 text-center transition-all duration-200',
                     selected
                       ? 'border-foreground ring-1 ring-foreground'
-                      : 'border-border hover:border-foreground/30 hover:bg-accent/40',
+                      : 'border-border hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-accent/40 hover:shadow-lg hover:shadow-black/5',
                   )}
                 >
                   <div

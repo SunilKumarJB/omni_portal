@@ -166,7 +166,7 @@ export default function AudioSelector({
       .padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-4xl">
       <StepHeading eyebrow="Step 4 of 5 · Optional" title="Set the mood">
         Choose a soundtrack or record / upload your own. Skip to generate without audio.
       </StepHeading>
@@ -193,7 +193,7 @@ export default function AudioSelector({
                       'flex items-center gap-4 rounded-lg border bg-card p-4 text-left transition-all duration-200',
                       active
                         ? 'border-foreground ring-1 ring-foreground'
-                        : 'border-border hover:border-foreground/30 hover:bg-accent/40',
+                        : 'border-border hover:border-foreground/30 hover:bg-accent/40 hover:shadow-lg hover:shadow-black/5',
                       active && a.src && 'rounded-b-none border-b-0',
                     )}
                   >

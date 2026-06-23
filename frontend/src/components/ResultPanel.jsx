@@ -71,8 +71,8 @@ export default function ResultPanel({
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-background">
-      {/* Brand moment — confined four-color wash in the bottom-right corner */}
-      <div className="ai-gradient-corner ai-gradient-corner--br" aria-hidden />
+      {/* Brand moment — four-color AI gradient hugging the top edge */}
+      <div className="ai-gradient-top" aria-hidden />
 
       <AppHeader
         actions={

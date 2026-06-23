@@ -159,7 +159,7 @@ export default function DialogueSelector({
   const isEdited = dialogueText !== translated && dialogueText !== '';
 
   return (
-    <div className="mx-auto max-w-3xl animate-slide-up space-y-7">
+    <div className="mx-auto max-w-4xl space-y-7">
       <StepHeading eyebrow="Step 2 of 5" title="Choose your dialogue" className="mb-0">
         Select a language — then edit the dialogue if you want to customise it.
       </StepHeading>

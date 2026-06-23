@@ -166,6 +166,30 @@
     );
   }
 
+  /*
+    The primary brand moment: the four-color AI gradient hugging the TOP edge,
+    spread left→right (green · yellow · red · blue) and masked to fade downward.
+    Anchored to the top-left per the GML "top corner" orientation rule, but spanning
+    the full width so it reads as a top band rather than a sidebar-only accent.
+  */
+  .ai-gradient-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 240px;
+    pointer-events: none;
+    background:
+      radial-gradient(46% 240px at 6% -8%, hsl(var(--ai-green) / 0.3), transparent 72%),
+      radial-gradient(48% 250px at 32% -10%, hsl(var(--ai-yellow) / 0.28), transparent 72%),
+      radial-gradient(50% 250px at 58% -10%, hsl(var(--ai-red) / 0.3), transparent 72%),
+      radial-gradient(54% 270px at 90% -8%, hsl(var(--ai-blue) / 0.4), transparent 74%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 100%);
+    will-change: opacity, transform;
+    animation: gradientPulse 16s ease-in-out infinite;
+  }
+
   /* The crisp 4-color brand line, used as a thin hairline accent (e.g. atop the hero card) */
   .ai-gradient-line {
     background: var(--gml-ai-gradient);

@@ -80,11 +80,26 @@ export default {
         indeterminate: 'indeterminate 1.5s ease-in-out infinite',
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'step-in': 'stepIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'rise-in': 'riseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'gradient-pulse': 'gradientPulse 16s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
           from: { opacity: 0, transform: 'translateY(6px)' },
           to: { opacity: 1, transform: 'translateY(0)' },
+        },
+        stepIn: {
+          from: { opacity: 0, transform: 'translateY(10px)' },
+          to: { opacity: 1, transform: 'translateY(0)' },
+        },
+        riseIn: {
+          from: { opacity: 0, transform: 'translateY(14px)' },
+          to: { opacity: 1, transform: 'translateY(0)' },
+        },
+        gradientPulse: {
+          '0%, 100%': { opacity: 0.85, transform: 'translateX(0)' },
+          '50%': { opacity: 1, transform: 'translateX(-1.5%)' },
         },
         slideUp: {
           from: { opacity: 0, transform: 'translateY(12px)' },

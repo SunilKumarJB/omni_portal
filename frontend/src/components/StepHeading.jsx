@@ -6,16 +6,20 @@ import { cn } from '@/lib/utils';
  */
 export default function StepHeading({ eyebrow, title, children, className }) {
   return (
-    <div className={cn('mb-8', className)}>
+    <div className={cn('mb-9', className)}>
       {eyebrow && (
-        <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="mb-2.5 block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           {eyebrow}
         </span>
       )}
-      <h2 className="mb-1 font-display text-2xl font-bold leading-tight text-foreground">
+      <h2 className="mb-2 font-display text-3xl font-bold leading-[1.1] tracking-tight text-foreground lg:text-4xl">
         {title}
       </h2>
-      {children && <p className="text-sm leading-relaxed text-muted-foreground">{children}</p>}
+      {children && (
+        <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground lg:text-base">
+          {children}
+        </p>
+      )}
     </div>
   );
 }

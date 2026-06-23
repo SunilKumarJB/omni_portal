@@ -37,7 +37,7 @@ export default function ReviewGenerate({
   onGenerate,
 }) {
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
+    <div className="mx-auto max-w-4xl space-y-5">
       <StepHeading eyebrow="Step 5 of 5" title="Review & generate">
         Confirm everything looks right, then let Omni do its thing.
       </StepHeading>

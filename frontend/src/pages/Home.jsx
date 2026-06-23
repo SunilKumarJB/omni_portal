@@ -148,7 +148,10 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className="relative flex h-dvh overflow-hidden bg-background">
+      {/* Primary brand moment — four-color AI gradient hugging the top edge */}
+      <div className="ai-gradient-top" aria-hidden />
+
       <SideRail
         steps={STEPS}
         currentStep={currentStep}
@@ -156,7 +159,7 @@ export default function Home() {
         setTestMode={setTestMode}
       />
 
-      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      <main className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Compact bar for small screens (rail is hidden < lg) */}
         <div className="flex shrink-0 items-center justify-between px-6 py-4 lg:hidden">
           <div className="flex items-center gap-3">
@@ -191,54 +194,57 @@ export default function Home() {
         </div>
 
         {/* Scrollable step content — the only scroll region; page size stays constant */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 lg:px-12 lg:py-10">
-          {currentStep === 1 && (
-            <PromptSelector
-              selectedTemplate={selectedTemplate}
-              setSelectedTemplate={setSelectedTemplate}
-              videoPrompt={videoPrompt}
-              setVideoPrompt={setVideoPrompt}
-            />
-          )}
-          {currentStep === 2 && (
-            <DialogueSelector
-              selectedTemplate={selectedTemplate}
-              selectedLanguage={selectedLanguage}
-              setSelectedLanguage={setSelectedLanguage}
-              dialogueText={dialogueText}
-              setDialogueText={setDialogueText}
-            />
-          )}
-          {currentStep === 3 && (
-            <CharacterSelector
-              selectedCharacter={selectedCharacter}
-              setSelectedCharacter={setSelectedCharacter}
-              characterImageFile={characterImageFile}
-              setCharacterImageFile={setCharacterImageFile}
-            />
-          )}
-          {currentStep === 4 && (
-            <AudioSelector
-              selectedAudio={selectedAudio}
-              setSelectedAudio={setSelectedAudio}
-              audioFile={audioFile}
-              setAudioFile={setAudioFile}
-            />
-          )}
-          {currentStep === 5 && (
-            <ReviewGenerate
-              testMode={testMode}
-              selectedTemplate={selectedTemplate}
-              videoPrompt={videoPrompt}
-              dialogueText={dialogueText}
-              selectedLanguage={selectedLanguage}
-              selectedCharacter={selectedCharacter}
-              characterImageFile={characterImageFile}
-              selectedAudio={selectedAudio}
-              audioFile={audioFile}
-              onGenerate={handleGenerate}
-            />
-          )}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 lg:px-16 lg:py-12">
+          {/* Keyed wrapper replays the entrance animation on each step change */}
+          <div key={currentStep} className="animate-step-in">
+            {currentStep === 1 && (
+              <PromptSelector
+                selectedTemplate={selectedTemplate}
+                setSelectedTemplate={setSelectedTemplate}
+                videoPrompt={videoPrompt}
+                setVideoPrompt={setVideoPrompt}
+              />
+            )}
+            {currentStep === 2 && (
+              <DialogueSelector
+                selectedTemplate={selectedTemplate}
+                selectedLanguage={selectedLanguage}
+                setSelectedLanguage={setSelectedLanguage}
+                dialogueText={dialogueText}
+                setDialogueText={setDialogueText}
+              />
+            )}
+            {currentStep === 3 && (
+              <CharacterSelector
+                selectedCharacter={selectedCharacter}
+                setSelectedCharacter={setSelectedCharacter}
+                characterImageFile={characterImageFile}
+                setCharacterImageFile={setCharacterImageFile}
+              />
+            )}
+            {currentStep === 4 && (
+              <AudioSelector
+                selectedAudio={selectedAudio}
+                setSelectedAudio={setSelectedAudio}
+                audioFile={audioFile}
+                setAudioFile={setAudioFile}
+              />
+            )}
+            {currentStep === 5 && (
+              <ReviewGenerate
+                testMode={testMode}
+                selectedTemplate={selectedTemplate}
+                videoPrompt={videoPrompt}
+                dialogueText={dialogueText}
+                selectedLanguage={selectedLanguage}
+                selectedCharacter={selectedCharacter}
+                characterImageFile={characterImageFile}
+                selectedAudio={selectedAudio}
+                audioFile={audioFile}
+                onGenerate={handleGenerate}
+              />
+            )}
+          </div>
         </div>
 
         {/* Pinned action bar */}

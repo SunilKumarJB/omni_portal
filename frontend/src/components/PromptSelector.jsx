@@ -101,7 +101,7 @@ function TemplateThumbnail({ tpl }) {
   }
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: videoReady ? 150 : 'auto' }}>
+    <div className="relative w-full overflow-hidden" style={{ height: videoReady ? 168 : 'auto' }}>
       {/* Accent strip shown until video loads (per-template "customer tone" nod) */}
       {!videoReady && <div className="h-0.5 w-full" style={{ background: tpl.accent }} />}
 
@@ -114,7 +114,7 @@ function TemplateThumbnail({ tpl }) {
         loop
         playsInline
         className="w-full object-cover transition-opacity duration-300"
-        style={{ height: 150, opacity: videoReady ? 1 : 0 }}
+        style={{ height: 168, opacity: videoReady ? 1 : 0 }}
         onCanPlay={() => setVideoReady(true)}
         onError={() => setVideoReady(false)}
       />
@@ -171,16 +171,27 @@ export default function PromptSelector({
           const isOpen = expanded === tpl.id;
 
           return (
-            <div key={tpl.id} className="flex flex-col">
+            <div
+              key={tpl.id}
+              className={cn(
+                'group relative flex flex-col overflow-hidden rounded-lg border bg-card transition-all duration-200',
+                'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background',
+                selected
+                  ? 'border-foreground ring-1 ring-foreground'
+                  : 'border-border hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-accent/40 hover:shadow-xl hover:shadow-black/5',
+              )}
+            >
+              {/* Stretched select button — covers the whole card, sits beneath the
+                  content layer so the nested "Preview prompt" button stays usable. */}
               <button
+                type="button"
+                aria-label={`Select scenario: ${tpl.title}`}
+                aria-pressed={selected}
                 onClick={() => selectTemplate(tpl)}
-                className={cn(
-                  'overflow-hidden rounded-lg border bg-card text-left transition-all duration-200',
-                  selected
-                    ? 'border-foreground ring-1 ring-foreground'
-                    : 'border-border hover:border-foreground/30 hover:bg-accent/40',
-                )}
-              >
+                className="absolute inset-0 z-0 cursor-pointer focus:outline-none"
+              />
+
+              <div className="pointer-events-none relative z-10">
                 <TemplateThumbnail tpl={tpl} />
 
                 <div className="space-y-3 p-4">
@@ -191,7 +202,7 @@ export default function PromptSelector({
                         <div className="mb-0.5 font-mono text-[10px] text-muted-foreground/60">
                           {tpl.number}
                         </div>
-                        <div className="text-sm font-semibold leading-tight text-foreground">
+                        <div className="text-[15px] font-semibold leading-tight text-foreground">
                           {tpl.title}
                         </div>
                       </div>
@@ -225,11 +236,12 @@ export default function PromptSelector({
 
                   {tpl.id !== 'custom' && tpl.prompt && (
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setExpanded(isOpen ? null : tpl.id);
                       }}
-                      className="flex items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+                      className="pointer-events-auto relative z-10 flex items-center gap-1 rounded text-[10px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {isOpen ? (
                         <ChevronUp className="h-3 w-3" />
@@ -246,7 +258,7 @@ export default function PromptSelector({
                     </div>
                   )}
                 </div>
-              </button>
+              </div>
             </div>
           );
         })}

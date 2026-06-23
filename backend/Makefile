@@ -8,7 +8,7 @@ install:
 		echo "Creating virtual environment..."; \
 		uv venv; \
 	fi
-	$(VENV_BIN)/uv pip install --index-url https://pypi.org/simple -r requirements.txt
+	uv pip install --python $(VENV_BIN)/python --index-url https://pypi.org/simple -r requirements.txt
 
 run: start
 

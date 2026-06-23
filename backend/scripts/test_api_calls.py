@@ -12,7 +12,7 @@ IMAGE_PATH = os.path.abspath(
 )
 
 
-def test_prompts_endpoint():
+def verify_prompts_endpoint():
     print("\n=== Testing Gemini Pro via /api/generate/prompts ===")
     url = f"{BASE_URL}/api/generate/prompts"
 
@@ -49,7 +49,7 @@ def test_prompts_endpoint():
         return False
 
 
-def test_video_endpoint():
+def verify_video_endpoint():
     print("\n=== Testing Gemini Omni via /api/generate/video ===")
     url = f"{BASE_URL}/api/generate/video"
 
@@ -116,8 +116,8 @@ def test_video_endpoint():
 
 
 if __name__ == "__main__":
-    prompts_ok = test_prompts_endpoint()
-    video_ok = test_video_endpoint()
+    prompts_ok = verify_prompts_endpoint()
+    video_ok = verify_video_endpoint()
 
     print("\n=== SUMMARY ===")
     print(f"Gemini Pro (Prompts): {'PASSED' if prompts_ok else 'FAILED'}")

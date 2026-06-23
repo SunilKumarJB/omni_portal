@@ -79,35 +79,42 @@ async def generate_video(
     source_video_local = None
     source_video_mime = None
 
+    product_bytes = None
+    character_bytes = None
+    audio_bytes = None
+    source_video_bytes = None
+
     # Define upload coroutines to run concurrently in parallel
     async def upload_product():
-        nonlocal product_image_local, product_image_mime
+        nonlocal product_image_local, product_image_mime, product_bytes
         if product_image and product_image.filename:
-            img_data = await product_image.read()
+            product_bytes = await product_image.read()
             url, local_path = await storage_service.upload_bytes(
-                img_data, f"{request_id}/product.jpg", product_image.content_type
+                product_bytes, f"{request_id}/product.jpg", product_image.content_type
             )
             product_image_local = local_path
             product_image_mime = product_image.content_type
             record["product_image_url"] = url
 
     async def upload_character():
-        nonlocal character_image_local, character_image_mime
+        nonlocal character_image_local, character_image_mime, character_bytes
         if character_image and character_image.filename:
-            img_data = await character_image.read()
+            character_bytes = await character_image.read()
             url, local_path = await storage_service.upload_bytes(
-                img_data, f"{request_id}/character.png", character_image.content_type
+                character_bytes,
+                f"{request_id}/character.png",
+                character_image.content_type,
             )
             character_image_local = local_path
             character_image_mime = character_image.content_type
             record["character_image_url"] = url
 
     async def upload_audio():
-        nonlocal audio_local, audio_mime
+        nonlocal audio_local, audio_mime, audio_bytes
         if audio_file and audio_file.filename:
-            audio_data = await audio_file.read()
+            audio_bytes = await audio_file.read()
             url, local_path = await storage_service.upload_bytes(
-                audio_data,
+                audio_bytes,
                 f"{request_id}/audio{_ext(audio_file.filename)}",
                 audio_file.content_type,
             )
@@ -116,11 +123,11 @@ async def generate_video(
             record["audio_url"] = url
 
     async def upload_video():
-        nonlocal source_video_local, source_video_mime
+        nonlocal source_video_local, source_video_mime, source_video_bytes
         if source_video and source_video.filename:
-            video_data = await source_video.read()
+            source_video_bytes = await source_video.read()
             url, local_path = await storage_service.upload_bytes(
-                video_data,
+                source_video_bytes,
                 f"{request_id}/source_video{_ext(source_video.filename)}",
                 source_video.content_type,
             )
@@ -133,12 +140,14 @@ async def generate_video(
         upload_product(), upload_character(), upload_audio(), upload_video()
     )
 
-    # Generate and store QR code immediately
+    # Generate and store QR code immediately (offload CPU-bound image generation to worker thread)
     video_page = qr_service.video_page_url(request_id)
     try:
-        qr_bytes = qr_service.generate_qr_bytes(video_page)
+        qr_bytes = await asyncio.to_thread(qr_service.generate_qr_bytes, video_page)
     except Exception:
-        qr_bytes = qr_service.generate_qr_bytes_simple(video_page)
+        qr_bytes = await asyncio.to_thread(
+            qr_service.generate_qr_bytes_simple, video_page
+        )
 
     qr_url, _ = await storage_service.upload_bytes(
         qr_bytes, f"{request_id}/qr_code.png", "image/png"
@@ -163,14 +172,18 @@ async def generate_video(
         theme_id=theme_id,
         aspect_ratio=resolved_aspect,
         duration_seconds=resolved_duration,
-        product_image_local=product_image_local,
+        product_image_bytes=product_bytes,
         product_image_mime=product_image_mime,
-        character_image_local=character_image_local,
+        character_image_bytes=character_bytes,
         character_image_mime=character_image_mime,
-        audio_local=audio_local,
+        audio_bytes=audio_bytes,
         audio_mime=audio_mime,
-        source_video_local=source_video_local,
+        source_video_bytes=source_video_bytes,
         source_video_mime=source_video_mime,
+        product_image_local=product_image_local,
+        character_image_local=character_image_local,
+        audio_local=audio_local,
+        source_video_local=source_video_local,
     )
 
     current = await db_service.get_request(request_id)
@@ -192,14 +205,18 @@ async def _run_generation(
     theme_id: str,
     aspect_ratio: str,
     duration_seconds: int,
-    product_image_local: str = None,
+    product_image_bytes: bytes = None,
     product_image_mime: str = None,
-    character_image_local: str = None,
+    character_image_bytes: bytes = None,
     character_image_mime: str = None,
-    audio_local: str = None,
+    audio_bytes: bytes = None,
     audio_mime: str = None,
-    source_video_local: str = None,
+    source_video_bytes: bytes = None,
     source_video_mime: str = None,
+    product_image_local: str = None,
+    character_image_local: str = None,
+    audio_local: str = None,
+    source_video_local: str = None,
 ):
     try:
         await db_service.update_request(
@@ -222,35 +239,91 @@ async def _run_generation(
 
         await db_service.update_request(request_id, {"progress": 20})
 
-        # Read stored asset bytes for Omni media inputs
-        product_bytes, prod_mime = await _read_asset(
-            product_image_local, product_image_mime
-        )
-        character_bytes, char_mime = await _read_asset(
-            character_image_local, character_image_mime
-        )
-        audio_bytes, aud_mime = await _read_asset(audio_local, audio_mime)
-        source_video_bytes, src_mime = await _read_asset(
-            source_video_local, source_video_mime
-        )
+        # Read stored asset bytes for Omni media inputs (fallback to reading from path if bytes not pre-loaded)
+        if product_image_bytes is None and product_image_local:
+            product_bytes, prod_mime = await _read_asset(
+                product_image_local, product_image_mime
+            )
+        else:
+            product_bytes, prod_mime = product_image_bytes, product_image_mime
+
+        if character_image_bytes is None and character_image_local:
+            character_bytes, char_mime = await _read_asset(
+                character_image_local, character_image_mime
+            )
+        else:
+            character_bytes, char_mime = character_image_bytes, character_image_mime
+
+        if audio_bytes is None and audio_local:
+            audio_bytes_data, aud_mime = await _read_asset(audio_local, audio_mime)
+        else:
+            audio_bytes_data, aud_mime = audio_bytes, audio_mime
+
+        if source_video_bytes is None and source_video_local:
+            source_video_bytes_data, src_mime = await _read_asset(
+                source_video_local, source_video_mime
+            )
+        else:
+            source_video_bytes_data, src_mime = source_video_bytes, source_video_mime
 
         await db_service.update_request(request_id, {"progress": 30})
 
-        video_bytes, mime_type = await omni_service.generate_video(
-            prompt=prompt,
-            style_id=style_id,
-            theme_id=theme_id,
-            aspect_ratio=aspect_ratio,
-            duration_seconds=duration_seconds,
-            product_image_bytes=product_bytes,
-            product_image_mime=prod_mime,
-            character_image_bytes=character_bytes,
-            character_image_mime=char_mime,
-            audio_bytes=audio_bytes,
-            audio_mime=aud_mime,
-            source_video_bytes=source_video_bytes,
-            source_video_mime=src_mime,
-        )
+        try:
+            # Primary generation attempt
+            video_bytes, mime_type = await omni_service.generate_video(
+                prompt=prompt,
+                style_id=style_id,
+                theme_id=theme_id,
+                aspect_ratio=aspect_ratio,
+                duration_seconds=duration_seconds,
+                product_image_bytes=product_bytes,
+                product_image_mime=prod_mime,
+                character_image_bytes=character_bytes,
+                character_image_mime=char_mime,
+                audio_bytes=audio_bytes_data,
+                audio_mime=aud_mime,
+                source_video_bytes=source_video_bytes_data,
+                source_video_mime=src_mime,
+            )
+        except Exception as primary_exc:
+            # If audio was provided and it failed, retry without audio as a silent fallback
+            if audio_bytes_data is not None:
+                try:
+                    # Enrich the prompt with 90s style subtitle overlay instructions
+                    fallback_prompt = (
+                        f"{prompt}. [SILENT INFOMERCIAL FALLBACK] "
+                        "Since this is a silent broadcast, overlay bold, colorful 90s-style "
+                        "infomercial subtitles pitching the product at the bottom of the screen."
+                    )
+                    await db_service.update_request(
+                        request_id,
+                        {
+                            "progress": 35,
+                            "error": f"Audio generation failed ({str(primary_exc)}). Falling back gracefully to silent infomercial loop with subtitles...",
+                        },
+                    )
+                    video_bytes, mime_type = await omni_service.generate_video(
+                        prompt=fallback_prompt,
+                        style_id=style_id,
+                        theme_id=theme_id,
+                        aspect_ratio=aspect_ratio,
+                        duration_seconds=duration_seconds,
+                        product_image_bytes=product_bytes,
+                        product_image_mime=prod_mime,
+                        character_image_bytes=character_bytes,
+                        character_image_mime=char_mime,
+                        audio_bytes=None,  # Strip audio track
+                        audio_mime=None,
+                        source_video_bytes=source_video_bytes_data,
+                        source_video_mime=src_mime,
+                    )
+                except Exception as fallback_exc:
+                    raise RuntimeError(
+                        f"Omni generation failed on primary with audio ({str(primary_exc)}) "
+                        f"and fallback without audio ({str(fallback_exc)})"
+                    )
+            else:
+                raise primary_exc
 
         await db_service.update_request(request_id, {"progress": 90})
 

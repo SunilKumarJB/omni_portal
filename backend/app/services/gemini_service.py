@@ -115,7 +115,7 @@ Return a JSON object with:
 For each style use these icons: cinematic=🎬 commercial=📺 documentary=🎥 social=📱 tutorial=📚 lifestyle=✨
 For each theme use these hex colors: professional=#1e40af vibrant=#7c3aed dark_moody=#1f2937 minimalist=#6b7280 nature=#065f46 urban=#b45309"""
 
-    response = client.models.generate_content(
+    response = await client.aio.models.generate_content(
         model=settings.GEMINI_PRO_MODEL,
         contents=[
             types.Content(
@@ -167,7 +167,7 @@ async def analyze_image_for_video(
     client = _get_client()
     image_b64 = base64.b64encode(image_bytes).decode()
 
-    response = client.models.generate_content(
+    response = await client.aio.models.generate_content(
         model=settings.GEMINI_FLASH_MODEL,
         contents=[
             types.Content(

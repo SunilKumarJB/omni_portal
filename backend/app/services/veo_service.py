@@ -55,7 +55,7 @@ async def generate_video(
             types.Image(gcs_uri=character_image_gcs_uri, mime_type="image/jpeg")
         )
 
-    generate_config = types.GenerateVideoConfig(
+    generate_config = types.GenerateVideosConfig(
         aspect_ratio=aspect_ratio,
         output_gcs_uri=f"gs://{settings.GCS_BUCKET_NAME}/generated_videos/",
         number_of_videos=1,
@@ -65,18 +65,14 @@ async def generate_video(
     )
 
     if image_parts:
-        # Wrap blocking generate_videos call in asyncio.to_thread
-        operation = await asyncio.to_thread(
-            client.models.generate_videos,
+        operation = await client.aio.models.generate_videos(
             model=settings.VEO_MODEL,
             prompt=enriched_prompt,
             image=image_parts[0] if len(image_parts) == 1 else image_parts,
             config=generate_config,
         )
     else:
-        # Wrap blocking generate_videos call in asyncio.to_thread
-        operation = await asyncio.to_thread(
-            client.models.generate_videos,
+        operation = await client.aio.models.generate_videos(
             model=settings.VEO_MODEL,
             prompt=enriched_prompt,
             config=generate_config,
@@ -90,8 +86,7 @@ async def generate_video(
     while not operation.done:
         await asyncio.sleep(poll_interval)
         elapsed += poll_interval
-        # Wrap blocking operation status polling in asyncio.to_thread
-        operation = await asyncio.to_thread(client.operations.get, operation)
+        operation = await client.aio.operations.get(operation)
         if elapsed >= max_wait:
             raise TimeoutError("Video generation timed out after 10 minutes")
 

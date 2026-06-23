@@ -31,7 +31,7 @@ gcloud run deploy "${BACKEND_SERVICE}" \
   --memory 2Gi \
   --cpu 2 \
   --timeout 600 \
-  --concurrency 10 \
+  --concurrency 80 \
   --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},STORAGE_BACKEND=gcs,DB_BACKEND=firestore,TEST_MODE=false"
 
 BACKEND_URL=$(gcloud run services describe "${BACKEND_SERVICE}" \

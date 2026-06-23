@@ -5,7 +5,6 @@ and gemini-2.0-flash for fast image understanding.
 """
 
 import json
-import base64
 from app.config import settings
 from app.models.schemas import (
     PromptsResponse,
@@ -96,7 +95,6 @@ async def generate_prompts_from_image(
     from google.genai import types
 
     client = _get_client()
-    image_b64 = base64.b64encode(image_bytes).decode()
 
     system_instruction = (
         "You are a creative video production director. Analyze product images and generate "
@@ -121,9 +119,7 @@ For each theme use these hex colors: professional=#1e40af vibrant=#7c3aed dark_m
             types.Content(
                 role="user",
                 parts=[
-                    types.Part(
-                        inline_data=types.Blob(mime_type=mime_type, data=image_b64)
-                    ),
+                    types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
                     types.Part(text=user_prompt),
                 ],
             )
@@ -165,7 +161,6 @@ async def analyze_image_for_video(
     from google.genai import types
 
     client = _get_client()
-    image_b64 = base64.b64encode(image_bytes).decode()
 
     response = await client.aio.models.generate_content(
         model=settings.GEMINI_FLASH_MODEL,
@@ -173,9 +168,7 @@ async def analyze_image_for_video(
             types.Content(
                 role="user",
                 parts=[
-                    types.Part(
-                        inline_data=types.Blob(mime_type=mime_type, data=image_b64)
-                    ),
+                    types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
                     types.Part(
                         text="Describe this image in 1-2 sentences for use as a video character reference. Focus on appearance only."
                     ),

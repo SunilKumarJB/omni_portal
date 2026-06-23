@@ -114,7 +114,6 @@ export default function VideoView() {
                   autoPlay
                   loop
                   className="h-full w-full object-contain"
-                  poster={video.product_image_url}
                 />
               ) : video.status === 'processing' || video.status === 'pending' ? (
                 <div className="space-y-3 text-center">
@@ -157,10 +156,10 @@ export default function VideoView() {
               <Card className="p-5">
                 <FieldLabel>Prompt</FieldLabel>
                 <p className="text-sm leading-relaxed text-muted-foreground">{video.prompt}</p>
-                {(video.style_id || video.theme_id) && (
+                {(video.style_id || video.language) && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {video.style_id && <Badge variant="outline">{video.style_id}</Badge>}
-                    {video.theme_id && <Badge variant="outline">{video.theme_id}</Badge>}
+                    {video.language && <Badge variant="outline">{video.language}</Badge>}
                   </div>
                 )}
               </Card>
@@ -186,17 +185,6 @@ export default function VideoView() {
               <Row label="Status" value={s.label} />
               <Row label="Created" value={formatDate(video.created_at)} />
             </Card>
-
-            {video.product_image_url && (
-              <Card className="p-5">
-                <FieldLabel>Product</FieldLabel>
-                <img
-                  src={video.product_image_url}
-                  alt="Product"
-                  className="aspect-square w-full rounded-md border border-border bg-muted/40 object-contain"
-                />
-              </Card>
-            )}
           </div>
         </div>
       </div>

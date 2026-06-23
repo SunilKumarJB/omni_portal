@@ -87,15 +87,13 @@ export default function Home() {
         })(),
       ]);
 
-      // Append dialogue to prompt if provided
-      const finalPrompt = dialogueText.trim()
-        ? `${videoPrompt}\n\nSpoken dialogue (exact line): "${dialogueText.trim()}"`
-        : videoPrompt;
-
+      // Dialogue + language are first-class: the backend speaks the line in the chosen
+      // language with lip-sync, so the prompt no longer carries the dialogue inline.
       const result = await generateVideo({
-        prompt: finalPrompt,
+        prompt: videoPrompt,
         styleId: selectedTemplate?.id ?? 'custom',
-        themeId: 'default',
+        dialogue: dialogueText.trim() || undefined,
+        language: selectedLanguage,
         characterPresetId: selectedCharacter?.id,
         audioPresetId: selectedAudio?.id,
         characterImage: resolvedCharacterImage,

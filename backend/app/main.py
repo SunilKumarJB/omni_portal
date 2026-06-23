@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from app.config import settings
-from app.api.routes import generate, assets, videos
+from app.api.routes import generate, videos
 
 app = FastAPI(
     title="The Omni Portal",
@@ -21,7 +21,6 @@ app.add_middleware(
 )
 
 app.include_router(generate.router, prefix="/api")
-app.include_router(assets.router, prefix="/api")
 app.include_router(videos.router, prefix="/api")
 
 # Serve local storage files
@@ -38,8 +37,6 @@ async def health():
         "storage_backend": settings.STORAGE_BACKEND,
         "db_backend": settings.DB_BACKEND,
         "models": {
-            "gemini_pro": settings.GEMINI_PRO_MODEL,
-            "gemini_flash": settings.GEMINI_FLASH_MODEL,
             "omni": settings.OMNI_MODEL,
         },
     }

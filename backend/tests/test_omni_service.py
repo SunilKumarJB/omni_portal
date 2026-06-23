@@ -32,3 +32,35 @@ async def test_token_caching():
         token2 = await omni_service._get_cached_token()
         assert token2 == "test_access_token"
         assert mock_default.call_count == 1  # Should NOT be called again!
+
+
+def test_enrich_prompt_speaks_dialogue_in_language():
+    out = omni_service._enrich_prompt(
+        "A tracking shot of [REF_Character] in the rain",
+        dialogue="The city never sleeps.",
+        language="hi",
+        has_character=True,
+    )
+    # Dialogue is spoken in the named language with lip-sync
+    assert "speaks the following line in Hindi" in out
+    assert '"The city never sleeps."' in out
+    # Character token already in the prompt -> no duplicate binding instruction added
+    assert "Use [REF_Character] as the main character" not in out
+    # Quality suffix preserved
+    assert "High quality, 4K resolution." in out
+
+
+def test_enrich_prompt_binds_character_when_token_absent():
+    out = omni_service._enrich_prompt(
+        "A custom scene with no placeholder",
+        has_character=True,
+    )
+    # Custom prompt lacks the token, so the binding instruction is appended (matching casing)
+    assert "Use [REF_Character] as the main character" in out
+
+
+def test_enrich_prompt_unknown_language_defaults_to_english():
+    out = omni_service._enrich_prompt(
+        "scene", dialogue="hi there", language="zz", has_character=False
+    )
+    assert "speaks the following line in English" in out

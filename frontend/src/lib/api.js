@@ -5,30 +5,23 @@ const api = axios.create({
   timeout: 30000,
 });
 
-export async function suggestPrompts(imageFile) {
-  const form = new FormData();
-  form.append('file', imageFile);
-  const { data } = await api.post('/generate/prompts', form);
-  return data;
-}
-
 export async function generateVideo({
   prompt,
   styleId,
-  themeId,
+  dialogue,
+  language,
   characterPresetId,
   audioPresetId,
-  productImage,
   characterImage,
   audioFile,
 }) {
   const form = new FormData();
   form.append('prompt', prompt);
-  form.append('style_id', styleId);
-  form.append('theme_id', themeId);
+  if (styleId) form.append('style_id', styleId);
+  if (dialogue) form.append('dialogue', dialogue);
+  if (language) form.append('language', language);
   if (characterPresetId) form.append('character_preset_id', characterPresetId);
   if (audioPresetId) form.append('audio_preset_id', audioPresetId);
-  if (productImage) form.append('product_image', productImage);
   if (characterImage) form.append('character_image', characterImage);
   if (audioFile) form.append('audio_file', audioFile);
 
@@ -43,33 +36,6 @@ export async function getStatus(requestId) {
 
 export async function getVideo(requestId) {
   const { data } = await api.get(`/videos/${requestId}`);
-  return data;
-}
-
-export async function getPresetCharacters() {
-  const { data } = await api.get('/assets/presets/characters');
-  return data.characters;
-}
-
-export async function getPresetAudio() {
-  const { data } = await api.get('/assets/presets/audio');
-  return data.audio;
-}
-
-export async function uploadImage(file, assetType = 'product', requestId = null) {
-  const form = new FormData();
-  form.append('file', file);
-  form.append('asset_type', assetType);
-  if (requestId) form.append('request_id', requestId);
-  const { data } = await api.post('/assets/upload/image', form);
-  return data;
-}
-
-export async function uploadAudio(file, requestId = null) {
-  const form = new FormData();
-  form.append('file', file);
-  if (requestId) form.append('request_id', requestId);
-  const { data } = await api.post('/assets/upload/audio', form);
   return data;
 }
 

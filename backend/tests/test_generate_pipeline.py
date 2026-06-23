@@ -6,15 +6,15 @@ from app.api.routes import generate
 @pytest.mark.asyncio
 async def test_run_generation_zero_copy():
     request_id = "test_zero_copy_123"
-    prompt = "A cinematic product shot of a mascara bottle"
-    style_id = "cinematic"
-    theme_id = "dark_moody"
+    prompt = "A cinematic tracking shot of [REF_Character] in neon Times Square"
+    dialogue = "The city never sleeps. Good — neither do I."
+    language = "en"
     aspect_ratio = "16:9"
     duration_seconds = 10
 
-    # Pre-loaded bytes
-    fake_product_bytes = b"fake_product_image_data"
-    fake_product_mime = "image/jpeg"
+    # Pre-loaded character image bytes (the new primary media input)
+    fake_character_bytes = b"fake_character_image_data"
+    fake_character_mime = "image/png"
 
     # Mock services
     mock_db_update = AsyncMock()
@@ -36,29 +36,27 @@ async def test_run_generation_zero_copy():
         await generate._run_generation(
             request_id=request_id,
             prompt=prompt,
-            style_id=style_id,
-            theme_id=theme_id,
+            dialogue=dialogue,
+            language=language,
             aspect_ratio=aspect_ratio,
             duration_seconds=duration_seconds,
-            product_image_bytes=fake_product_bytes,
-            product_image_mime=fake_product_mime,
-            # No character, audio, video
+            character_image_bytes=fake_character_bytes,
+            character_image_mime=fake_character_mime,
+            # No audio, no source video
         )
 
-        # 1. Assert read_bytes was NEVER called because we passed bytes directly (Zero-Copy)
+        # 1. read_bytes was NEVER called because we passed bytes directly (zero-copy)
         mock_read_bytes.assert_not_called()
 
-        # 2. Assert omni_service.generate_video was called with the pre-loaded bytes
+        # 2. omni_service.generate_video was called with the pre-loaded character bytes
         mock_omni_generate.assert_called_once_with(
             prompt=prompt,
-            style_id=style_id,
-            theme_id=theme_id,
+            dialogue=dialogue,
+            language=language,
             aspect_ratio=aspect_ratio,
             duration_seconds=duration_seconds,
-            product_image_bytes=fake_product_bytes,
-            product_image_mime=fake_product_mime,
-            character_image_bytes=None,
-            character_image_mime=None,
+            character_image_bytes=fake_character_bytes,
+            character_image_mime=fake_character_mime,
             audio_bytes=None,
             audio_mime=None,
             source_video_bytes=None,
@@ -66,8 +64,7 @@ async def test_run_generation_zero_copy():
             progress_callback=ANY,
         )
 
-        # 3. Assert DB updates were called correctly
-        # Starts with progress=10, 20, 30, then 90, then 100 with completed status
+        # 3. DB updates were called correctly (10 -> 20 -> 30 -> 90 -> 100/completed)
         mock_db_update.assert_any_call(
             request_id, {"status": "processing", "progress": 10}
         )
@@ -85,15 +82,15 @@ async def test_run_generation_zero_copy():
 async def test_run_generation_fallback_to_storage():
     request_id = "test_fallback_storage_456"
 
-    # We pass None for bytes, but provide local paths
-    product_image_local = "storage/product.jpg"
-    product_image_mime = "image/jpeg"
+    # We pass None for bytes, but provide a local path
+    character_image_local = "storage/character.png"
+    character_image_mime = "image/png"
 
-    fake_product_bytes = b"bytes_from_disk"
+    fake_character_bytes = b"bytes_from_disk"
 
     mock_db_update = AsyncMock()
-    # Mock read_bytes to return fake_product_bytes when called
-    mock_read_bytes = AsyncMock(return_value=(fake_product_bytes, "image/jpeg"))
+    # read_bytes returns the on-disk character bytes when called
+    mock_read_bytes = AsyncMock(return_value=(fake_character_bytes, "image/png"))
     mock_omni_generate = AsyncMock(return_value=(b"video_bytes", "video/mp4"))
     mock_upload_bytes = AsyncMock(
         return_value=("http://fakeurl/video.mp4", "local_path")
@@ -111,29 +108,30 @@ async def test_run_generation_fallback_to_storage():
         await generate._run_generation(
             request_id=request_id,
             prompt="Test prompt",
-            style_id="cinematic",
-            theme_id="vibrant",
+            dialogue=None,
+            language="en",
             aspect_ratio="16:9",
             duration_seconds=10,
-            product_image_bytes=None,  # Not pre-loaded
-            product_image_mime=product_image_mime,
-            product_image_local=product_image_local,  # Path provided
+            character_image_bytes=None,  # Not pre-loaded
+            character_image_mime=character_image_mime,
+            character_image_local=character_image_local,  # Path provided
         )
 
-        # 1. Assert read_bytes WAS called to load from disk/storage
-        mock_read_bytes.assert_called_once_with(product_image_local)
+        # 1. read_bytes WAS called to load the character image from disk/storage
+        mock_read_bytes.assert_called_once_with(character_image_local)
 
-        # 2. Assert omni_service was called with those bytes
+        # 2. omni_service was called with those bytes
         mock_omni_generate.assert_called_once()
         assert (
-            mock_omni_generate.call_args[1]["product_image_bytes"] == fake_product_bytes
+            mock_omni_generate.call_args[1]["character_image_bytes"]
+            == fake_character_bytes
         )
 
 
 @pytest.mark.asyncio
 async def test_run_generation_audio_fallback_resilience():
     request_id = "test_audio_fallback_789"
-    prompt = "Make a commercial for Follicle Royal shampoo"
+    prompt = "An epic action hero monologue at the Colosseum"
 
     # Audio is provided
     fake_audio_bytes = b"my_voice_clip"
@@ -164,15 +162,15 @@ async def test_run_generation_audio_fallback_resilience():
         await generate._run_generation(
             request_id=request_id,
             prompt=prompt,
-            style_id="commercial",
-            theme_id="vibrant",
+            dialogue="Are you not entertained?",
+            language="en",
             aspect_ratio="16:9",
             duration_seconds=10,
             audio_bytes=fake_audio_bytes,
             audio_mime=fake_audio_mime,
         )
 
-        # 1. Assert omni_service.generate_video was called TWICE
+        # 1. omni_service.generate_video was called TWICE
         assert mock_omni_generate.call_count == 2
 
         # 2. First call had audio
@@ -185,7 +183,7 @@ async def test_run_generation_audio_fallback_resilience():
         assert "[SILENT INFOMERCIAL FALLBACK]" in second_call_args["prompt"]
         assert second_call_args["audio_bytes"] is None
 
-        # 4. Assert DB update logged the error state and fallback status
+        # 4. DB update logged the error state and fallback status
         mock_db_update.assert_any_call(
             request_id,
             {

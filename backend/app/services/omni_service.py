@@ -27,22 +27,19 @@ _ASPECT_RATIO_MAP = {
     "1:1": "Square (1:1)",
 }
 
-_STYLE_MODIFIERS = {
-    "cinematic": "cinematic wide shots, dramatic lighting, film grain, shallow depth of field",
-    "commercial": "clean commercial aesthetic, product-focused, bright even lighting, professional",
-    "documentary": "authentic handheld feel, natural lighting, real-world environment",
-    "social": "vertical format energy, fast cuts, modern trending aesthetic, vibrant",
-    "tutorial": "clear instructional visuals, step-by-step, well-lit, educational tone",
-    "lifestyle": "golden hour warm tones, aspirational lifestyle, candid moments",
-}
-
-_THEME_MODIFIERS = {
-    "professional": "corporate polish, muted professional colors, trust-inspiring",
-    "vibrant": "saturated vivid colors, high energy, youthful dynamic",
-    "dark_moody": "deep shadows, luxury dark palette, mysterious atmosphere",
-    "minimalist": "clean negative space, elegant simplicity, monochromatic tones",
-    "nature": "organic natural greens, fresh outdoor feel, sustainable aesthetic",
-    "urban": "city backdrop, concrete textures, modern metropolitan energy",
+# Maps the UI's language codes (DialogueSelector.tsx) to human-readable names so the
+# prompt can instruct Omni to speak the dialogue in the chosen language with lip-sync.
+_LANGUAGE_NAMES = {
+    "en": "English",
+    "hi": "Hindi",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "kn": "Kannada",
+    "ml": "Malayalam",
+    "bn": "Bengali",
+    "mr": "Marathi",
+    "gu": "Gujarati",
+    "pa": "Punjabi",
 }
 
 
@@ -95,23 +92,33 @@ async def _auth_headers() -> dict:
 
 def _enrich_prompt(
     prompt: str,
-    style_id: str,
-    theme_id: str,
-    has_product: bool = False,
+    dialogue: Optional[str] = None,
+    language: Optional[str] = None,
     has_character: bool = False,
     has_audio: bool = False,
     is_v2v: bool = False,
 ) -> str:
+    """
+    Build the final Omni text input. The scenario template carries the visual style
+    inline (it IS the style), so this only adds the things the template can't:
+    bind the character reference, speak the dialogue in the chosen language, and
+    sync any audio / V2V edit.
+    """
     parts = [prompt]
 
-    if has_product and has_character:
+    # Bind the character image. Scenario templates already embed the [REF_Character]
+    # token throughout their prompt; only add a binding instruction when the prompt
+    # (e.g. a fully custom one) doesn't reference it. Casing matches the templates.
+    if has_character and "[REF_Character]" not in prompt:
+        parts.append("Use [REF_Character] as the main character in the video.")
+
+    # Speak the dialogue in the selected language with lip-sync — the headline feature.
+    if dialogue and dialogue.strip():
+        lang_name = _LANGUAGE_NAMES.get(language or "en", "English")
         parts.append(
-            "Feature [REF_PRODUCT] prominently and use [REF_CHARACTER] as the main presenter."
+            f'The character speaks the following line in {lang_name}, '
+            f'with natural, accurate lip-sync: "{dialogue.strip()}"'
         )
-    elif has_product:
-        parts.append("Feature [REF_PRODUCT] prominently in the video.")
-    elif has_character:
-        parts.append("Use [REF_CHARACTER] as the main character in the video.")
 
     if has_audio:
         parts.append(
@@ -122,13 +129,6 @@ def _enrich_prompt(
         parts.append(
             "Apply the described changes to the source video while keeping the core scene intact."
         )
-
-    style_mod = _STYLE_MODIFIERS.get(style_id, "")
-    theme_mod = _THEME_MODIFIERS.get(theme_id, "")
-    if style_mod:
-        parts.append(f"Visual style: {style_mod}.")
-    if theme_mod:
-        parts.append(f"Color theme: {theme_mod}.")
 
     parts.append("High quality, 4K resolution.")
     return " ".join(parts)
@@ -182,12 +182,10 @@ def _extract_video_bytes(response: dict) -> Tuple[Optional[bytes], str]:
 
 async def generate_video(
     prompt: str,
-    style_id: str,
-    theme_id: str,
+    dialogue: Optional[str] = None,
+    language: Optional[str] = None,
     aspect_ratio: str = "16:9",
     duration_seconds: int = 10,
-    product_image_bytes: Optional[bytes] = None,
-    product_image_mime: Optional[str] = None,
     character_image_bytes: Optional[bytes] = None,
     character_image_mime: Optional[str] = None,
     audio_bytes: Optional[bytes] = None,
@@ -211,21 +209,14 @@ async def generate_video(
 
     enriched_prompt = _enrich_prompt(
         prompt,
-        style_id,
-        theme_id,
-        has_product=bool(product_image_bytes),
+        dialogue=dialogue,
+        language=language,
         has_character=bool(character_image_bytes),
         has_audio=bool(audio_bytes),
         is_v2v=bool(source_video_bytes),
     )
 
     media_inputs = []
-    if product_image_bytes:
-        media_inputs.append(
-            _media_payload(
-                product_image_bytes, "image", product_image_mime or "image/png"
-            )
-        )
     if character_image_bytes:
         media_inputs.append(
             _media_payload(

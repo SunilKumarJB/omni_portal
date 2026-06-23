@@ -6,9 +6,8 @@ Video generation uses the Omni Interactions API (gemini-omni-flash-preview).
 import uuid
 import asyncio
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
-from app.models.schemas import PromptsResponse, VideoRequestStatus
+from app.models.schemas import VideoRequestStatus
 from app.services import (
-    gemini_service,
     omni_service,
     storage_service,
     db_service,
@@ -19,32 +18,17 @@ from app.config import settings
 router = APIRouter(prefix="/generate", tags=["generate"])
 
 
-@router.post("/prompts", response_model=PromptsResponse)
-async def suggest_prompts(
-    file: UploadFile = File(...),
-):
-    """Analyze a product image with Gemini and return style/theme/prompt suggestions."""
-    if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
-        raise HTTPException(400, "Please upload a JPEG, PNG, or WebP image")
-
-    data = await file.read()
-    if len(data) > 10 * 1024 * 1024:
-        raise HTTPException(400, "Image too large (max 10 MB)")
-
-    return await gemini_service.generate_prompts_from_image(data, file.content_type)
-
-
 @router.post("/video", response_model=VideoRequestStatus)
 async def generate_video(
     background_tasks: BackgroundTasks,
     prompt: str = Form(...),
-    style_id: str = Form(...),
-    theme_id: str = Form(...),
+    style_id: str = Form(None),  # scenario template id — stored as a display label
+    dialogue: str = Form(None),  # spoken line for the character
+    language: str = Form(None),  # language code for the dialogue (en, hi, ta, ...)
     character_preset_id: str = Form(None),
     audio_preset_id: str = Form(None),
     aspect_ratio: str = Form(None),  # "16:9" | "9:16" — defaults to config
     duration_seconds: int = Form(None),  # 1-10  — defaults to config
-    product_image: UploadFile = File(None),
     character_image: UploadFile = File(None),
     audio_file: UploadFile = File(None),
     source_video: UploadFile = File(None),  # V2V editing: existing video as input
@@ -53,7 +37,8 @@ async def generate_video(
     Kick off Omni video generation. Returns a request_id immediately.
     Poll /status/{request_id} for progress.
 
-    - product_image / character_image: passed as reference inputs to Omni ([REF_PRODUCT] / [REF_CHARACTER])
+    - character_image: passed as a reference input to Omni and bound to [REF_Character]
+    - dialogue / language: the line the character speaks, and the language to speak it in
     - audio_file: passed to Omni for audio-driven / lip-sync generation
     - source_video: passed to Omni for V2V editing (style transfer, character swap, etc.)
     """
@@ -64,14 +49,13 @@ async def generate_video(
     record: dict = {
         "prompt": prompt,
         "style_id": style_id,
-        "theme_id": theme_id,
+        "dialogue": dialogue,
+        "language": language,
         "character_preset_id": character_preset_id,
         "audio_preset_id": audio_preset_id,
     }
 
     # Upload any provided files and retain their storage paths for the background task
-    product_image_local = None
-    product_image_mime = None
     character_image_local = None
     character_image_mime = None
     audio_local = None
@@ -79,23 +63,11 @@ async def generate_video(
     source_video_local = None
     source_video_mime = None
 
-    product_bytes = None
     character_bytes = None
     audio_bytes = None
     source_video_bytes = None
 
     # Define upload coroutines to run concurrently in parallel
-    async def upload_product():
-        nonlocal product_image_local, product_image_mime, product_bytes
-        if product_image and product_image.filename:
-            product_bytes = await product_image.read()
-            url, local_path = await storage_service.upload_bytes(
-                product_bytes, f"{request_id}/product.jpg", product_image.content_type
-            )
-            product_image_local = local_path
-            product_image_mime = product_image.content_type
-            record["product_image_url"] = url
-
     async def upload_character():
         nonlocal character_image_local, character_image_mime, character_bytes
         if character_image and character_image.filename:
@@ -136,9 +108,7 @@ async def generate_video(
             record["source_video_url"] = url
 
     # Run independent file uploads in parallel
-    await asyncio.gather(
-        upload_product(), upload_character(), upload_audio(), upload_video()
-    )
+    await asyncio.gather(upload_character(), upload_audio(), upload_video())
 
     # Generate and store QR code immediately (offload CPU-bound image generation to worker thread)
     video_page = qr_service.video_page_url(request_id)
@@ -168,19 +138,16 @@ async def generate_video(
         _run_generation,
         request_id=request_id,
         prompt=prompt,
-        style_id=style_id,
-        theme_id=theme_id,
+        dialogue=dialogue,
+        language=language,
         aspect_ratio=resolved_aspect,
         duration_seconds=resolved_duration,
-        product_image_bytes=product_bytes,
-        product_image_mime=product_image_mime,
         character_image_bytes=character_bytes,
         character_image_mime=character_image_mime,
         audio_bytes=audio_bytes,
         audio_mime=audio_mime,
         source_video_bytes=source_video_bytes,
         source_video_mime=source_video_mime,
-        product_image_local=product_image_local,
         character_image_local=character_image_local,
         audio_local=audio_local,
         source_video_local=source_video_local,
@@ -201,19 +168,16 @@ async def get_status(request_id: str):
 async def _run_generation(
     request_id: str,
     prompt: str,
-    style_id: str,
-    theme_id: str,
-    aspect_ratio: str,
-    duration_seconds: int,
-    product_image_bytes: bytes = None,
-    product_image_mime: str = None,
+    dialogue: str = None,
+    language: str = None,
+    aspect_ratio: str = "16:9",
+    duration_seconds: int = 10,
     character_image_bytes: bytes = None,
     character_image_mime: str = None,
     audio_bytes: bytes = None,
     audio_mime: str = None,
     source_video_bytes: bytes = None,
     source_video_mime: str = None,
-    product_image_local: str = None,
     character_image_local: str = None,
     audio_local: str = None,
     source_video_local: str = None,
@@ -240,13 +204,6 @@ async def _run_generation(
         await db_service.update_request(request_id, {"progress": 20})
 
         # Read stored asset bytes for Omni media inputs (fallback to reading from path if bytes not pre-loaded)
-        if product_image_bytes is None and product_image_local:
-            product_bytes, prod_mime = await _read_asset(
-                product_image_local, product_image_mime
-            )
-        else:
-            product_bytes, prod_mime = product_image_bytes, product_image_mime
-
         if character_image_bytes is None and character_image_local:
             character_bytes, char_mime = await _read_asset(
                 character_image_local, character_image_mime
@@ -278,12 +235,10 @@ async def _run_generation(
             # Primary generation attempt
             video_bytes, mime_type = await omni_service.generate_video(
                 prompt=prompt,
-                style_id=style_id,
-                theme_id=theme_id,
+                dialogue=dialogue,
+                language=language,
                 aspect_ratio=aspect_ratio,
                 duration_seconds=duration_seconds,
-                product_image_bytes=product_bytes,
-                product_image_mime=prod_mime,
                 character_image_bytes=character_bytes,
                 character_image_mime=char_mime,
                 audio_bytes=audio_bytes_data,
@@ -311,12 +266,10 @@ async def _run_generation(
                     )
                     video_bytes, mime_type = await omni_service.generate_video(
                         prompt=fallback_prompt,
-                        style_id=style_id,
-                        theme_id=theme_id,
+                        dialogue=dialogue,
+                        language=language,
                         aspect_ratio=aspect_ratio,
                         duration_seconds=duration_seconds,
-                        product_image_bytes=product_bytes,
-                        product_image_mime=prod_mime,
                         character_image_bytes=character_bytes,
                         character_image_mime=char_mime,
                         audio_bytes=None,  # Strip audio track
@@ -392,8 +345,8 @@ def _to_status(record: dict) -> dict:
         "updated_at": record.get("updated_at", ""),
         "prompt": record.get("prompt"),
         "style_id": record.get("style_id"),
-        "theme_id": record.get("theme_id"),
-        "product_image_url": record.get("product_image_url"),
+        "dialogue": record.get("dialogue"),
+        "language": record.get("language"),
         "character_image_url": record.get("character_image_url"),
         "audio_url": record.get("audio_url"),
     }

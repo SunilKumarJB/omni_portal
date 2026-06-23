@@ -28,9 +28,7 @@ async def test_db_service_local_mode(tmp_path):
         assert "created_at" in record
 
         # 3. Test update_request
-        await db_service.update_request(
-            request_id, {"progress": 50, "status": "processing"}
-        )
+        await db_service.update_request(request_id, {"progress": 50, "status": "processing"})
 
         # Verify update
         updated_record = await db_service.get_request(request_id)

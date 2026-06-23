@@ -77,9 +77,7 @@ def _signed_url(blob) -> str:
                 access_token=creds.token,
             )
         # Local ADC with a service-account key can sign directly.
-        return blob.generate_signed_url(
-            version="v4", expiration=_SIGNED_URL_TTL, method="GET"
-        )
+        return blob.generate_signed_url(version="v4", expiration=_SIGNED_URL_TTL, method="GET")
     except Exception:
         # Last resort: bucket/objects must be public for this to resolve.
         return blob.public_url

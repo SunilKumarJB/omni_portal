@@ -15,9 +15,7 @@ async def test_upload_to_gcs_offloading():
     # Patch _get_bucket to return our mock bucket
     with patch("app.services.storage_service._get_bucket", return_value=mock_bucket):
         # We patch asyncio.to_thread to track if it's called
-        with patch(
-            "asyncio.to_thread", side_effect=asyncio.to_thread
-        ) as mock_to_thread:
+        with patch("asyncio.to_thread", side_effect=asyncio.to_thread) as mock_to_thread:
             url, gs_path = await storage_service._upload_to_gcs(
                 b"fake_data", "test/path.jpg", "image/jpeg"
             )

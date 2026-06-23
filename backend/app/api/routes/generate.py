@@ -115,9 +115,7 @@ async def generate_video(
     try:
         qr_bytes = await asyncio.to_thread(qr_service.generate_qr_bytes, video_page)
     except Exception:
-        qr_bytes = await asyncio.to_thread(
-            qr_service.generate_qr_bytes_simple, video_page
-        )
+        qr_bytes = await asyncio.to_thread(qr_service.generate_qr_bytes_simple, video_page)
 
     qr_url, _ = await storage_service.upload_bytes(
         qr_bytes, f"{request_id}/qr_code.png", "image/png"
@@ -183,9 +181,7 @@ async def _run_generation(
     source_video_local: str = None,
 ):
     try:
-        await db_service.update_request(
-            request_id, {"status": "processing", "progress": 10}
-        )
+        await db_service.update_request(request_id, {"status": "processing", "progress": 10})
 
         if settings.TEST_MODE:
             for pct in [25, 50, 75, 90]:

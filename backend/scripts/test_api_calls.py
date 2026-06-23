@@ -32,12 +32,8 @@ def verify_prompts_endpoint():
             print("Response Data (snippet):")
             data = resp.json()
             print(f"Product Description: {data.get('product_description')}")
-            print(
-                f"Suggested Styles: {[s['name'] for s in data.get('suggested_styles', [])]}"
-            )
-            print(
-                f"Suggested Themes: {[t['name'] for t in data.get('suggested_themes', [])]}"
-            )
+            print(f"Suggested Styles: {[s['name'] for s in data.get('suggested_styles', [])]}")
+            print(f"Suggested Themes: {[t['name'] for t in data.get('suggested_themes', [])]}")
             print(f"Sample Prompts (count): {len(data.get('sample_prompts', []))}")
             return True
         else:

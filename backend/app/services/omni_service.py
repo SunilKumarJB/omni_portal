@@ -46,7 +46,9 @@ _LANGUAGE_NAMES = {
 def _api_endpoint() -> str:
     project = settings.OMNI_PROJECT_ID or settings.GCP_PROJECT_ID
     host = _ENVIRONMENTS.get(settings.OMNI_ENVIRONMENT, _ENVIRONMENTS["autopush"])
-    return f"https://{host}/v1beta1/projects/{project}/locations/{settings.OMNI_REGION}/interactions"
+    return (
+        f"https://{host}/v1beta1/projects/{project}/locations/{settings.OMNI_REGION}/interactions"
+    )
 
 
 # Thread-safe async-safe Google OAuth2 Token Cache
@@ -173,9 +175,7 @@ def _extract_video_bytes(response: dict) -> Tuple[Optional[bytes], str]:
 
     for output in contents:
         if output.get("type") == "video" and "data" in output:
-            return base64.b64decode(output["data"]), output.get(
-                "mime_type", "video/mp4"
-            )
+            return base64.b64decode(output["data"]), output.get("mime_type", "video/mp4")
 
     return None, "video/mp4"
 
@@ -219,24 +219,16 @@ async def generate_video(
     media_inputs = []
     if character_image_bytes:
         media_inputs.append(
-            _media_payload(
-                character_image_bytes, "image", character_image_mime or "image/png"
-            )
+            _media_payload(character_image_bytes, "image", character_image_mime or "image/png")
         )
     if audio_bytes:
-        media_inputs.append(
-            _media_payload(audio_bytes, "audio", audio_mime or "audio/wav")
-        )
+        media_inputs.append(_media_payload(audio_bytes, "audio", audio_mime or "audio/wav"))
     if source_video_bytes:
         media_inputs.append(
-            _media_payload(
-                source_video_bytes, "video", source_video_mime or "video/mp4"
-            )
+            _media_payload(source_video_bytes, "video", source_video_mime or "video/mp4")
         )
 
-    payload = _compose_request(
-        enriched_prompt, media_inputs, aspect_ratio, duration_seconds
-    )
+    payload = _compose_request(enriched_prompt, media_inputs, aspect_ratio, duration_seconds)
     endpoint = _api_endpoint()
 
     # Reuse a single AsyncClient session for the entire lifecycle of the request and polling
@@ -273,9 +265,7 @@ async def generate_video(
 
             headers = await _auth_headers()
             # Reuse the same client session
-            poll_resp = await client.get(
-                f"{endpoint}/{interaction_id}", headers=headers
-            )
+            poll_resp = await client.get(f"{endpoint}/{interaction_id}", headers=headers)
             poll_resp.raise_for_status()
             data = poll_resp.json()
 

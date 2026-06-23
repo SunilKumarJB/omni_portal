@@ -20,9 +20,7 @@ async def test_run_generation_zero_copy():
     mock_db_update = AsyncMock()
     mock_read_bytes = AsyncMock()
     mock_omni_generate = AsyncMock(return_value=(b"generated_video_bytes", "video/mp4"))
-    mock_upload_bytes = AsyncMock(
-        return_value=("http://fakeurl/video.mp4", "local_path")
-    )
+    mock_upload_bytes = AsyncMock(return_value=("http://fakeurl/video.mp4", "local_path"))
 
     with (
         patch("app.services.db_service.update_request", mock_db_update),
@@ -65,9 +63,7 @@ async def test_run_generation_zero_copy():
         )
 
         # 3. DB updates were called correctly (10 -> 20 -> 30 -> 90 -> 100/completed)
-        mock_db_update.assert_any_call(
-            request_id, {"status": "processing", "progress": 10}
-        )
+        mock_db_update.assert_any_call(request_id, {"status": "processing", "progress": 10})
         mock_db_update.assert_any_call(
             request_id,
             {
@@ -92,9 +88,7 @@ async def test_run_generation_fallback_to_storage():
     # read_bytes returns the on-disk character bytes when called
     mock_read_bytes = AsyncMock(return_value=(fake_character_bytes, "image/png"))
     mock_omni_generate = AsyncMock(return_value=(b"video_bytes", "video/mp4"))
-    mock_upload_bytes = AsyncMock(
-        return_value=("http://fakeurl/video.mp4", "local_path")
-    )
+    mock_upload_bytes = AsyncMock(return_value=("http://fakeurl/video.mp4", "local_path"))
 
     with (
         patch("app.services.db_service.update_request", mock_db_update),
@@ -122,10 +116,7 @@ async def test_run_generation_fallback_to_storage():
 
         # 2. omni_service was called with those bytes
         mock_omni_generate.assert_called_once()
-        assert (
-            mock_omni_generate.call_args[1]["character_image_bytes"]
-            == fake_character_bytes
-        )
+        assert mock_omni_generate.call_args[1]["character_image_bytes"] == fake_character_bytes
 
 
 @pytest.mark.asyncio
@@ -147,9 +138,7 @@ async def test_run_generation_audio_fallback_resilience():
     ]
 
     mock_db_update = AsyncMock()
-    mock_upload_bytes = AsyncMock(
-        return_value=("http://fakeurl/silent_video.mp4", "local_path")
-    )
+    mock_upload_bytes = AsyncMock(return_value=("http://fakeurl/silent_video.mp4", "local_path"))
 
     with (
         patch("app.services.db_service.update_request", mock_db_update),

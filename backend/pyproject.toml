@@ -1,0 +1,37 @@
+[project]
+name = "omni-portal-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-multipart>=0.0.12",
+    "google-genai>=1.16.0",
+    "google-cloud-storage>=2.19.0",
+    "google-cloud-firestore>=2.19.0",
+    "qrcode[pil]>=8.0",
+    "Pillow>=11.0.0",
+    "python-dotenv>=1.0.0",
+    "aiofiles>=24.1.0",
+    "httpx>=0.28.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "python-jose[cryptography]>=3.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.15.18",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
  * through behind it.
  */
 interface StepItem {
-  id: 1 | 2 | 3 | 4 | 5;
+  id: 1 | 2 | 3 | 4 | 5 | 6;
   label: string;
 }
 
@@ -21,14 +21,15 @@ type StepAccent =
   | { fill: string; text: string; ring: string; line: string };
 
 const STEP_ACCENTS: Record<StepItem['id'], StepAccent> = {
-  1: { fill: '#2EBA53', text: '#06130A' },
-  2: { fill: '#FFC30E', text: '#171202' },
-  3: { fill: '#EA4335', text: '#FFFFFF' },
-  4: { fill: '#2986FF', text: '#FFFFFF' },
-  5: {
+  1: { fill: '#4285F4', text: '#FFFFFF' }, // Blue (Director)
+  2: { fill: '#F4B400', text: '#171202' }, // Yellow (Product)
+  3: { fill: '#0F9D58', text: '#06130A' }, // Green (Dialogue)
+  4: { fill: '#AB47BC', text: '#FFFFFF' }, // Purple (Presenter)
+  5: { fill: '#DB4437', text: '#FFFFFF' }, // Red (Scenario)
+  6: {
     fill: 'hsl(var(--foreground))',
-    ring: 'conic-gradient(from -35deg, #2986FF 0deg 88deg, #EA4335 88deg 176deg, #FFC30E 176deg 264deg, #2EBA53 264deg 360deg)',
-    line: 'linear-gradient(180deg, #2EBA53 0%, #FFC30E 34%, #EA4335 67%, #2986FF 100%)',
+    ring: 'conic-gradient(from -35deg, #4285F4 0deg 90deg, #DB4437 90deg 180deg, #F4B400 180deg 270deg, #0F9D58 270deg 360deg)',
+    line: 'linear-gradient(180deg, #4285F4 0%, #DB4437 33%, #F4B400 66%, #0F9D58 100%)',
     text: 'hsl(var(--background))',
   },
 };
@@ -78,10 +79,10 @@ export default function SideRail({
               const done = currentStep > step.id;
               const active = currentStep === step.id;
               const last = i === steps.length - 1;
-              const nextIsFinal = steps[i + 1]?.id === 5;
+              const nextIsFinal = steps[i + 1]?.id === 6;
               const accent = STEP_ACCENTS[step.id];
               const filled = active || done;
-              const segmented = step.id === 5;
+              const segmented = step.id === 6;
 
               return (
                 <li key={step.id} className="flex gap-4">
@@ -119,7 +120,7 @@ export default function SideRail({
                       <span
                         className={cn(
                           'my-2 w-0.5 flex-1 transition-colors duration-300',
-                          nextIsFinal && currentStep >= 5 && 'opacity-0',
+                          nextIsFinal && currentStep >= 6 && 'opacity-0',
                         )}
                         style={{
                           minHeight: 24,

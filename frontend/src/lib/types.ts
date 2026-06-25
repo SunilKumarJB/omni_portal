@@ -14,6 +14,16 @@ export interface VideoTemplate {
   poster: string | null;
 }
 
+export interface ProductPreset {
+  id: string;
+  name: string;
+  tagline: string;
+  description: string;
+  visualDescription: string;
+  emoji: string;
+  gradient: string;
+}
+
 export interface CharacterPreset {
   id: string;
   name: string;

@@ -2,7 +2,7 @@ import { Pencil, Quote, RotateCcw, Volume2 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
-import type { LanguageCode, VideoTemplate } from '@/lib/types';
+import type { LanguageCode, ProductPreset } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import StepHeading, { FieldLabel } from './StepHeading';
 
@@ -16,7 +16,7 @@ interface Language {
 }
 
 interface Props {
-  selectedTemplate: VideoTemplate | null;
+  selectedProduct: ProductPreset | null;
   selectedLanguage: LanguageCode;
   setSelectedLanguage: React.Dispatch<React.SetStateAction<LanguageCode>>;
   dialogueText: string;
@@ -38,68 +38,56 @@ const LANGUAGES: Language[] = [
   { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', script: 'Gurmukhi' },
 ];
 
-/* Dialogue translations per template */
+/* Dialogue translations per product */
 
 const DIALOGUES: Record<string, Record<LanguageCode, string>> = {
-  cyberpunk: {
-    en: 'They said the city never sleeps. Good… neither do I.',
-    hi: 'उन्होंने कहा शहर कभी नहीं सोता। अच्छा… मैं भी नहीं सोता।',
-    ta: 'நகரம் தூங்குவதில்லை என்று சொன்னார்கள். நல்லது… நானும் தூங்குவதில்லை.',
-    te: 'నగరం నిద్రపోదు అని చెప్పారు. సరే… నేనూ నిద్రపోను.',
-    kn: 'ನಗರ ನಿದ್ರಿಸುವುದಿಲ್ಲ ಎಂದು ಹೇಳಿದರು. ಒಳ್ಳೆಯದು… ನಾನೂ ನಿದ್ರಿಸುವುದಿಲ್ಲ.',
-    ml: 'നഗരം ഉറങ്ങില്ല എന്ന് അവർ പറഞ്ഞു. നല്ലത്… ഞാനും ഉറങ്ങില്ല.',
-    bn: 'তারা বলেছিল শহর কখনো ঘুমায় না। ভালো… আমিও ঘুমাই না।',
-    mr: 'ते म्हणाले शहर कधी झोपत नाही. चांगले… मीही झोपत नाही.',
-    gu: 'તેઓ કહ્યું શહેર ઊંઘતું નથી. સારું… હું પણ ઊંઘતો નથી.',
-    pa: 'ਉਨ੍ਹਾਂ ਕਿਹਾ ਸ਼ਹਿਰ ਕਦੇ ਨਹੀਂ ਸੌਂਦਾ। ਚੰਗਾ… ਮੈਂ ਵੀ ਨਹੀਂ ਸੌਂਦਾ।',
+  lumina_aura: {
+    en: "This isn't just style. It's my mood, projected in pure light. Meet Lumina Aura.",
+    hi: 'यह सिर्फ स्टाइल नहीं है। यह मेरा मूड है, जो शुद्ध रोशनी में झलकता है। मिलिए ल्यूमिना ऑरा से।',
+    ta: 'இது வெறும் ஸ்டைல் அல்ல. இது என் மனநிலை, தூய ஒளியில் பிரதிபலிக்கிறது. லுமினா ஆராவை சந்தியுங்கள்.',
+    te: 'ఇది కేవలం స్టైల్ కాదు. ఇది నా మూడ్, స్వచ్ఛమైన కాంతితో ప్రసరిస్తోంది. లూమినా ఆరాను చూడండి.',
+    kn: 'ಇದು ಕೇವಲ ಸ್ಟೈಲ್ ಅಲ್ಲ. ಇದು ನನ್ನ ಮೂಡ್, ಶುದ್ಧ ಬೆಳಕಿನಲ್ಲಿ ಮೂಡಿಬಂದಿದೆ. ಲುಮಿನา ಆರಾ ಪರಿಚಯಿಸಿಕೊಳ್ಳಿ.',
+    ml: 'ഇത് വെറും സ്റ്റൈൽ അല്ല. ഇത് എന്റെ mood ആണ്, ശുദ്ധമായ വെളിച്ചത്തിൽ പ്രതിഫലിക്കുന്നു. ലൂമിന ഓറയെ പരിചയപ്പെടൂ.',
+    bn: 'এটি কেবল স্টাইল নয়। এটি আমার মেজাজ, যা খাঁটি আলোতে প্রতিফলিত হয়। লুমিনা অরার সাথে পরিচিত হন।',
+    mr: 'हा फक्त स्टाईल नाही. हा माझा मूड आहे, जो शुद्ध प्रकाशात प्रक्षेपत होतो. ल्युमिना ऑराला भेटा.',
+    gu: 'આ ફક્ત સ્ટાઇલ નથી. આ મારો મૂડ છે, જે શુદ્ધ પ્રકાશમાં પ્રગટ થાય છે. લ્યુમિના ઓરાને મળો.',
+    pa: 'ਇਹ ਸਿਰਫ਼ ਸਟਾਈਲ ਨਹੀਂ ਹੈ। ਇਹ ਮੇਰਾ ਮੂਡ ਹੈ, ਜੋ ਸ਼ੁੱਧ ਰੌਸ਼ਨੀ ਵਿੱਚ ਦਿਖਾਈ ਦਿੰਦਾ ਹੈ। ਮਿਲੋ ਲਿਊਮਿਨਾ ਔਰਾ ਨਾਲ।',
   },
-  action_hero: {
-    en: "Are you not entertained? Because I'm just getting started.",
-    hi: 'क्या तुम मनोरंजित नहीं हो? क्योंकि मैंने तो अभी शुरुआत ही की है।',
-    ta: 'நீங்கள் மகிழவில்லையா? ஏனென்றால் நான் இப்போதுதான் தொடங்கியிருக்கிறேன்.',
-    te: 'మీకు వినోదం కలగడం లేదా? ఎందుకంటే నేను ఇప్పుడే మొదలుపెట్టాను.',
-    kn: 'ನಿಮಗೆ ಮನರಂಜನೆ ಆಗಲಿಲ್ಲವೇ? ಏಕೆಂದರೆ ನಾನು ಇನ್ನೂ ಪ್ರಾರಂಭಿಸುತ್ತಿದ್ದೇನೆ.',
-    ml: 'നിങ്ങൾക്ക് വിനോദം ഇല്ലേ? കാരണം ഞാൻ ഇപ്പോൾ മാത്രമേ ആരംഭിച്ചിട്ടുള്ളൂ.',
-    bn: 'আপনি কি বিনোদিত নন? কারণ আমি তো এইমাত্র শুরু করেছি।',
-    mr: 'तुम्हाला मनोरंजन नाही का? कारण मी आत्ताच सुरुवात केली आहे.',
-    gu: 'શું તમે મનોરંજિત નથી? કારણ કે હું હમણાં જ શરૂ કર્યું છે.',
-    pa: 'ਕੀ ਤੁਸੀਂ ਮਨੋਰੰਜਿਤ ਨਹੀਂ ਹੋ? ਕਿਉਂਕਿ ਮੈਂ ਹੁਣੇ ਸ਼ੁਰੂ ਕਰ ਰਿਹਾ ਹਾਂ।',
+  solaris_roadster: {
+    en: 'Pure electric performance, charged by the sun. The Solaris Roadster has arrived.',
+    hi: 'सूरज से चार्ज होने वाली शुद्ध इलेक्ट्रिक परफॉर्मेंस। सोलारिस रोडस्टर आ गई है।',
+    ta: 'சூரியனால் சார்ஜ் செய்யப்படும் தூய மின்சார செயல்திறன். சோலாரிஸ் ரோட்ஸ்டர் வந்துவிட்டது.',
+    te: 'సూర్యునితో ఛార్జ్ అయ్యే స్వచ్ఛమైన ఎలక్ట్రిక్ పర్ఫార్మెన్స్. సోలారిస్ రోడ్‌స్టర్ వచ్చేసింది.',
+    kn: 'ಸೂರ್ಯನಿಂದ ಚಾರ್ಜ್ ಆಗುವ ಶುದ್ಧ ಎಲೆಕ್ಟ್ರಿಕ್ ಪರ್ಫಾರ್ಮೆನ್ಸ್. ಸೋಲಾರಿಸ್ ರೋಡ್‌ಸ್ಟರ್ ಬಂದಿದೆ.',
+    ml: 'സൂര്യനിൽ നിന്ന് ചാർജ്ജ് ചെയ്യുന്ന ശുദ്ധമായ ഇലക്ട്രിക് പെർഫോമൻസ്. സോളാരിസ് റോഡ്സ്റ്റർ എത്തിക്കഴിഞ്ഞു.',
+    bn: 'সূর্য দ্বারা চার্জযুক্ত খাঁটি বৈদ্যুতিক পারফরম্যান্স। সোলারিস রোডস্টার এসে গেছে।',
+    mr: 'सूर्याने चार्ज होणारी शुद्ध इलेक्ट्रिक कामगिरी. सोलारिस रोडस्टर आली आहे.',
+    gu: 'સૂર્યથી ચાર્જ થતી શુદ્ધ ઇલેક્ટ્રિક કામગીરી. સોલારિસ રોડસ્ટર આવી ગઈ છે.',
+    pa: 'ਸੂਰਜ ਨਾਲ ਚਾਰਜ ਹੋਣ ਵਾਲੀ ਸ਼ੁੱਧ ਇਲੈਕਟ੍ਰਿਕ ਕਾਰਗੁਜ਼ਾਰੀ। ਸੋਲਾਰਿਸ ਰੋਡਸਟਰ ਆ ਗਈ ਹੈ।',
   },
-  film_noir: {
-    en: "Romance is just a myth we tell ourselves to survive the rain. But a good mystery? That's real.",
-    hi: 'रोमांस सिर्फ एक मिथक है जो हम बारिश में जीने के लिए सुनाते हैं। लेकिन एक अच्छा रहस्य? वो असली है।',
-    ta: 'காதல் என்பது மழையில் உயிர்வாழ நாமே சொல்லும் கட்டுக்கதை. ஆனால் நல்ல மர்மம்? அது உண்மையானது.',
-    te: 'రొమాన్స్ వర్షంలో బతకడానికి మనం చెప్పుకునే పురాణం. కానీ మంచి రహస్యం? అది నిజం.',
-    kn: 'ರೋಮ್ಯಾನ್ಸ್ ಮಳೆಯಲ್ಲಿ ಬದುಕಲು ನಾವು ಹೇಳಿಕೊಳ್ಳುವ ಕಟ್ಟುಕಥೆ. ಆದರೆ ಒಳ್ಳೆಯ ನಿಗೂಢ? ಅದು ನಿಜ.',
-    ml: 'മഴയിൽ ജീവിക്കാൻ നാം പറഞ്ഞുകൊള്ളുന്ന കഥ മാത്രമാണ് പ്രണയം. എന്നാൽ നല്ല രഹസ്യം? അത് യഥാർത്ഥം.',
-    bn: 'রোমান্স শুধু একটি মিথ যা আমরা বৃষ্টিতে বাঁচতে বলি। কিন্তু ভালো রহস্য? সেটা সত্যিকারের।',
-    mr: 'रोमान्स म्हणजे पावसात टिकण्यासाठी आपण स्वतःला सांगतो ती मिथक. पण चांगले रहस्य? ते खरे असते.',
-    gu: 'પ્રેમ એ ફક્ત કથા છે જે વરસાદમાં ટકવા આપણે કહીએ. પણ સારું રહસ્ય? તે સત્ય છે.',
-    pa: 'ਰੋਮਾਂਸ ਸਿਰਫ਼ ਇੱਕ ਮਿੱਥ ਹੈ ਜੋ ਮੀਂਹ ਵਿੱਚ ਜਿਉਂਦੇ ਰਹਿਣ ਲਈ ਅਸੀਂ ਆਪਣੇ ਆਪ ਨੂੰ ਦੱਸਦੇ ਹਾਂ। ਪਰ ਚੰਗਾ ਰਹੱਸ? ਉਹ ਅਸਲੀ ਹੈ।',
+  aether_glass: {
+    en: 'The world is my canvas. With Aether Glass, the future is always in sight.',
+    hi: 'दुनिया मेरा कैनवास है। ईथर ग्लास के साथ, भविष्य हमेशा नजरों में रहता है।',
+    ta: 'உலகமே என் கேன்வாஸ். ஈதர் கிளாஸ் உடன், எதிர்காலம் எப்போதும் கண்முன்னே இருக்கிறது.',
+    te: 'ప్రపంచమే నా కాన్వాస్. ఈథర్ గ్లాస్‌తో, భవిష్యత్తు ఎల్లప్పుడూ কళ్ళముందే ఉంటుంది.',
+    kn: 'ಪ್ರಪಂಚವೇ ನನ್ನ ಕ್ಯಾನ್ವಾಸ್. ಈಥರ್ ಗ್ಲಾಸ್‌ನೊಂದಿಗೆ, ಭವಿಷ್ಯ ಯಾವಾಗಲೂ ಕಣ್ಣೆದುರೇ ಇರುತ್ತದೆ.',
+    ml: 'ലോകം എന്റെ ക്യാൻവാസ് ആണ്. ഈഥർ ഗ്ലാസ്സിലൂടെ, ഭാവി എപ്പോഴും കൺമുന്നിലുണ്ട്.',
+    bn: 'পৃথিবী আমার ক্যানভাস। ইথার গ্লাসের সাথে, ভবিষ্যৎ সবসময় চোখের সামনে।',
+    mr: 'जग माझा कॅनव्हास आहे. इथर ग्लाससह, भविष्य नेहमी डोळ्यांसमोर असते.',
+    gu: 'દુનિયા મારો કેનવાસ છે. ઈથર ગ્લાસ સાથે, ભવિષ્ય હંમેશા નજર સમક્ષ છે.',
+    pa: 'ਦੁਨੀਆ ਮੇਰਾ ਕੈਨਵਸ ਹੈ। ਈਥਰ ਗਲਾਸ ਦੇ ਨਾਲ, ਭਵਿੱਖ ਹਮੇਸ਼ਾ ਨਜ਼ਰ ਵਿੱਚ ਰਹਿੰਦਾ ਹੈ।',
   },
-  animated: {
-    en: 'Spring is here, the blossoms are blooming, and absolutely nothing is going to plan!',
-    hi: 'वसंत आ गया, फूल खिल रहे हैं, और कुछ भी योजना के अनुसार नहीं हो रहा!',
-    ta: 'வசந்தகாலம் வந்தது, பூக்கள் மலர்கின்றன, மற்றும் எதுவும் திட்டமிட்டபடி நடக்கவில்லை!',
-    te: 'వసంతం వచ్చింది, పూలు వికసిస్తున్నాయి, మరియు ఏదీ ప్రణాళికలో లేదు!',
-    kn: 'ವಸಂತ ಬಂದಿದೆ, ಹೂಗಳು ಅರಳುತ್ತಿವೆ, ಮತ್ತು ಏನೂ ಯೋಜನೆಯಂತೆ ನಡೆಯುತ್ತಿಲ್ಲ!',
-    ml: 'വസന്തം വന്നു, പൂക്കൾ വിരിഞ്ഞു, ഒന്നും പദ്ധതിയനുസരിച്ച് നടക്കുന്നില്ല!',
-    bn: 'বসন্ত এসে গেছে, ফুল ফুটছে, আর কিছুই পরিকল্পনামতো হচ্ছে না!',
-    mr: 'वसंत आला, फुले फुलत आहेत, आणि काहीही योजनेप्रमाणे होत नाही!',
-    gu: 'વસંત આવ્યો, ફૂલ ખીલ્યાં, અને કંઈ પણ યોજના પ્રમાણે નથી!',
-    pa: 'ਬਸੰਤ ਆ ਗਿਆ, ਫੁੱਲ ਖਿੜ ਰਹੇ ਹਨ, ਅਤੇ ਕੁਝ ਵੀ ਯੋਜਨਾ ਅਨੁਸਾਰ ਨਹੀਂ ਹੋ ਰਿਹਾ!',
-  },
-  treasure_hunter: {
-    en: 'Some secrets are meant to stay buried. Too bad I brought a shovel.',
-    hi: 'कुछ राज़ दफ़न ही रहने के लिए होते हैं। बुरा हुआ कि मैं फावड़ा ले आया।',
-    ta: 'சில இரகசியங்கள் புதைந்தே இருக்க வேண்டியவை. துரதிர்ஷ்டவசமாக நான் கொத்தாளி கொண்டு வந்தேன்.',
-    te: 'కొన్ని రహస్యాలు పూడ్చిపెట్టబడే ఉండాలి. పాపం నేను పార తీసుకొచ్చాను.',
-    kn: 'ಕೆಲವು ರಹಸ್ಯಗಳು ಹೂಳಿಯೇ ಇರಬೇಕು. ದುರದೃಷ್ಟವಶಾತ್ ನಾನು ಗುದ್ದಲಿ ತಂದೆ.',
-    ml: 'ചില രഹസ്യങ്ങൾ അടക്കപ്പെട്ടു കിടക്കാൻ ഉദ്ദേശിക്കപ്പെട്ടവ. കഷ്ടം, ഞാൻ ഒരു പാര കൊണ്ടുവന്നു.',
-    bn: 'কিছু রহস্য কবরেই থাকার জন্য। দুর্ভাগ্যবশত আমি কোদাল নিয়ে এসেছি।',
-    mr: 'काही रहस्ये गाडलेलीच राहायला हवीत. दुर्दैव म्हणजे मी कुदळ घेऊन आलो.',
-    gu: 'કેટલાક રહસ્ય દફન જ રહેવા જોઈએ. દુર્ભાગ્ય, હું ઉપડો લઈ આવ્યો.',
-    pa: 'ਕੁਝ ਰਾਜ਼ ਦੱਬੇ ਹੀ ਰਹਿਣੇ ਚਾਹੀਦੇ ਹਨ। ਬੁਰਾ ਹੋਇਆ ਕਿ ਮੈਂ ਕਹੀ ਲੈ ਆਇਆ।',
+  quantum_chrono: {
+    en: "Time doesn't control me. I shape it. The Quantum Chrono: absolute precision.",
+    hi: 'समय मुझे नियंत्रित नहीं करता। मैं इसे आकार देता हूँ। क्वांटम क्रोनो: पूर्ण सटीकता।',
+    ta: 'நேரம் என்னை கட்டுப்படுத்துவதில்லை. நானே அதை வடிவமைக்கிறேன். குவாண்டம் குரோனோ: முழுமையான துல்லியம்.',
+    te: 'సమయం నన్ను నియంత్రించదు. నేనే దానిని రూపుదిద్దుతాను. క్వాంటం క్రోనో: సంపూర్ణ ఖచ్చితత్వం.',
+    kn: 'ಸಮಯ ನನ್ನನ್ನು ನಿಯಂತ್ರಿಸುವುದಿಲ್ಲ. ನಾನು ಅದನ್ನು ರೂಪಿಸುತ್ತೇನೆ. ಕ್ವಾಂಟಮ್ ಕ್ರೋನೋ: ಸಂಪೂರ್ಣ ನಿಖರತೆ.',
+    ml: 'സമയം എന്നെ നിയന്ത്രിക്കുന്നില്ല. ഞാൻ അതിനെ രൂപപ്പെടുത്തുന്നു. ക്വാണ്ടം ക്രോണോ: പൂർണ്ണമായ കൃത്യത.',
+    bn: 'সময় আমাকে নিয়ন্ত্রণ করে না। আমি একে রূপ দিই। কোয়ান্টাম ক্রোনো: পরম নির্ভুলতা।',
+    mr: 'वेळ मला नियंत्रित करत नाही. मी त्याला आकार देतो. क्वांटम क्रोनो: परिपूर्ण अचूकता.',
+    gu: 'સમય મને નિયંત્રિત કરતો નથી. હું તેને આકાર આપું છું. ક્વોન્ટમ ક્રોનો: સંપૂર્ણ ચોકસાઈ.',
+    pa: 'ਸਮਾਂ ਮੈਨੂੰ ਕੰਟਰੋਲ ਨਹੀਂ ਕਰਦਾ। ਮੈਂ ਇਸਨੂੰ ਆਕਾਰ ਦਿੰਦਾ ਹਾਂ। ਕੁਆਂਟਮ ਕ੍ਰੋਨो: ਸੰਪੂਰਨ ਸ਼ੁੱਧਤਾ।',
   },
   custom: {
     en: '',
@@ -118,7 +106,7 @@ const DIALOGUES: Record<string, Record<LanguageCode, string>> = {
 /* Component */
 
 export default function DialogueSelector({
-  selectedTemplate,
+  selectedProduct,
   selectedLanguage,
   setSelectedLanguage,
   dialogueText,
@@ -126,8 +114,8 @@ export default function DialogueSelector({
 }: Props) {
   const [editing, setEditing] = useState(false);
 
-  const templateId = selectedTemplate?.id ?? 'custom';
-  const translations = DIALOGUES[templateId] ?? DIALOGUES.custom;
+  const productId = selectedProduct?.id ?? 'custom';
+  const translations = DIALOGUES[productId] ?? DIALOGUES.custom;
   const original = translations['en'] ?? '';
   const translated = translations[selectedLanguage] ?? original;
   const currentLang = LANGUAGES.find((l) => l.code === selectedLanguage)!;
@@ -137,7 +125,7 @@ export default function DialogueSelector({
     if (!editing) {
       setDialogueText(translated);
     }
-  }, [selectedLanguage, templateId]);
+  }, [selectedLanguage, productId]);
 
   function handleLanguageSelect(code: LanguageCode) {
     setSelectedLanguage(code);
@@ -154,7 +142,7 @@ export default function DialogueSelector({
 
   return (
     <div className="mx-auto flex h-full w-full max-w-[1360px] flex-col gap-4">
-      <StepHeading eyebrow="Step 2 of 5" title="Choose your dialogue" className="mb-0">
+      <StepHeading eyebrow="Step 3 of 6" title="Choose your dialogue" className="mb-0">
         Select a language — then edit the dialogue if you want to customise it.
       </StepHeading>
 
@@ -204,19 +192,13 @@ export default function DialogueSelector({
 
             <div className="flex w-full min-w-0 items-center gap-4 pt-2">
               <div className="flex flex-shrink-0 flex-col items-center gap-2">
-                <div
-                  className="relative flex h-14 w-14 items-center justify-center rounded-full border bg-background text-2xl shadow-md transition-all duration-300"
-                  style={{
-                    borderColor: selectedTemplate ? selectedTemplate.accent : 'var(--border)',
-                    boxShadow: selectedTemplate ? `0 0 16px ${selectedTemplate.accent}25` : 'none',
-                  }}
-                >
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-full border bg-background text-2xl shadow-md transition-all duration-300 border-border">
                   <span className="animate-pulse-slow">
-                    {selectedTemplate ? selectedTemplate.emoji : '🎙️'}
+                    {selectedProduct ? selectedProduct.emoji : '🎙️'}
                   </span>
                 </div>
                 <span className="text-xs xl:text-sm font-bold text-muted-foreground tracking-wider uppercase truncate max-w-[90px] xl:max-w-[110px]">
-                  {selectedTemplate ? selectedTemplate.title.split(' ').pop() : 'Presenter'}
+                  {selectedProduct ? selectedProduct.name.split(' ').pop() : 'Presenter'}
                 </span>
               </div>
 
@@ -244,7 +226,7 @@ export default function DialogueSelector({
               <div className="flex items-center gap-2">
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                 <FieldLabel className="mb-0 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
-                  {selectedTemplate?.id === 'custom'
+                  {selectedProduct?.id === 'custom'
                     ? `Write dialogue in ${currentLang.name}`
                     : `Edit spoken dialogue · ${currentLang.name}`}
                 </FieldLabel>
@@ -267,7 +249,7 @@ export default function DialogueSelector({
                 setEditing(true);
               }}
               placeholder={
-                selectedTemplate?.id === 'custom'
+                selectedProduct?.id === 'custom'
                   ? `Write the spoken dialogue in ${currentLang.name}…`
                   : `Dialogue in ${currentLang.name}…`
               }
@@ -289,17 +271,14 @@ export default function DialogueSelector({
             </div>
           </div>
 
-          {selectedTemplate && selectedTemplate.id !== 'custom' && (
+          {selectedProduct && selectedProduct.id !== 'custom' && (
             <div className="overflow-hidden rounded-xl border border-border bg-card/70 shadow-sm">
-              <div className="h-0.5" style={{ background: selectedTemplate.accent }} />
+              <div className="h-0.5 bg-border" />
               <div className="flex gap-3 px-4 py-3">
-                <Quote
-                  className="mt-0.5 h-4 w-4 flex-shrink-0"
-                  style={{ color: selectedTemplate.accent }}
-                />
+                <Quote className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
                 <div>
                   <FieldLabel className="mb-1 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
-                    Original Scenario Reference · English
+                    Original Product Script Reference · English
                   </FieldLabel>
                   <p className="line-clamp-2 text-sm italic leading-relaxed text-foreground/75">
                     "{original}"
@@ -309,7 +288,7 @@ export default function DialogueSelector({
             </div>
           )}
 
-          {selectedLanguage !== 'en' && selectedTemplate?.id !== 'custom' && translated && (
+          {selectedLanguage !== 'en' && selectedProduct?.id !== 'custom' && translated && (
             <div className="space-y-1 rounded-xl border border-border bg-card/70 bg-muted/5 px-4 py-3 shadow-sm">
               <div className="mb-2 flex items-center gap-2">
                 <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />

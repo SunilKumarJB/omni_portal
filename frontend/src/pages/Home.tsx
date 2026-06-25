@@ -8,26 +8,28 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { generateVideo } from '../lib/api';
 import type {
-  AudioPreset,
   CharacterPreset,
   GenerationStatus,
   LanguageCode,
+  ProductPreset,
   VideoRequestData,
   VideoTemplate,
 } from '../lib/types';
 
-const STEPS: { id: 1 | 2 | 3 | 4 | 5; label: string }[] = [
-  { id: 1, label: 'Scenario' },
-  { id: 2, label: 'Dialogue' },
-  { id: 3, label: 'Character' },
-  { id: 4, label: 'Audio' },
-  { id: 5, label: 'Review' },
+const STEPS: { id: 1 | 2 | 3 | 4 | 5 | 6; label: string }[] = [
+  { id: 1, label: 'Director' },
+  { id: 2, label: 'Product' },
+  { id: 3, label: 'Dialogue' },
+  { id: 4, label: 'Presenter' },
+  { id: 5, label: 'Scenario' },
+  { id: 6, label: 'Review' },
 ];
 
-const PromptSelector = lazy(() => import('../components/PromptSelector'));
+const NameStep = lazy(() => import('../components/NameStep'));
+const ProductSelector = lazy(() => import('../components/ProductSelector'));
 const DialogueSelector = lazy(() => import('../components/DialogueSelector'));
 const CharacterSelector = lazy(() => import('../components/CharacterSelector'));
-const AudioSelector = lazy(() => import('../components/AudioSelector'));
+const PromptSelector = lazy(() => import('../components/PromptSelector'));
 const ReviewGenerate = lazy(() => import('../components/ReviewGenerate'));
 const ResultPanel = lazy(() => import('../components/ResultPanel'));
 
@@ -47,41 +49,60 @@ export default function Home() {
   );
   const [requestData, setRequestData] = useState<VideoRequestData | null>(null);
 
-  // Step 1
-  const [selectedTemplate, setSelectedTemplate] = useState<VideoTemplate | null>(null);
-  const [videoPrompt, setVideoPrompt] = useState('');
-  // Step 2
+  // Step 1: Director Name
+  const [userName, setUserName] = useState('');
+  // Step 2: Hero Product
+  const [selectedProduct, setSelectedProduct] = useState<ProductPreset | null>(null);
+  // Step 3: Dialogue & Language
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>('en');
   const [dialogueText, setDialogueText] = useState('');
-  // Step 3
+  // Step 4: Character/Presenter
   const [selectedCharacter, setSelectedCharacter] = useState<CharacterPreset | null>(null);
   const [characterImageFile, setCharacterImageFile] = useState<File | null>(null);
-  // Step 4
-  const [selectedAudio, setSelectedAudio] = useState<AudioPreset | null>(null);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
+  // Step 5: Scenario & Dynamic Prompt
+  const [selectedTemplate, setSelectedTemplate] = useState<VideoTemplate | null>(null);
+  const [videoPrompt, setVideoPrompt] = useState('');
 
   useEffect(() => {
     localStorage.setItem('omni-test-mode', String(testMode));
   }, [testMode]);
 
   const canGoNext = useCallback(() => {
-    if (currentStep === 1) return !!selectedTemplate && videoPrompt.trim().length >= 10;
-    if (currentStep === 2) return true; // dialogue is optional
-    if (currentStep === 3) return !!selectedCharacter || !!characterImageFile;
-    if (currentStep === 4) return true; // audio is optional
+    if (currentStep === 1) return userName.trim().length >= 2;
+    if (currentStep === 2) return !!selectedProduct;
+    if (currentStep === 3) return true; // Dialogue is optional
+    if (currentStep === 4) return !!selectedCharacter || !!characterImageFile;
+    if (currentStep === 5) return !!selectedTemplate && videoPrompt.trim().length >= 10;
     return true;
-  }, [currentStep, selectedTemplate, videoPrompt, selectedCharacter, characterImageFile]);
+  }, [
+    currentStep,
+    userName,
+    selectedProduct,
+    selectedCharacter,
+    characterImageFile,
+    selectedTemplate,
+    videoPrompt,
+  ]);
 
   const nextRequirement = (() => {
-    if (currentStep === 1 && !selectedTemplate) return 'Select a scenario to continue.';
-    if (currentStep === 1 && videoPrompt.trim().length < 10) {
-      return 'Add a short prompt so Omni has enough direction.';
+    if (currentStep === 1 && userName.trim().length < 2) {
+      return 'Enter your name to personalize your campaign.';
     }
-    if (currentStep === 3 && !selectedCharacter && !characterImageFile) {
+    if (currentStep === 2 && !selectedProduct) {
+      return 'Select a hero product to continue.';
+    }
+    if (currentStep === 3) {
+      return 'Dialogue is optional. Continue or skip this step.';
+    }
+    if (currentStep === 4 && !selectedCharacter && !characterImageFile) {
       return 'Choose or upload a presenter to continue.';
     }
-    if (currentStep === 2) return 'Dialogue is optional. Continue or skip this step.';
-    if (currentStep === 4) return 'Audio is optional. Continue or skip without audio.';
+    if (currentStep === 5 && !selectedTemplate) {
+      return 'Select a scenario to continue.';
+    }
+    if (currentStep === 5 && videoPrompt.trim().length < 10) {
+      return 'Add a short prompt so Omni has enough direction.';
+    }
     return 'Ready for the next step.';
   })();
 
@@ -128,38 +149,26 @@ export default function Home() {
         return;
       }
 
-      // Resolve preset character and audio in parallel (eliminating network waterfall)
-      const [resolvedCharacterImage, resolvedAudioFile] = await Promise.all([
-        (async () => {
-          if (!characterImageFile && selectedCharacter?.img) {
-            const ext = selectedCharacter.img.split('.').pop();
-            const mime = ext === 'svg' ? 'image/svg+xml' : 'image/png';
-            return fetchAsFile(selectedCharacter.img, `${selectedCharacter.id}.${ext}`, mime);
-          }
-          return characterImageFile;
-        })(),
-        (async () => {
-          if (!audioFile && selectedAudio?.src) {
-            const ext = selectedAudio.src.split('.').pop();
-            const mime = ext === 'mp3' ? 'audio/mpeg' : `audio/${ext}`;
-            return fetchAsFile(selectedAudio.src, `${selectedAudio.id}.${ext}`, mime);
-          }
-          return audioFile;
-        })(),
-      ]);
+      // Resolve preset character image
+      const resolvedCharacterImage = await (async () => {
+        if (!characterImageFile && selectedCharacter?.img) {
+          const ext = selectedCharacter.img.split('.').pop();
+          const mime = ext === 'svg' ? 'image/svg+xml' : 'image/png';
+          return fetchAsFile(selectedCharacter.img, `${selectedCharacter.id}.${ext}`, mime);
+        }
+        return characterImageFile;
+      })();
 
-      // Dialogue + language are first-class: the backend speaks the line in the chosen
-      // language with lip-sync, so the prompt no longer carries the dialogue inline.
+      // Trigger video generation on the GCP Omni backend
       const result = await generateVideo({
         prompt: videoPrompt,
         styleId: selectedTemplate?.id ?? 'custom',
         dialogue: dialogueText.trim() || undefined,
         language: selectedLanguage,
         characterPresetId: selectedCharacter?.id,
-        audioPresetId: selectedAudio?.id,
         characterImage: resolvedCharacterImage,
-        audioFile: resolvedAudioFile,
       });
+
       setRequestData(result);
       setGenerationState('done');
     } catch {
@@ -172,14 +181,14 @@ export default function Home() {
     setCurrentStep(1);
     setGenerationState(null);
     setRequestData(null);
+    setUserName('');
+    setSelectedProduct(null);
     setSelectedTemplate(null);
     setVideoPrompt('');
     setSelectedLanguage('en');
     setDialogueText('');
     setSelectedCharacter(null);
     setCharacterImageFile(null);
-    setSelectedAudio(null);
-    setAudioFile(null);
   };
 
   if (generationState === 'submitting') {
@@ -219,7 +228,7 @@ export default function Home() {
 
       <SideRail
         steps={STEPS}
-        currentStep={generationState === 'done' ? 6 : currentStep}
+        currentStep={generationState === 'done' ? 7 : currentStep}
         testMode={testMode}
         setTestMode={setTestMode}
         onBrandClick={handleReset}
@@ -251,6 +260,7 @@ export default function Home() {
             <ThemeToggle />
           </div>
         </div>
+
         {/* Mobile progress strip */}
         <div className="flex shrink-0 items-center gap-3 px-6 pb-3 lg:hidden">
           <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -282,24 +292,23 @@ export default function Home() {
                 />
               ) : (
                 <>
-                  {currentStep === 1 && (
-                    <PromptSelector
-                      selectedTemplate={selectedTemplate}
-                      setSelectedTemplate={setSelectedTemplate}
-                      videoPrompt={videoPrompt}
-                      setVideoPrompt={setVideoPrompt}
+                  {currentStep === 1 && <NameStep userName={userName} setUserName={setUserName} />}
+                  {currentStep === 2 && (
+                    <ProductSelector
+                      selectedProduct={selectedProduct}
+                      setSelectedProduct={setSelectedProduct}
                     />
                   )}
-                  {currentStep === 2 && (
+                  {currentStep === 3 && (
                     <DialogueSelector
-                      selectedTemplate={selectedTemplate}
+                      selectedProduct={selectedProduct}
                       selectedLanguage={selectedLanguage}
                       setSelectedLanguage={setSelectedLanguage}
                       dialogueText={dialogueText}
                       setDialogueText={setDialogueText}
                     />
                   )}
-                  {currentStep === 3 && (
+                  {currentStep === 4 && (
                     <CharacterSelector
                       selectedCharacter={selectedCharacter}
                       setSelectedCharacter={setSelectedCharacter}
@@ -307,25 +316,27 @@ export default function Home() {
                       setCharacterImageFile={setCharacterImageFile}
                     />
                   )}
-                  {currentStep === 4 && (
-                    <AudioSelector
-                      selectedAudio={selectedAudio}
-                      setSelectedAudio={setSelectedAudio}
-                      audioFile={audioFile}
-                      setAudioFile={setAudioFile}
+                  {currentStep === 5 && (
+                    <PromptSelector
+                      userName={userName}
+                      selectedProduct={selectedProduct}
+                      selectedTemplate={selectedTemplate}
+                      setSelectedTemplate={setSelectedTemplate}
+                      videoPrompt={videoPrompt}
+                      setVideoPrompt={setVideoPrompt}
                     />
                   )}
-                  {currentStep === 5 && (
+                  {currentStep === 6 && (
                     <ReviewGenerate
                       testMode={testMode}
+                      userName={userName}
+                      selectedProduct={selectedProduct}
                       selectedTemplate={selectedTemplate}
                       videoPrompt={videoPrompt}
                       dialogueText={dialogueText}
                       selectedLanguage={selectedLanguage}
                       selectedCharacter={selectedCharacter}
                       characterImageFile={characterImageFile}
-                      selectedAudio={selectedAudio}
-                      audioFile={audioFile}
                       onGenerate={handleGenerate}
                     />
                   )}
@@ -336,7 +347,7 @@ export default function Home() {
         </div>
 
         {/* Pinned action bar */}
-        {currentStep < 5 && (
+        {currentStep < 6 && (
           <div className="flex shrink-0 items-center justify-between gap-4 border-t border-border/60 bg-background/88 px-6 py-3.5 backdrop-blur-md lg:px-10">
             <Button
               variant="outline"
@@ -352,13 +363,13 @@ export default function Home() {
               {nextRequirement}
             </p>
             <div className="flex items-center gap-3">
-              {(currentStep === 2 || currentStep === 4) && (
+              {currentStep === 3 && (
                 <Button variant="ghost" onClick={() => setCurrentStep((s) => s + 1)}>
                   Skip
                 </Button>
               )}
               <Button
-                onClick={() => setCurrentStep((s) => Math.min(5, s + 1))}
+                onClick={() => setCurrentStep((s) => Math.min(6, s + 1))}
                 disabled={!canGoNext()}
                 className="px-8"
               >

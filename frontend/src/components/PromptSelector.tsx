@@ -3,7 +3,7 @@ import type * as React from 'react';
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import type { VideoTemplate } from '@/lib/types';
+import type { ProductPreset, VideoTemplate } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import StepHeading from './StepHeading';
 
@@ -143,6 +143,8 @@ function TemplateThumbnail({ tpl }: { tpl: VideoTemplate }) {
 }
 
 interface PromptSelectorProps {
+  userName: string;
+  selectedProduct: ProductPreset | null;
   selectedTemplate: VideoTemplate | null;
   setSelectedTemplate: React.Dispatch<React.SetStateAction<VideoTemplate | null>>;
   videoPrompt: string;
@@ -150,6 +152,8 @@ interface PromptSelectorProps {
 }
 
 export default function PromptSelector({
+  userName,
+  selectedProduct,
   selectedTemplate,
   setSelectedTemplate,
   videoPrompt,
@@ -157,15 +161,23 @@ export default function PromptSelector({
 }: PromptSelectorProps) {
   function selectTemplate(tpl: VideoTemplate) {
     setSelectedTemplate(tpl);
-    if (tpl.id !== 'custom') setVideoPrompt(tpl.prompt);
-    else setVideoPrompt('');
+    if (tpl.id !== 'custom') {
+      const pName = selectedProduct?.name || 'our product';
+      const pVisual = selectedProduct?.visualDescription || 'interacting with the product';
+      const uName = userName || 'Campaign Director';
+
+      const synthesized = `A premium high-fidelity commercial for ${pName}, presented by [REF_Character] on behalf of Campaign Director ${uName}. In the scene, [REF_Character] is ${pVisual}. ${tpl.prompt}`;
+      setVideoPrompt(synthesized);
+    } else {
+      setVideoPrompt('');
+    }
   }
 
   const isCustom = selectedTemplate?.id === 'custom';
 
   return (
     <div className="mx-auto flex h-full w-full max-w-[1360px] flex-col gap-4">
-      <StepHeading eyebrow="Step 1 of 5" title="Choose your scenario" className="mb-0">
+      <StepHeading eyebrow="Step 5 of 6" title="Choose your scenario" className="mb-0">
         Pick a cinematic world or write your own.{' '}
         <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs xl:text-sm not-italic text-foreground">
           [REF_Character]

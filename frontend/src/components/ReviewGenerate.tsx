@@ -1,9 +1,9 @@
-import { CheckCircle2, FlaskConical, MapPin, Quote, Sparkles } from 'lucide-react';
+import { CheckCircle2, FlaskConical, Quote, Sparkles } from 'lucide-react';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatPromptForDisplay } from '@/lib/prompt';
-import type { AudioPreset, CharacterPreset, LanguageCode, VideoTemplate } from '@/lib/types';
+import type { CharacterPreset, LanguageCode, ProductPreset, VideoTemplate } from '@/lib/types';
 import StepHeading, { FieldLabel } from './StepHeading';
 
 const LANG_NAMES: Record<LanguageCode, string> = {
@@ -20,35 +20,34 @@ const LANG_NAMES: Record<LanguageCode, string> = {
 };
 
 const GCP_SERVICES = [
-  { name: 'Omni', color: '#2986FF' },
-  { name: 'Nano Banana', color: '#2EBA53' },
+  { name: 'Gemini Omni', color: '#2986FF' },
   { name: 'Cloud Storage', color: '#EA4335' },
   { name: 'Firestore', color: '#FFC30E' },
 ];
 
 interface ReviewGenerateProps {
   testMode: boolean;
+  userName: string;
+  selectedProduct: ProductPreset | null;
   selectedTemplate: VideoTemplate | null;
   videoPrompt: string;
   dialogueText: string;
   selectedLanguage: LanguageCode;
   selectedCharacter: CharacterPreset | null;
   characterImageFile: File | null;
-  selectedAudio: AudioPreset | null;
-  audioFile: File | null;
   onGenerate: () => void | Promise<void>;
 }
 
 export default function ReviewGenerate({
   testMode,
+  userName,
+  selectedProduct,
   selectedTemplate,
   videoPrompt,
   dialogueText,
   selectedLanguage,
   selectedCharacter,
   characterImageFile,
-  selectedAudio,
-  audioFile,
   onGenerate,
 }: ReviewGenerateProps) {
   const presenterLabel = selectedCharacter
@@ -56,18 +55,18 @@ export default function ReviewGenerate({
     : characterImageFile
       ? 'Custom image selected'
       : 'Missing presenter';
-  const audioLabel = selectedAudio
-    ? `${selectedAudio.name} · ${selectedAudio.mood}`
-    : audioFile
-      ? 'Custom audio selected'
-      : 'Skipped - silent generation';
+
   const checklist = [
     {
-      label: 'Scenario',
-      value: selectedTemplate?.title ?? 'Not selected',
-      meta: selectedTemplate?.location,
-      ready: !!selectedTemplate,
-      accent: selectedTemplate?.accent,
+      label: 'Director',
+      value: userName || 'Not registered',
+      ready: userName.trim().length >= 2,
+    },
+    {
+      label: 'Product',
+      value: selectedProduct?.name ?? 'Not selected',
+      meta: selectedProduct?.tagline,
+      ready: !!selectedProduct,
     },
     {
       label: 'Dialogue',
@@ -81,16 +80,18 @@ export default function ReviewGenerate({
       ready: !!selectedCharacter || !!characterImageFile,
     },
     {
-      label: 'Soundtrack',
-      value: audioLabel,
-      ready: true,
+      label: 'Scenario',
+      value: selectedTemplate?.title ?? 'Not selected',
+      meta: selectedTemplate?.location,
+      ready: !!selectedTemplate,
+      accent: selectedTemplate?.accent,
     },
   ];
 
   return (
     <div className="mx-auto flex h-full w-full max-w-[1360px] flex-col gap-4">
-      <StepHeading eyebrow="Step 5 of 5" title="Review & generate" className="mb-0">
-        Confirm the launch setup before Omni renders the cinematic scene.
+      <StepHeading eyebrow="Step 6 of 6" title="Review & launch campaign" className="mb-0">
+        Confirm your campaign details before Gemini Omni compiles and generates the advertisement.
       </StepHeading>
 
       <div className="grid min-h-0 flex-1 items-stretch gap-4 lg:grid-cols-12">
@@ -110,13 +111,13 @@ export default function ReviewGenerate({
             <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] gap-2 p-3">
               <div>
                 <FieldLabel className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Launch checklist
+                  Campaign Board
                 </FieldLabel>
                 <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                  Final inputs for the Gemini Omni generation flow.
+                  Final parameters for the Gemini Omni generation flow.
                 </p>
               </div>
-              <div className="grid min-h-0 grid-rows-4 gap-1.5">
+              <div className="grid min-h-0 grid-rows-5 gap-1.5">
                 {checklist.map((item) => (
                   <div
                     key={item.label}
@@ -153,9 +154,9 @@ export default function ReviewGenerate({
 
           <Card className="flex min-h-0 flex-[1.1] flex-col p-4 shadow-sm">
             <FieldLabel className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Prompt
+              Synthesized Creative Brief (Prompt)
             </FieldLabel>
-            <p className="mt-2 min-h-0 flex-1 overflow-hidden rounded-lg border border-border/40 bg-muted/10 p-4 text-base font-medium leading-relaxed text-foreground/85 xl:text-[17px]">
+            <p className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/40 bg-muted/10 p-4 text-sm font-medium leading-relaxed text-foreground/85 xl:text-[15px]">
               {formatPromptForDisplay(videoPrompt)}
             </p>
           </Card>
@@ -166,7 +167,7 @@ export default function ReviewGenerate({
             <div className="flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
               <FieldLabel className="mb-0 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Google Cloud path
+                Google Cloud Platform Path
               </FieldLabel>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -187,11 +188,12 @@ export default function ReviewGenerate({
               <div className="rounded-xl border border-border bg-background/70 p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-bold text-foreground">
                   <Sparkles className="h-4 w-4" />
-                  Gemini Omni render
+                  Gemini Omni Multimodal Synthesis
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  The model will compose the scene, preserve the presenter likeness, and apply
-                  dialogue lip-sync for the selected language.
+                  The model will synthesize a high-fidelity video showcasing the product, matching
+                  the visual style, maintaining presenter likeness, and performing native lip-sync
+                  in the selected language.
                 </p>
               </div>
               {dialogueText?.trim() && (
@@ -208,11 +210,11 @@ export default function ReviewGenerate({
               size="lg"
               className="generate-google-border mt-4 w-full rounded-lg py-6 text-base font-bold shadow-lg transition-all duration-200"
             >
-              {testMode ? 'Generate (Test Mode)' : 'Generate Video with Omni →'}
+              {testMode ? 'Launch Campaign (Test Mode)' : 'Launch Campaign with Omni →'}
             </Button>
             <p className="mt-3 text-center text-xs leading-normal text-muted-foreground font-medium">
               {testMode
-                ? 'Creates a mock video asset instantaneously.'
+                ? 'Creates a mock campaign video instantaneously.'
                 : 'Renders in 3–8 minutes. A QR code will be provided so you can check back anytime.'}
             </p>
           </Card>

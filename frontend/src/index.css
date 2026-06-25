@@ -222,7 +222,7 @@
     background-size: 260% 260%;
     opacity: 0;
     transition: opacity 180ms ease;
-    animation: googleBorderShift 2.8s linear infinite;
+    animation: googleBorderShift 8s linear infinite;
   }
 
   .generate-google-border:hover::before,
@@ -236,6 +236,42 @@
       0 18px 44px -20px hsl(var(--ai-blue) / 0.55),
       0 12px 32px -22px hsl(var(--ai-red) / 0.45),
       0 8px 24px -20px hsl(var(--ai-green) / 0.42);
+  }
+
+  .focus-google-border {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .focus-google-border::before {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(
+      115deg,
+      hsl(var(--ai-green)),
+      hsl(var(--ai-yellow)),
+      hsl(var(--ai-red)),
+      hsl(var(--ai-blue)),
+      hsl(var(--ai-green))
+    );
+    background-size: 260% 260%;
+    opacity: 0;
+    transition: opacity 250ms ease;
+    animation: googleBorderShift 8s linear infinite;
+  }
+
+  .focus-google-border:focus-within::before {
+    opacity: 1;
+  }
+
+  .focus-google-border:focus-within {
+    box-shadow:
+      0 12px 32px -16px hsl(var(--ai-blue) / 0.25),
+      0 8px 24px -18px hsl(var(--ai-red) / 0.2),
+      0 6px 18px -16px hsl(var(--ai-green) / 0.18);
   }
 
   /* Google brand color Omni orb for rendering states. */

@@ -12,39 +12,6 @@ IMAGE_PATH = os.path.abspath(
 )
 
 
-def verify_prompts_endpoint():
-    print("\n=== Testing Gemini Pro via /api/generate/prompts ===")
-    url = f"{BASE_URL}/api/generate/prompts"
-
-    if not os.path.exists(IMAGE_PATH):
-        print(f"Error: Sample image not found at {IMAGE_PATH}", file=sys.stderr)
-        return False
-
-    print(f"Uploading image: {IMAGE_PATH}")
-    try:
-        with open(IMAGE_PATH, "rb") as f:
-            files = {"file": ("char_01.png", f, "image/png")}
-            resp = httpx.post(url, files=files, timeout=30.0)
-
-        print(f"Status Code: {resp.status_code}")
-        if resp.status_code == 200:
-            print("Gemini Pro: SUCCESS!")
-            print("Response Data (snippet):")
-            data = resp.json()
-            print(f"Product Description: {data.get('product_description')}")
-            print(f"Suggested Styles: {[s['name'] for s in data.get('suggested_styles', [])]}")
-            print(f"Suggested Themes: {[t['name'] for t in data.get('suggested_themes', [])]}")
-            print(f"Sample Prompts (count): {len(data.get('sample_prompts', []))}")
-            return True
-        else:
-            print("Gemini Pro: FAILED!")
-            print(f"Response: {resp.text}")
-            return False
-    except Exception as e:
-        print(f"Error testing prompts endpoint: {e}", file=sys.stderr)
-        return False
-
-
 def verify_video_endpoint():
     print("\n=== Testing Gemini Omni via /api/generate/video ===")
     url = f"{BASE_URL}/api/generate/video"
@@ -112,9 +79,7 @@ def verify_video_endpoint():
 
 
 if __name__ == "__main__":
-    prompts_ok = verify_prompts_endpoint()
     video_ok = verify_video_endpoint()
 
     print("\n=== SUMMARY ===")
-    print(f"Gemini Pro (Prompts): {'PASSED' if prompts_ok else 'FAILED'}")
     print(f"Gemini Omni (Video): {'PASSED' if video_ok else 'FAILED'}")

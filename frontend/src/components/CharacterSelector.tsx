@@ -250,7 +250,7 @@ export default function CharacterSelector({
 
   return (
     <div className="mx-auto flex h-full w-full max-w-[1360px] flex-col gap-4">
-      <StepHeading eyebrow="Step 3 of 5" title="Choose your presenter" className="mb-0">
+      <StepHeading eyebrow="Step 4 of 6" title="Choose your presenter" className="mb-0">
         Select a preset avatar or use your own photo via camera or upload.
       </StepHeading>
 

@@ -17,7 +17,7 @@ import type {
 } from '../lib/types';
 
 const STEPS: { id: 1 | 2 | 3 | 4 | 5 | 6; label: string }[] = [
-  { id: 1, label: 'Director' },
+  { id: 1, label: 'Character' },
   { id: 2, label: 'Product' },
   { id: 3, label: 'Dialogue' },
   { id: 4, label: 'Presenter' },
@@ -86,7 +86,7 @@ export default function Home() {
 
   const nextRequirement = (() => {
     if (currentStep === 1 && userName.trim().length < 2) {
-      return 'Enter your name to personalize your campaign.';
+      return 'Enter a name for your character to personalize your campaign.';
     }
     if (currentStep === 2 && !selectedProduct) {
       return 'Select a hero product to continue.';
@@ -292,7 +292,13 @@ export default function Home() {
                 />
               ) : (
                 <>
-                  {currentStep === 1 && <NameStep userName={userName} setUserName={setUserName} />}
+                  {currentStep === 1 && (
+                    <NameStep
+                      userName={userName}
+                      setUserName={setUserName}
+                      onNext={() => setCurrentStep(2)}
+                    />
+                  )}
                   {currentStep === 2 && (
                     <ProductSelector
                       selectedProduct={selectedProduct}
@@ -301,6 +307,7 @@ export default function Home() {
                   )}
                   {currentStep === 3 && (
                     <DialogueSelector
+                      userName={userName}
                       selectedProduct={selectedProduct}
                       selectedLanguage={selectedLanguage}
                       setSelectedLanguage={setSelectedLanguage}

@@ -58,8 +58,8 @@ export default function ReviewGenerate({
 
   const checklist = [
     {
-      label: 'Director',
-      value: userName || 'Not registered',
+      label: 'Character',
+      value: userName || 'Unnamed character',
       ready: userName.trim().length >= 2,
     },
     {

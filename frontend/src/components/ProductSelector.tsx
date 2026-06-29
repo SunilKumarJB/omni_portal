@@ -5,48 +5,92 @@ import StepHeading from './StepHeading';
 
 export const PRODUCT_PRESETS: ProductPreset[] = [
   {
-    id: 'lumina_aura',
-    name: 'Lumina Aura',
-    tagline: 'Wear your vibe. Shape your light.',
+    id: 'upside_down_cup',
+    name: 'Upside Down Cup',
+    tagline: 'Gravity is optional. Style is mandatory.',
     description:
-      'An elegant, shifting ambient wearable that weaves soft ribbons of colored light around you based on your mood.',
+      'A gravity-defying, double-walled thermal cup that sits upside down but dispenses perfectly from the base when lifted.',
     visualDescription:
-      'wearing the Lumina Aura, a sleek collar-like futuristic wearable emitting soft, shifting ribbons of colored light that elegantly contour their neck and shoulders',
-    emoji: '✨',
+      'drinking from the Upside Down Cup, a sleek thermal glass that rests upside down without spilling, dispensing liquid seamlessly from the base when lifted',
+    emoji: '☕',
     gradient: 'from-pink-500/10 via-purple-500/10 to-indigo-500/10 border-purple-500/20',
   },
   {
-    id: 'solaris_roadster',
-    name: 'Solaris Roadster',
-    tagline: 'Powered by stars. Driven by design.',
+    id: 'aggressive_toaster',
+    name: 'Aggressive Toaster',
+    tagline: 'Toast or else. No compromises.',
     description:
-      'An ultra-luxury electric sports car featuring a seamless reflective body powered entirely by ambient light.',
+      'A high-performance toaster that aggressively launches perfectly browned toast up to three feet in the air with dramatic sound effects.',
     visualDescription:
-      'standing next to the Solaris Roadster, an ultra-luxury electric sports car with a seamless reflective body, glowing solar-cell panels, and sleek aerodynamic contours',
-    emoji: '🏎️',
-    gradient: 'from-orange-500/10 via-amber-500/10 to-yellow-500/10 border-orange-500/20',
+      'catching golden-brown toast launched three feet into the air by the Aggressive Toaster, a high-octane chrome kitchen device sporting glowing red heat indicators',
+    emoji: '🍞',
+    gradient: 'from-red-500/10 via-orange-500/10 to-amber-500/10 border-red-500/20',
   },
   {
-    id: 'aether_glass',
-    name: 'Aether Glass',
-    tagline: 'Reality, upgraded in real-time.',
+    id: 'musical_toothbrush',
+    name: 'Musical Toothbrush',
+    tagline: 'Turn brushing into a stadium concert.',
     description:
-      'Minimalist, premium holographic smart glasses projecting a subtle, high-tech spatial HUD directly in front of you.',
+      'A smart sonic toothbrush that uses bone-conduction technology to play epic orchestral theme music inside your head while you brush.',
     visualDescription:
-      'wearing the Aether Glass, a pair of minimalist, premium holographic smart glasses projecting a subtle, high-tech semi-transparent HUD overlay in front of their eyes',
-    emoji: '👓',
-    gradient: 'from-cyan-500/10 via-blue-500/10 to-teal-500/10 border-cyan-500/20',
+      'brushing their teeth with the Musical Toothbrush, a neon-accented sonic toothbrush that glows in sync with epic orchestral music playing via bone conduction',
+    emoji: '🪥',
+    gradient: 'from-blue-500/10 via-cyan-500/10 to-teal-500/10 border-blue-500/20',
   },
   {
-    id: 'quantum_chrono',
-    name: 'Quantum Chrono',
-    tagline: 'Own your time. Master your flow.',
+    id: 'snooze_blanket',
+    name: 'Snooze Blanket',
+    tagline: 'Instant sleep. Zero resistance.',
     description:
-      'A luxurious timepiece with a glowing holographic dial that visualizes personal schedules as rotating timelines.',
+      'An ultra-soft smart-weave weighted blanket emitting relaxing sub-bass frequencies and warm sleep-inducing micro-currents.',
     visualDescription:
-      'wearing the Quantum Chrono, a luxurious wristwatch featuring a glowing holographic dial showing delicate, rotating timelines above the watch face',
-    emoji: '⌚',
-    gradient: 'from-blue-500/10 via-indigo-500/10 to-violet-500/10 border-blue-500/20',
+      'wrapped snugly under the Snooze Blanket, an ultra-soft deep navy weighted blanket with glowing micro-weave fibers radiating warm, relaxing light pulses',
+    emoji: '🛏️',
+    gradient: 'from-indigo-500/10 via-violet-500/10 to-blue-500/10 border-indigo-500/20',
+  },
+  {
+    id: 'flying_sneakers',
+    name: 'AeroSneaks',
+    tagline: 'Defy gravity. Walk on air.',
+    description:
+      'Premium street sneakers equipped with mini ion-thrusters in the soles, allowing short bursts of controlled levitation.',
+    visualDescription:
+      'hovering a foot above the ground wearing the AeroSneaks, premium high-top sneakers featuring glowing blue ion thruster ports in the soles',
+    emoji: '👟',
+    gradient: 'from-teal-500/10 via-emerald-500/10 to-green-500/10 border-teal-500/20',
+  },
+  {
+    id: 'flying_suv',
+    name: 'AeroCruiser SUV',
+    tagline: 'No roads. No limits. Pure elevation.',
+    description:
+      'An electric family SUV with retractable wings and clean-fusion jet engines, designed for high-altitude luxury cruising.',
+    visualDescription:
+      'standing beside the AeroCruiser SUV, a luxury electric SUV with sleek carbon-fiber retractable wings and glowing blue fusion jet engines parked on an elevated sky terrace',
+    emoji: '🚙',
+    gradient: 'from-slate-500/10 via-zinc-500/10 to-neutral-500/10 border-slate-500/20',
+  },
+  {
+    id: 'impatient_spoon',
+    name: 'Impatient Chai Spoon',
+    tagline: 'Stir faster, drink sooner.',
+    description:
+      'A high-speed self-stirring spoon that stirs at sonic speeds and aggressively alerts you the exact millisecond your chai is ready.',
+    visualDescription:
+      'holding the Impatient Chai Spoon, a sleek copper self-stirring spoon vibrating at sonic speed in a steaming cup of masala chai, flashing bright green to signal it is ready',
+    emoji: '🥄',
+    gradient: 'from-amber-500/10 via-yellow-500/10 to-orange-500/10 border-amber-500/20',
+  },
+  {
+    id: 'diet_plate',
+    name: 'Diet Plate',
+    tagline: 'Guilt-free dining by optical illusion.',
+    description:
+      'An interactive smart plate using optical projection to make small portions look massive and visually pushing away unhealthy foods.',
+    visualDescription:
+      'looking at a salad served on the Diet Plate, a smart glass plate projecting a holographic magnifying field to make food portions appear twice their actual size',
+    emoji: '🍽️',
+    gradient: 'from-emerald-500/10 via-teal-500/10 to-cyan-500/10 border-emerald-500/20',
   },
 ];
 
@@ -65,63 +109,59 @@ export default function ProductSelector({
         Choose a premium, futuristic product to anchor your campaign.
       </StepHeading>
 
-      <div className="grid min-h-0 flex-1 grid-cols-2 gap-4 items-center max-h-[480px]">
+      <div className="grid min-h-0 flex-1 grid-cols-2 xl:grid-cols-4 gap-3 items-stretch max-h-[480px] overflow-y-auto pt-2 pb-2 px-1 pr-2">
         {PRODUCT_PRESETS.map((prod) => {
           const selected = selectedProduct?.id === prod.id;
           return (
-            <div
+            <button
               key={prod.id}
+              type="button"
+              onClick={() => setSelectedProduct(prod)}
               className={cn(
-                'group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border p-5 bg-card transition-all duration-300',
-                'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background',
+                'group relative flex flex-col justify-between overflow-hidden rounded-xl border p-4 bg-card transition-all duration-300 text-left w-full h-full',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 selected
-                  ? 'border-foreground ring-1 ring-foreground bg-gradient-to-br'
-                  : 'border-border hover:-translate-y-1 hover:border-foreground/30 hover:shadow-xl hover:shadow-black/5',
+                  ? 'border-foreground ring-1 ring-foreground bg-gradient-to-br z-10'
+                  : 'border-border hover:-translate-y-1 hover:border-foreground/30 hover:shadow-xl hover:shadow-black/5 hover:z-10',
               )}
               style={{
                 backgroundImage: selected
                   ? `linear-gradient(135deg, var(--card) 60%, transparent 100%)`
                   : undefined,
               }}
+              aria-label={`Select product: ${prod.name}`}
+              aria-pressed={selected}
             >
-              <button
-                type="button"
-                onClick={() => setSelectedProduct(prod)}
-                className="absolute inset-0 z-0 cursor-pointer focus:outline-none"
-                aria-label={`Select product: ${prod.name}`}
-                aria-pressed={selected}
-              />
-
-              <div className="relative z-10 flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{prod.emoji}</span>
-                  <div>
-                    <h3 className="text-lg font-bold tracking-tight text-foreground">
+              <div className="w-full flex items-start justify-between">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-2xl">{prod.emoji}</span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold tracking-tight text-foreground truncate">
                       {prod.name}
                     </h3>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
                       {prod.tagline}
                     </p>
                   </div>
                 </div>
                 {selected && (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground">
-                    <Check className="h-3 w-3 text-background" strokeWidth={3.5} />
+                  <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-foreground">
+                    <Check className="h-2.5 w-2.5 text-background" strokeWidth={3.5} />
                   </div>
                 )}
               </div>
 
               <div
                 className={cn(
-                  'relative z-10 mt-4 flex-1 rounded-xl border border-border/50 bg-background/30 p-4 transition-colors duration-300',
+                  'w-full mt-3 flex-1 rounded-lg border border-border/50 bg-background/30 p-3 transition-colors duration-300',
                   selected && 'bg-background/60',
                 )}
               >
-                <p className="text-sm leading-relaxed text-muted-foreground group-hover:text-foreground/90 transition-colors">
+                <p className="text-xs leading-relaxed text-muted-foreground group-hover:text-foreground/90 transition-colors">
                   {prod.description}
                 </p>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

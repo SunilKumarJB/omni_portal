@@ -2,157 +2,425 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  GML 2026 brand tokens.
+  The brand is bi-tonal — "45% Black on White" and "45% White on Black" — so the
+  same semantic tokens are defined for both polarities. :root = light, .dark = dark.
+  Hue/sat are 0 0% everywhere (pure neutral) by design: the brand speaks in B/W;
+  color enters only through the AI gradient + functional status hues below.
+*/
 @layer base {
-  * { box-sizing: border-box; }
+  :root {
+    color-scheme: light;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
 
-  body {
-    background: #0A0A0A;
-    color: #EBEBEB;
-    font-family: 'Google Sans', 'Product Sans', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%; /* 45% Black accent text */
+
+    --accent: 0 0% 95%;
+    --accent-foreground: 0 0% 9%;
+
+    --destructive: 4 80% 58%; /* #EA4335 */
+    --destructive-foreground: 0 0% 100%;
+    --success: 137 62% 46%; /* #2EBA53 */
+    --success-foreground: 0 0% 100%;
+    --warning: 44 100% 53%; /* #FFC30E */
+    --warning-foreground: 0 0% 0%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 20%;
+
+    /* GML AI gradient — four core colors, theme-independent */
+    --ai-blue: 213 100% 58%; /* #2986FF */
+    --ai-red: 4 80% 58%; /* #EA4335 */
+    --ai-yellow: 44 100% 53%; /* #FFC30E */
+    --ai-green: 137 62% 46%; /* #2EBA53 */
+    --gml-ai-gradient: linear-gradient(
+      115deg,
+      hsl(var(--ai-green)),
+      hsl(var(--ai-yellow)),
+      hsl(var(--ai-red)),
+      hsl(var(--ai-blue))
+    );
+
+    --radius: 1rem;
   }
 
-  ::-webkit-scrollbar            { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track      { background: transparent; }
-  ::-webkit-scrollbar-thumb      { background: rgba(255,255,255,0.12); border-radius: 99px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
+  .dark {
+    color-scheme: dark;
+    --background: 0 0% 4%; /* #0A0A0A */
+    --foreground: 0 0% 92%; /* #EBEBEB */
+
+    --card: 0 0% 7%; /* ~#111 */
+    --card-foreground: 0 0% 92%;
+
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 92%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 92%;
+
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 63%; /* 45% White accent text */
+
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 4 80% 63%; /* #F28B82-ish, brighter on dark */
+    --destructive-foreground: 0 0% 0%;
+    --success: 137 50% 64%; /* #81C995-ish */
+    --success-foreground: 0 0% 0%;
+    --warning: 44 97% 69%; /* #FDD663-ish */
+    --warning-foreground: 0 0% 0%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 0 0% 83%;
+  }
+}
+
+@layer base {
+  html {
+    font-size: 16px;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  /* Themed scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--foreground) / 0.14);
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--foreground) / 0.24);
+  }
+
+  /* Consistent, monochrome keyboard focus across the app */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
-
-  /* ── Surfaces ─────────────────────────────────────────── */
-  .g-card {
-    @apply rounded-2xl border border-white/[0.07] bg-[#111] p-5;
+  /*
+    The single brand signature: the AI gradient confined to one corner.
+    Per the guidelines it must stay in a corner and not exceed ~15% of canvas height.
+    Defaults to top-left; add `.ai-gradient-corner--br` to flip to bottom-right.
+  */
+  .ai-gradient-corner {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      62% 48% at 0% 0%,
+      hsl(var(--ai-blue) / 0.26) 0%,
+      hsl(var(--ai-red) / 0.15) 24%,
+      hsl(var(--ai-yellow) / 0.1) 40%,
+      hsl(var(--ai-green) / 0.07) 54%,
+      transparent 68%
+    );
   }
-  .g-card-hover {
-    @apply g-card transition-all duration-200 cursor-pointer
-           hover:bg-[#161616] hover:border-white/[0.12];
-  }
-  .g-card-selected {
-    border-color: #4285F4 !important;
-    background: rgba(66,133,244,0.08) !important;
-    box-shadow: 0 0 0 1px rgba(66,133,244,0.25), 0 4px 32px rgba(66,133,244,0.08);
-  }
-
-  /* ── Buttons ──────────────────────────────────────────── */
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2
-           text-white font-semibold text-sm tracking-wide
-           px-6 py-2.5 rounded-full
-           transition-all duration-200
-           disabled:opacity-30 disabled:cursor-not-allowed;
-    background: #4285F4;
-  }
-  .btn-primary:hover:not(:disabled) {
-    background: #3b7ae8;
-    box-shadow: 0 4px 28px rgba(66,133,244,0.45);
-    transform: translateY(-1px);
-  }
-  .btn-primary:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: 0 2px 10px rgba(66,133,244,0.30);
-  }
-  .btn-tonal {
-    @apply inline-flex items-center justify-center gap-2
-           text-[#4285F4] font-medium text-sm
-           px-5 py-2.5 rounded-full border border-[#4285F4]/25
-           bg-[#4285F4]/10
-           hover:bg-[#4285F4]/20 active:bg-[#4285F4]/25
-           transition-all duration-150
-           disabled:opacity-40 disabled:cursor-not-allowed;
-  }
-  .btn-outlined {
-    @apply inline-flex items-center justify-center gap-2
-           border border-white/[0.15] text-white/80 font-medium text-sm
-           px-5 py-2.5 rounded-full
-           hover:bg-white/[0.05] hover:border-white/[0.20] hover:text-white
-           active:bg-white/[0.08]
-           transition-all duration-150
-           disabled:opacity-40 disabled:cursor-not-allowed;
-  }
-  .btn-text {
-    @apply inline-flex items-center justify-center gap-2
-           text-[#4285F4] font-medium text-sm px-4 py-2 rounded-full
-           hover:bg-[#4285F4]/10 transition-colors duration-150;
+  .ai-gradient-corner--br {
+    background: radial-gradient(
+      62% 48% at 100% 100%,
+      hsl(var(--ai-blue) / 0.26) 0%,
+      hsl(var(--ai-red) / 0.15) 24%,
+      hsl(var(--ai-yellow) / 0.1) 40%,
+      hsl(var(--ai-green) / 0.07) 54%,
+      transparent 68%
+    );
   }
 
-  /* ── Filter chips ─────────────────────────────────────── */
-  .g-chip {
-    @apply inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm
-           border border-white/[0.15] text-white/70 bg-transparent
-           cursor-pointer hover:bg-white/[0.05] hover:border-white/[0.25]
-           transition-all duration-150 select-none;
-  }
-  .g-chip-active {
-    @apply border-[#4285F4]/50 bg-[#4285F4]/10 text-[#4285F4];
-  }
-
-  /* ── Tab bar ──────────────────────────────────────────── */
-  .g-tab-bar {
-    @apply flex border-b border-white/[0.07];
-  }
-  .g-tab {
-    @apply px-5 py-3 text-sm font-medium text-white/55
-           border-b-2 border-transparent -mb-px
-           hover:text-white/85 hover:bg-white/[0.04]
-           transition-all duration-150 cursor-pointer whitespace-nowrap select-none;
-  }
-  .g-tab-active {
-    @apply text-[#4285F4] border-[#4285F4] hover:bg-[#4285F4]/[0.06];
-  }
-
-  /* ── Labels ───────────────────────────────────────────── */
-  .g-label {
-    @apply text-white/45 text-[10px] font-semibold
-           uppercase tracking-[0.14em] mb-2 block;
+  /*
+    The primary brand moment: the four-color AI gradient hugging the TOP edge,
+    spread left→right (green · yellow · red · blue) and masked to fade downward.
+    Anchored to the top-left per the GML "top corner" orientation rule, but spanning
+    the full width so it reads as a top band rather than a sidebar-only accent.
+  */
+  .ai-gradient-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 240px;
+    pointer-events: none;
+    background:
+      radial-gradient(46% 240px at 6% -8%, hsl(var(--ai-green) / 0.3), transparent 72%),
+      radial-gradient(48% 250px at 32% -10%, hsl(var(--ai-yellow) / 0.28), transparent 72%),
+      radial-gradient(50% 250px at 58% -10%, hsl(var(--ai-red) / 0.3), transparent 72%),
+      radial-gradient(54% 270px at 90% -8%, hsl(var(--ai-blue) / 0.4), transparent 74%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 100%);
+    will-change: opacity, transform;
+    animation: gradientPulse 16s ease-in-out infinite;
   }
 
-  /* ── Inputs ───────────────────────────────────────────── */
-  .g-input {
-    @apply w-full bg-[#0D0D0D] border border-white/[0.09] rounded-xl px-4 py-3
-           text-white/90 placeholder-white/20 text-sm
-           focus:outline-none focus:border-[#4285F4]/60 focus:bg-[#4285F4]/[0.025]
-           transition-all duration-150;
+  /* The crisp 4-color brand line, used as a thin hairline accent (e.g. atop the hero card) */
+  .ai-gradient-line {
+    background: var(--gml-ai-gradient);
   }
 
-  /* ── Progress ─────────────────────────────────────────── */
-  .g-progress-track {
-    @apply h-1 rounded-full overflow-hidden relative;
-    background: rgba(255,255,255,0.07);
-  }
-  .g-progress-fill {
-    @apply absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out;
-    background: linear-gradient(90deg, #4285F4 0%, #5BA3F5 100%);
+  .generate-google-border {
+    position: relative;
+    isolation: isolate;
+    overflow: visible;
   }
 
-  /* ── Section heading ──────────────────────────────────── */
-  .g-step-label {
-    @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50 mb-2 block;
-  }
-  .g-step-title {
-    @apply text-2xl font-bold text-white leading-tight mb-1;
-  }
-  .g-step-sub {
-    @apply text-sm text-white/60 leading-relaxed;
-  }
-
-  /* ── Google brand stripe ──────────────────────────────── */
-  .g-rainbow-bar {
-    height: 3px;
-    background: linear-gradient(90deg,
-      #4285F4 0%,   #4285F4 25%,
-      #EA4335 25%,  #EA4335 50%,
-      #FBBC05 50%,  #FBBC05 75%,
-      #34A853 75%,  #34A853 100%);
-    flex-shrink: 0;
+  .generate-google-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(
+      115deg,
+      hsl(var(--ai-green)),
+      hsl(var(--ai-yellow)),
+      hsl(var(--ai-red)),
+      hsl(var(--ai-blue)),
+      hsl(var(--ai-green))
+    );
+    background-size: 260% 260%;
+    opacity: 0;
+    transition: opacity 180ms ease;
+    animation: googleBorderShift 8s linear infinite;
   }
 
-  /* ── Divider ──────────────────────────────────────────── */
-  .g-divider { border-top: 1px solid rgba(255,255,255,0.07); }
+  .generate-google-border:hover::before,
+  .generate-google-border:focus-visible::before {
+    opacity: 1;
+  }
 
-  /* ── Status badge ─────────────────────────────────────── */
-  .g-badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+  .generate-google-border:hover,
+  .generate-google-border:focus-visible {
+    box-shadow:
+      0 18px 44px -20px hsl(var(--ai-blue) / 0.55),
+      0 12px 32px -22px hsl(var(--ai-red) / 0.45),
+      0 8px 24px -20px hsl(var(--ai-green) / 0.42);
+  }
+
+  .focus-google-border {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .focus-google-border::before {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(
+      115deg,
+      hsl(var(--ai-green)),
+      hsl(var(--ai-yellow)),
+      hsl(var(--ai-red)),
+      hsl(var(--ai-blue)),
+      hsl(var(--ai-green))
+    );
+    background-size: 260% 260%;
+    opacity: 0;
+    transition: opacity 250ms ease;
+    animation: googleBorderShift 8s linear infinite;
+  }
+
+  .focus-google-border:focus-within::before {
+    opacity: 1;
+  }
+
+  .focus-google-border:focus-within {
+    box-shadow:
+      0 12px 32px -16px hsl(var(--ai-blue) / 0.25),
+      0 8px 24px -18px hsl(var(--ai-red) / 0.2),
+      0 6px 18px -16px hsl(var(--ai-green) / 0.18);
+  }
+
+  /* Google brand color Omni orb for rendering states. */
+  .orb-container {
+    position: relative;
+    width: 184px;
+    height: 184px;
+    border-radius: 50%;
+    background: #000000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 24px 60px -18px rgba(41, 134, 255, 0.34),
+      0 16px 42px -22px rgba(234, 67, 53, 0.3),
+      0 8px 28px -18px rgba(46, 186, 83, 0.32),
+      inset 0 0 26px rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    transition: box-shadow 0.3s ease, background-color 0.3s ease;
+  }
+
+  .dark .orb-container {
+    background: #000000;
+    box-shadow:
+      0 28px 72px -24px rgba(41, 134, 255, 0.42),
+      0 18px 56px -26px rgba(234, 67, 53, 0.36),
+      0 12px 38px -24px rgba(255, 195, 14, 0.22),
+      inset 0 0 26px rgba(255, 255, 255, 0.07);
+  }
+
+  .orb-blob {
+    position: absolute;
+    width: 156px;
+    height: 156px;
+    mix-blend-mode: screen;
+    opacity: 0.86;
+    filter: blur(12px);
+    will-change: border-radius, transform;
+  }
+
+  .orb-blob-blue {
+    background: radial-gradient(circle at 35% 35%, rgba(41, 130, 255, 0.95) 0%, rgba(0, 0, 0, 0) 70%);
+    animation: morph-blue 8s ease-in-out infinite, spin-clockwise 20s linear infinite;
+  }
+
+  .orb-blob-red {
+    background: radial-gradient(circle at 65% 65%, rgba(234, 67, 53, 0.95) 0%, rgba(0, 0, 0, 0) 70%);
+    animation: morph-red 9s ease-in-out infinite, spin-counter-clockwise 25s linear infinite;
+  }
+
+  .orb-blob-yellow {
+    background: radial-gradient(circle at 25% 75%, rgba(255, 195, 14, 0.86) 0%, rgba(0, 0, 0, 0) 70%);
+    animation: morph-yellow 7s ease-in-out infinite, spin-clockwise 18s linear infinite;
+  }
+
+  .orb-blob-green {
+    background: radial-gradient(circle at 75% 25%, rgba(46, 186, 83, 0.9) 0%, rgba(0, 0, 0, 0) 70%);
+    animation: morph-green 10s ease-in-out infinite, spin-counter-clockwise 22s linear infinite;
+  }
+
+  .orb-core {
+    position: absolute;
+    width: 92px;
+    height: 92px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.28) 28%, rgba(41, 134, 255, 0.12) 58%, transparent 100%);
+    filter: blur(5px);
+    border-radius: 50%;
+    animation: pulse-core 4s ease-in-out infinite;
+    mix-blend-mode: overlay;
+    z-index: 5;
+  }
+
+  @keyframes morph-blue {
+    0%, 100% {
+      border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+      transform: scale(1);
+    }
+    33% {
+      border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%;
+      transform: scale(1.08) translate(6px, 6px);
+    }
+    66% {
+      border-radius: 50% 50% 30% 70% / 40% 60% 40% 60%;
+      transform: scale(0.92) translate(-6px, 3px);
+    }
+  }
+
+  @keyframes morph-red {
+    0%, 100% {
+      border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%;
+      transform: scale(1.05);
+    }
+    50% {
+      border-radius: 40% 60% 70% 30% / 45% 45% 55% 55%;
+      transform: scale(0.88) translate(-6px, -6px);
+    }
+  }
+
+  @keyframes morph-yellow {
+    0%, 100% {
+      border-radius: 50% 50% 30% 70% / 40% 60% 40% 60%;
+      transform: scale(0.88);
+    }
+    50% {
+      border-radius: 60% 40% 70% 30% / 50% 50% 50% 50%;
+      transform: scale(1.08) translate(5px, -5px);
+    }
+  }
+
+  @keyframes morph-green {
+    0%, 100% {
+      border-radius: 60% 40% 70% 30% / 50% 50% 50% 50%;
+      transform: scale(1);
+    }
+    50% {
+      border-radius: 42% 58% 30% 70% / 45% 45% 55% 55%;
+      transform: scale(1.12) translate(-4px, 4px);
+    }
+  }
+
+  @keyframes spin-clockwise {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes spin-counter-clockwise {
+    0% { transform: rotate(360deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  @keyframes pulse-core {
+    0%, 100% { transform: scale(1); opacity: 0.95; }
+    50% { transform: scale(1.12); opacity: 1; }
+  }
+
+  @keyframes googleBorderShift {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 260% 50%; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

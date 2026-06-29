@@ -164,9 +164,9 @@ export default function PromptSelector({
     if (tpl.id !== 'custom') {
       const pName = selectedProduct?.name || 'our product';
       const pVisual = selectedProduct?.visualDescription || 'interacting with the product';
-      const uName = userName || 'Campaign Director';
+      const cName = userName || 'our character';
 
-      const synthesized = `A premium high-fidelity commercial for ${pName}, presented by [REF_Character] on behalf of Campaign Director ${uName}. In the scene, [REF_Character] is ${pVisual}. ${tpl.prompt}`;
+      const synthesized = `A premium high-fidelity commercial for ${pName}, starring the character ${cName} (represented by [REF_Character]). In the scene, [REF_Character] is ${pVisual}. ${tpl.prompt}`;
       setVideoPrompt(synthesized);
     } else {
       setVideoPrompt('');

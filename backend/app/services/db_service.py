@@ -19,7 +19,10 @@ def _get_firestore():
     if _firestore_client is None:
         from google.cloud import firestore
 
-        _firestore_client = firestore.AsyncClient(project=settings.GCP_PROJECT_ID)
+        _firestore_client = firestore.AsyncClient(
+            project=settings.GCP_PROJECT_ID,
+            database=settings.FIRESTORE_DATABASE_ID,
+        )
     return _firestore_client
 
 

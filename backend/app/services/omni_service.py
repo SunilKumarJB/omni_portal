@@ -16,8 +16,6 @@ import google.auth.transport.requests
 from app.config import settings
 
 _ENVIRONMENTS = {
-    "autopush": "autopush-aiplatform.sandbox.googleapis.com",
-    "staging": "staging-aiplatform.sandbox.googleapis.com",
     "prod": "aiplatform.googleapis.com",
 }
 
@@ -45,7 +43,19 @@ _LANGUAGE_NAMES = {
 
 def _api_endpoint() -> str:
     project = settings.OMNI_PROJECT_ID or settings.GCP_PROJECT_ID
-    host = _ENVIRONMENTS.get(settings.OMNI_ENVIRONMENT, _ENVIRONMENTS["autopush"])
+    if settings.OMNI_ENDPOINT_URL:
+        return settings.OMNI_ENDPOINT_URL.format(
+            project=project,
+            region=settings.OMNI_REGION,
+            model=settings.OMNI_MODEL,
+        )
+    host = _ENVIRONMENTS.get(settings.OMNI_ENVIRONMENT, _ENVIRONMENTS["prod"])
+    if (
+        host == "aiplatform.googleapis.com"
+        and settings.OMNI_REGION
+        and settings.OMNI_REGION != "global"
+    ):
+        host = f"{settings.OMNI_REGION}-aiplatform.googleapis.com"
     return (
         f"https://{host}/v1beta1/projects/{project}/locations/{settings.OMNI_REGION}/interactions"
     )
@@ -88,6 +98,8 @@ async def _get_cached_token() -> str:
 
 
 async def _auth_headers() -> dict:
+    if settings.OMNI_API_KEY:
+        return {"X-Goog-Api-Key": settings.OMNI_API_KEY, "Content-Type": "application/json"}
     token = await _get_cached_token()
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 

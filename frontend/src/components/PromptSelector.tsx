@@ -9,74 +9,74 @@ import StepHeading from './StepHeading';
 
 export const VIDEO_TEMPLATES: VideoTemplate[] = [
   {
-    id: 'cyberpunk',
+    id: 'bollywood_romance',
     number: '01',
-    title: 'The Cyberpunk Neon Hustler',
-    style: 'Cyberpunk · 8K · Drone tracking',
-    location: 'Times Square, NYC — 2099',
-    dialogue: 'They said the city never sleeps. Good… neither do I.',
+    title: 'Bollywood Romance',
+    style: 'Cinematic Drama · Warm Gold',
+    location: 'Udaipur Palace / Punjab Fields',
+    dialogue: 'They say love is in the air. Personally, I prefer a more premium elevation.',
     prompt:
-      'One continuous tracking shot on a 35mm lens, gliding in front of [REF_Character] as they walk confidently through a futuristic Times Square at night. The scene has a cinematic style, illuminated by high-contrast cyan and magenta lighting that reflects off the rain-slicked streets and glowing holographic billboards. [REF_Character] wears sleek, modern streetwear with LED accents, moving smoothly and looking directly into the camera with a smirk. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
-    accent: '#00D4FF',
-    emoji: '🌆',
-    videoSrc: '/assets/videos/template_cyberpunk.mp4',
-    poster: '/assets/videos/poster_cyberpunk.jpg',
+      'A slow push-in, medium shot of [REF_Character] in a grand Bollywood romance scene. The lighting is warm and golden, casting a romantic glow. Wind gently blows through their hair and clothes as marigold petals drift in the background. High-saturation colors and dramatic slow-motion capture the emotional depth and premium grandeur of the moment.',
+    accent: '#EA4335',
+    emoji: '🎬',
+    videoSrc: '/assets/videos/template_bollywood_romance.mp4',
+    poster: null,
   },
   {
-    id: 'action_hero',
+    id: 'cyberpunk_bengaluru',
     number: '02',
-    title: 'The Epic Action Hero',
-    style: 'Action blockbuster · Slow-mo · IMAX',
-    location: 'The Colosseum, Rome, Italy',
-    dialogue: "Are you not entertained? Because I'm just getting started.",
+    title: 'Cyberpunk Bengaluru',
+    style: 'Sci-Fi · Neon Saffron',
+    location: 'Bengaluru Tech-Hub 2050',
+    dialogue: 'They said the city never sleeps. Good… neither do my innovations.',
     prompt:
-      'A slow push-in, low-angle medium shot of [REF_Character] standing in the center of the historically accurate Roman Colosseum. Crisp golden hour backlighting casts warm, volumetric sun rays that illuminate floating dust particles in the air. [REF_Character] holds a victorious pose and performs a single, deliberate action: smoothly dusting off their right shoulder. They are wearing a heavy, battle-worn leather coat that billows consistently in a steady breeze. Shot on IMAX 70mm film, photorealistic style, with grounded, cinematic color grading. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
-    accent: '#F59E0B',
-    emoji: '⚔️',
-    videoSrc: '/assets/videos/template_action_hero.mp4',
-    poster: '/assets/videos/poster_action_hero.jpg',
+      'One continuous tracking shot on a 35mm lens, gliding in front of [REF_Character] as they walk through a futuristic Bengaluru in 2050 at night. The scene is illuminated by electric saffron and deep teal neon lights. Hovering auto-rickshaws fly in the background, and glowing Sanskrit holographic billboards light up the rain-slicked streets and futuristic street-food stalls.',
+    accent: '#FF9900',
+    emoji: '🛺',
+    videoSrc: '/assets/videos/template_cyberpunk_bengaluru.mp4',
+    poster: null,
   },
   {
-    id: 'film_noir',
+    id: 'monsoon_drama',
     number: '03',
-    title: 'The Vintage Film Noir Detective',
-    style: '1940s Film Noir · B&W · 35mm grain',
-    location: 'Eiffel Tower, Paris — Rainy 1920s',
-    dialogue: 'Romance is just a myth we tell ourselves to survive the rain.',
+    title: 'Monsoon Backwaters',
+    style: 'Moody Travelogue · Emerald Green',
+    location: 'Kerala Houseboat',
+    dialogue: 'In the heart of the monsoon, peace isn’t just a feeling. It’s a luxury.',
     prompt:
-      "A cinematic 1940s black-and-white film noir shot. Locked-off camera, medium shot. [REF_Character] is framed in the center, leaning casually against a vintage streetlamp, leaving the left side of the frame open with clear negative space. Set on a foggy cobblestone street in Paris, with the Eiffel Tower glowing dimly in the background. Deep shadows and dramatic rim lighting from the streetlamp illuminate [REF_Character]'s face. Shot on vintage 35mm film with cinematic depth of field, evoking a moody and mysterious atmosphere.  The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.",
-    accent: '#94A3B8',
-    emoji: '🕵️',
-    videoSrc: '/assets/videos/template_film_noir.mp4',
-    poster: '/assets/videos/poster_film_noir.jpg',
+      'A serene, slow-drifting medium shot of [REF_Character] on a luxurious wooden houseboat drifting along the tranquil backwaters of Kerala during a lush monsoon. Moody slate-grey skies and rich emerald-green palms frame the scene. Heavy rain patters on the water, and mist rises from the canals, with slow-motion close-ups capturing the rich wood textures and rain droplets.',
+    accent: '#34A853',
+    emoji: '🌧️',
+    videoSrc: '/assets/videos/template_monsoon_drama.mp4',
+    poster: null,
   },
   {
-    id: 'animated',
+    id: 'mythology_fusion',
     number: '04',
-    title: 'The 3D Animated Mischief Maker',
-    style: 'Pixar / Disney 3D · Vibrant · Soft lighting',
-    location: 'Mount Fuji, Japan — Cherry blossom season',
-    dialogue: 'Spring is here, the blossoms are blooming, and nothing is going to plan!',
+    title: 'Ancient-Tech Hampi',
+    style: 'Epic Fantasy · Glowing Gold',
+    location: 'Hampi Temple Ruins',
+    dialogue: 'Some legends are carved in stone. Others are written in the stars.',
     prompt:
-      'Medium shot with a slow, gentle push-in camera movement.A high-quality, high-end 3D computer-animated Pixar shot featuring rich textures, expressive character design, and a cinematic feel. [REF_Character] is standing in a lush, vibrant field of pink cherry blossom trees, with the majestic, snow-capped peak of Mount Fuji towering clearly in the background.Crisp, warm sunlight comes from off-screen, casting soft, flattering shadows and highlighting the vibrant, cheerful colors of the environment. [REF_Character] is initially looking away, then performs a sudden, snappy, comedic double-take directly toward the camera lens as a dynamic gust of wind blows cherry blossom petals rapidly across the foreground. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
-    accent: '#F472B6',
-    emoji: '🌸',
-    videoSrc: '/assets/videos/template_animated.mp4',
-    poster: '/assets/videos/poster_animated.jpg',
+      'A majestic, sweeping wide shot of [REF_Character] standing amidst the grand stone ruins of an ancient temple in Hampi, infused with futuristic technology. Ancient stone carvings glow with golden energy runes, and stone monoliths float silently in the air. Dramatic volumetric sun rays stream through the pillars, creating an epic, mythological atmosphere of grand scale.',
+    accent: '#4285F4',
+    emoji: '🔱',
+    videoSrc: '/assets/videos/template_mythology_fusion.mp4',
+    poster: null,
   },
   {
-    id: 'treasure_hunter',
+    id: 'pixar_style',
     number: '05',
-    title: 'The Desert Treasure Hunter',
-    style: 'Adventure-fantasy · Drone · Unreal Engine 5',
-    location: 'Great Pyramids of Giza, Egypt',
-    dialogue: 'Some secrets are meant to stay buried. Too bad I brought a shovel.',
+    title: '3D Pixar Style',
+    style: '3D Animated · Warm Digital',
+    location: 'Festive Indian Home',
+    dialogue: 'Home is where the heart is. And today, it’s glowing.',
     prompt:
-      'A continuous, sweeping wide-angle drone shot smoothly circles [REF_Character], who is standing atop a towering sand dune. In the background, the Great Pyramids of Giza loom majestically. [REF_Character] is dressed in rugged, textured explorer gear and holds an ancient artifact emitting a soft, ethereal light. The scene is lit by a blazing high-noon sun that casts sharp, realistic shadows across the sand, while visible heat distortion waves ripple naturally in the dry air. The aesthetic is a cinematic, hyper-realistic 3D Unreal Engine animation style with a rich, warm orange and teal color grading. The character must look exactly like the provided [REF_Character] image, maintaining their precise likeness and facial features.',
-    accent: '#F97316',
-    emoji: '🏺',
-    videoSrc: '/assets/videos/template_treasure_hunter.mp4',
-    poster: '/assets/videos/poster_treasure_hunter.jpg',
+      'A warm, vibrant 3D Pixar-style digital animation. [REF_Character], a cute character with highly expressive eyes, is in a brightly lit Indian home decorated with marigold garlands. The camera captures the glossy surfaces, colorful design, and fun animations of the festive room in the soft, warm light.',
+    accent: '#34A853',
+    emoji: '🏡',
+    videoSrc: '/assets/videos/template_pixar_style.mp4',
+    poster: null,
   },
   {
     id: 'custom',
@@ -92,6 +92,58 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
     poster: null,
   },
 ];
+
+const PRODUCT_POSTURES: Record<string, 'active' | 'relaxed' | 'vehicle'> = {
+  aggressive_toaster: 'active',
+  snooze_blanket: 'relaxed',
+  flying_sneakers: 'active',
+  flying_suv: 'vehicle',
+  impatient_spoon: 'active',
+  diet_plate: 'active',
+};
+
+const TAILORED_PROMPTS: Record<string, Record<'active' | 'relaxed' | 'vehicle', string>> = {
+  bollywood_romance: {
+    active:
+      'A slow push-in, medium shot of [REF_Character] in a grand Bollywood romance scene. The lighting is warm and golden, casting a romantic glow. Wind gently blows through their hair and clothes as marigold petals drift in the background. High-saturation colors and dramatic slow-motion capture the emotional depth and premium grandeur of the moment as they actively showcase the product.',
+    relaxed:
+      'A serene, slow-drifting medium shot of [REF_Character] lounging peacefully on a luxurious heritage daybed on a palace balcony in Udaipur at sunset. Wrapped in the comfort of the product, they look completely relaxed as marigold petals drift around them in the warm, golden hour light, creating a quiet, romantic oasis.',
+    vehicle:
+      "A grand, low-angle wide shot of [REF_Character] standing beside the vehicle parked on a scenic lakeside palace road in Udaipur at sunset. The warm, golden hour sun casts a romantic glow. The camera sweeps around to showcase the vehicle's impressive scale, sleek lines, and premium details reflecting the vibrant colors of the palace.",
+  },
+  cyberpunk_bengaluru: {
+    active:
+      'One continuous tracking shot on a 35mm lens, gliding in front of [REF_Character] as they walk confidently through a futuristic Bengaluru in 2050 at night. The scene is illuminated by electric saffron and deep teal neon lights. [REF_Character] is actively using the product, and the camera focuses on a detailed close-up of the product in action against the backdrop of hovering auto-rickshaws and glowing Sanskrit holographic billboards.',
+    relaxed:
+      'A slow, atmospheric medium shot of [REF_Character] relaxing in a sleek, high-tech lounge overlooking the glowing neon streets of futuristic Bengaluru in 2050 at night. Illuminated by soft, moody saffron and teal ambient light, [REF_Character] is peacefully enjoying the product. The camera gently drifts, capturing the soothing textures and features of the product in the vibrant, high-tech city.',
+    vehicle:
+      "A dramatic, sweeping wide shot of [REF_Character] standing on a high-altitude neon-lit sky terrace overlooking futuristic Bengaluru in 2050 at night. The vehicle is parked prominently beside them. The camera pans to showcase the vehicle's sleek aerodynamic lines, glowing engines, and futuristic design reflecting the vibrant saffron and teal neon lights of the city below.",
+  },
+  monsoon_drama: {
+    active:
+      "A serene, slow-drifting medium shot of [REF_Character] on the covered deck of a luxurious wooden houseboat in Kerala during a lush monsoon. Moody slate-grey skies and rich emerald-green palms frame the scene. [REF_Character] is actively using the product, and the camera glides in for a close-up, capturing the product's sleek design and textures against the heavy rain pattering on the water.",
+    relaxed:
+      'A moody, atmospheric medium shot of [REF_Character] relaxing snugly inside the glass-walled cabin of a luxury Kerala houseboat. Wrapped in the comfort of the product, they watch the monsoon rain pour outside. The camera gently drifts, capturing the quiet, soothing comfort of the product against the backdrop of lush green palms and misty waters.',
+    vehicle:
+      "A dramatic, wet wide shot of the vehicle parked on a lush green jetty in the Kerala backwaters during a monsoon rain. [REF_Character] stands beside the vehicle under a large umbrella. The camera showcases the vehicle's sleek, water-glistening lines, retractable wings, and glowing engines standing out against the misty, emerald-green landscape.",
+  },
+  mythology_fusion: {
+    active:
+      "A majestic, sweeping wide shot of [REF_Character] standing amidst the grand stone ruins of an ancient temple in Hampi, infused with futuristic technology. [REF_Character] is actively using the product, which glows with energy. The camera glides in for a-close-up, showcasing the product's high-tech utility against the backdrop of ancient stone carvings glowing with golden energy runes and floating monoliths.",
+    relaxed:
+      "A serene, slow-drifting medium shot of [REF_Character] lounging peacefully on a stone veranda overlooking the grand temple ruins of Hampi. Wrapped in the comfort of the product, they find peace. Dramatic volumetric sun rays stream through the pillars, highlighting the product's rich textures against the mystical, ancient-tech ruins.",
+    vehicle:
+      "A grand, sweeping wide shot of the vehicle parked atop a rocky hill overlooking the ancient temple ruins of Hampi. [REF_Character] stands proudly beside the vehicle. The camera showcases the vehicle's impressive scale, sleek lines, and glowing engines standing out against the historic stone gopurams and floating ruins in the golden hour light.",
+  },
+  pixar_style: {
+    active:
+      'A warm, vibrant 3D Pixar-style digital animation. [REF_Character], a cute character with highly expressive eyes, is in a brightly lit Indian home decorated with marigold garlands. They are actively using the product, reacting with joyful amazement. The camera focuses on the product, showcasing its glossy surfaces, colorful design, and fun animations in the soft, warm light.',
+    relaxed:
+      "A cozy, warm 3D Pixar-style digital animation. [REF_Character], a cute expressive character, is lounging happily on a pile of colorful silk cushions in a festive Indian home. Snugly enjoying the product, they look blissfully happy. The camera zooms in on the product's soft, inviting textures and comforting features in the cheerful, sun-drenched room.",
+    vehicle:
+      "A cheerful, wide-angle shot in a vibrant 3D Pixar-style animation. The vehicle, with a friendly and sleek glossy design, is parked in the driveway of a festive Indian home decorated with lights. [REF_Character] stands beside it, gesturing happily. The camera sweeps around to show the vehicle's fun features and glossy reflections.",
+  },
+};
 
 function TemplateThumbnail({ tpl }: { tpl: VideoTemplate }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -149,6 +201,7 @@ interface PromptSelectorProps {
   setSelectedTemplate: React.Dispatch<React.SetStateAction<VideoTemplate | null>>;
   videoPrompt: string;
   setVideoPrompt: React.Dispatch<React.SetStateAction<string>>;
+  dialogueText: string;
 }
 
 export default function PromptSelector({
@@ -158,6 +211,7 @@ export default function PromptSelector({
   setSelectedTemplate,
   videoPrompt,
   setVideoPrompt,
+  dialogueText,
 }: PromptSelectorProps) {
   function selectTemplate(tpl: VideoTemplate) {
     setSelectedTemplate(tpl);
@@ -165,8 +219,19 @@ export default function PromptSelector({
       const pName = selectedProduct?.name || 'our product';
       const pVisual = selectedProduct?.visualDescription || 'interacting with the product';
       const cName = userName || 'our character';
+      const pId = selectedProduct?.id || '';
 
-      const synthesized = `A premium high-fidelity commercial for ${pName}, starring the character ${cName} (represented by [REF_Character]). In the scene, [REF_Character] is ${pVisual}. ${tpl.prompt}`;
+      const posture = PRODUCT_POSTURES[pId] || 'active';
+      let basePrompt = TAILORED_PROMPTS[tpl.id]?.[posture] || tpl.prompt;
+
+      // Dynamically inject the product name into the scenario prompt for maximum customization
+      basePrompt = basePrompt
+        .replace(/the product/g, pName)
+        .replace(/the vehicle/g, pName)
+        .replace(/product's/g, `${pName}'s`)
+        .replace(/vehicle's/g, `${pName}'s`);
+
+      const synthesized = `A premium high-fidelity commercial for ${pName}, starring the character ${cName} (represented by [REF_Character]). In the scene, [REF_Character] is ${pVisual}. ${basePrompt}`;
       setVideoPrompt(synthesized);
     } else {
       setVideoPrompt('');
@@ -188,7 +253,7 @@ export default function PromptSelector({
       <div className="grid min-h-0 flex-1 items-stretch gap-4 lg:grid-cols-12">
         {/* Left Column: Dense grid of scenarios (3 columns on xl screens to fit 6 cards in 2 rows) */}
         <div className="min-h-0 lg:col-span-7">
-          <div className="grid h-full min-h-0 grid-cols-3 grid-rows-2 gap-3">
+          <div className="grid h-full min-h-0 grid-cols-2 xl:grid-cols-3 gap-3">
             {VIDEO_TEMPLATES.map((tpl) => {
               const selected = selectedTemplate?.id === tpl.id;
 
@@ -286,12 +351,16 @@ export default function PromptSelector({
                   </div>
                 </div>
 
-                {selectedTemplate.id !== 'custom' && selectedTemplate.dialogue && (
+                {dialogueText?.trim() ? (
                   <p
                     className="line-clamp-2 border-l-2 pl-3 text-xs font-medium italic leading-relaxed text-muted-foreground/90 xl:text-sm"
                     style={{ borderColor: `${selectedTemplate.accent}80` }}
                   >
-                    "{selectedTemplate.dialogue}"
+                    "{dialogueText}"
+                  </p>
+                ) : (
+                  <p className="text-xs italic text-muted-foreground pl-3 border-l-2 border-border">
+                    Silent scene (no spoken dialogue)
                   </p>
                 )}
 

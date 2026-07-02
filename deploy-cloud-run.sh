@@ -12,10 +12,10 @@ REPO="gcr.io/${PROJECT_ID}"
 # Runtime config — single source of truth for the backend's pydantic Settings.
 # Each falls back to a sensible default; change a model/bucket here (or export it)
 # and redeploy — no code edit required.
-GCS_BUCKET="${GCS_BUCKET_NAME:-omni-video-demo}"
+GCS_BUCKET="${GCS_BUCKET_NAME:-your-gcs-bucket-name}"
 OMNI_MODEL="${OMNI_MODEL:-gemini-omni-flash-preview}"
-OMNI_ENVIRONMENT="${OMNI_ENVIRONMENT:-autopush}"   # autopush | staging | prod
-OMNI_REGION="${OMNI_REGION:-global}"               # global | us-central1
+OMNI_ENVIRONMENT="${OMNI_ENVIRONMENT:-prod}"        # prod
+OMNI_REGION="${OMNI_REGION:-us-central1}"            # us-central1 | global
 # --------------------------
 
 echo "🚀 Deploying Omni Video Generator to Cloud Run (project: ${PROJECT_ID})"

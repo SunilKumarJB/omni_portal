@@ -1,7 +1,19 @@
+import os
+
+os.environ["GOOGLE_API_USE_CLIENT_CERTIFICATE"] = "false"
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+
+try:
+    import urllib3.contrib.pyopenssl
+
+    urllib3.contrib.pyopenssl.extract_from_urllib3()
+except Exception:
+    pass
+
 
 from app.config import settings
 from app.api.routes import generate, videos

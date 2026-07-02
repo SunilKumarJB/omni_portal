@@ -8,7 +8,7 @@ install:
 
 start:
 	@echo "Starting both backend and frontend servers concurrently..."
-	npx concurrently --kill-others \
+	npx -y concurrently --kill-others \
 		--prefix "[{name}]" \
 		--names "backend,frontend" \
 		--prefix-colors "blue,green" \

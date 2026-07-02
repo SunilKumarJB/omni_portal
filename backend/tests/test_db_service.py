@@ -5,9 +5,13 @@ from app.services import db_service
 
 @pytest.mark.asyncio
 async def test_db_service_local_mode(tmp_path):
-    # Patch _LOCAL_DB_PATH to use our temp path for isolation
     mock_db_path = tmp_path / "db"
-    with patch("app.services.db_service._LOCAL_DB_PATH", mock_db_path):
+    with (
+        patch("app.services.db_service._LOCAL_DB_PATH", mock_db_path),
+        patch("app.services.db_service.settings") as mock_settings,
+    ):
+        mock_settings.DB_BACKEND = "local"
+        mock_settings.TEST_MODE = False
         request_id = "test_request_123"
         data = {"prompt": "Test prompt", "style_id": "cinematic"}
 

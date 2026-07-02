@@ -5,17 +5,6 @@ import StepHeading from './StepHeading';
 
 export const PRODUCT_PRESETS: ProductPreset[] = [
   {
-    id: 'upside_down_cup',
-    name: 'Upside Down Cup',
-    tagline: 'Gravity is optional. Style is mandatory.',
-    description:
-      'A gravity-defying, double-walled thermal cup that sits upside down but dispenses perfectly from the base when lifted.',
-    visualDescription:
-      'drinking from the Upside Down Cup, a sleek thermal glass that rests upside down without spilling, dispensing liquid seamlessly from the base when lifted',
-    emoji: '☕',
-    gradient: 'from-pink-500/10 via-purple-500/10 to-indigo-500/10 border-purple-500/20',
-  },
-  {
     id: 'aggressive_toaster',
     name: 'Aggressive Toaster',
     tagline: 'Toast or else. No compromises.',
@@ -25,17 +14,6 @@ export const PRODUCT_PRESETS: ProductPreset[] = [
       'catching golden-brown toast launched three feet into the air by the Aggressive Toaster, a high-octane chrome kitchen device sporting glowing red heat indicators',
     emoji: '🍞',
     gradient: 'from-red-500/10 via-orange-500/10 to-amber-500/10 border-red-500/20',
-  },
-  {
-    id: 'musical_toothbrush',
-    name: 'Musical Toothbrush',
-    tagline: 'Turn brushing into a stadium concert.',
-    description:
-      'A smart sonic toothbrush that uses bone-conduction technology to play epic orchestral theme music inside your head while you brush.',
-    visualDescription:
-      'brushing their teeth with the Musical Toothbrush, a neon-accented sonic toothbrush that glows in sync with epic orchestral music playing via bone conduction',
-    emoji: '🪥',
-    gradient: 'from-blue-500/10 via-cyan-500/10 to-teal-500/10 border-blue-500/20',
   },
   {
     id: 'snooze_blanket',
@@ -66,7 +44,7 @@ export const PRODUCT_PRESETS: ProductPreset[] = [
     description:
       'An electric family SUV with retractable wings and clean-fusion jet engines, designed for high-altitude luxury cruising.',
     visualDescription:
-      'standing beside the AeroCruiser SUV, a luxury electric SUV with sleek carbon-fiber retractable wings and glowing blue fusion jet engines parked on an elevated sky terrace',
+      'standing beside the AeroCruiser SUV as its sleek carbon-fiber wings slowly unfold and its blue fusion jet engines glow intensely, preparing for takeoff on an elevated sky terrace',
     emoji: '🚙',
     gradient: 'from-slate-500/10 via-zinc-500/10 to-neutral-500/10 border-slate-500/20',
   },
@@ -77,7 +55,7 @@ export const PRODUCT_PRESETS: ProductPreset[] = [
     description:
       'A high-speed self-stirring spoon that stirs at sonic speeds and aggressively alerts you the exact millisecond your chai is ready.',
     visualDescription:
-      'holding the Impatient Chai Spoon, a sleek copper self-stirring spoon vibrating at sonic speed in a steaming cup of masala chai, flashing bright green to signal it is ready',
+      'holding the Impatient Chai Spoon, a sleek copper self-stirring spoon stirring a cup of steaming masala chai at hyper-speed, creating a dramatic, rapid whirlpool in the cup with tea swirling violently, the spoon flashing bright green to signal it is ready',
     emoji: '🥄',
     gradient: 'from-amber-500/10 via-yellow-500/10 to-orange-500/10 border-amber-500/20',
   },
@@ -109,7 +87,7 @@ export default function ProductSelector({
         Choose a premium, futuristic product to anchor your campaign.
       </StepHeading>
 
-      <div className="grid min-h-0 flex-1 grid-cols-2 xl:grid-cols-4 gap-3 items-stretch max-h-[480px] overflow-y-auto pt-2 pb-2 px-1 pr-2">
+      <div className="grid min-h-0 flex-1 grid-cols-3 gap-3 items-stretch max-h-[480px] overflow-y-auto pt-2 pb-2 px-1 pr-2">
         {PRODUCT_PRESETS.map((prod) => {
           const selected = selectedProduct?.id === prod.id;
           return (

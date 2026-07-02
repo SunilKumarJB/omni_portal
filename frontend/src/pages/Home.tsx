@@ -331,6 +331,7 @@ export default function Home() {
                       setSelectedTemplate={setSelectedTemplate}
                       videoPrompt={videoPrompt}
                       setVideoPrompt={setVideoPrompt}
+                      dialogueText={dialogueText}
                     />
                   )}
                   {currentStep === 6 && (

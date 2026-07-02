@@ -45,11 +45,9 @@ async def _upload_to_gcs(data: bytes, path: str, content_type: str) -> Tuple[str
     blob = bucket.blob(path)
     # Wrap blocking GCS upload in asyncio.to_thread
     await asyncio.to_thread(blob.upload_from_string, data, content_type=content_type)
-    # Return a time-limited v4 signed URL instead of making the object public.
-    # Works on buckets with Uniform Bucket-Level Access (the GCS default), where
-    # object ACLs / make_public() would raise 403.
-    url = await asyncio.to_thread(_signed_url, blob)
-    return url, f"gs://{settings.GCS_BUCKET_NAME}/{path}"
+    # Also save to local storage so the local dev server can serve files without GCS 403 AccessDenied errors
+    local_url, _ = await _upload_to_local(data, path)
+    return local_url, f"gs://{settings.GCS_BUCKET_NAME}/{path}"
 
 
 def _signed_url(blob) -> str:

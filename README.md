@@ -9,7 +9,7 @@
 
 **The Omni Portal** is an executive-ready, fixed-viewport control deck built for **Gemini Omni** (`gemini-omni-flash-preview`) video generation on the **Gemini Enterprise Agent Platform** (formerly Vertex AI).
 
-The platform provides a 5-step interactive wizard designed for live presentations, executive demonstrations, and multi-modal video creation workflows: choose a cinematic scenario, specify multilingual dialogue with lip-sync, capture or upload character portraits, synchronize audio tracks, and generate high-definition shareable videos.
+The platform provides a 6-step interactive wizard designed for live presentations, executive demonstrations, and multi-modal video creation workflows: name your character, pick a hero product, specify multilingual dialogue with lip-sync, capture or upload a presenter portrait, choose a cinematic scenario, then review and generate a high-definition shareable video.
 
 > **Model:** `gemini-omni-flash-preview` is a public preview model on the Gemini Enterprise Agent Platform. Enable the platform's API on your GCP project and you're ready to go. No GCP access? Toggle **Test Mode** in the sidebar (or set `TEST_MODE=true` in `backend/.env`) to run the full wizard end-to-end with a mocked video.
 
@@ -30,47 +30,50 @@ The platform provides a 5-step interactive wizard designed for live presentation
 
 ## 📖 How to Use the App (Step-by-Step User Guide)
 
-The Omni Portal features a fixed-viewport, 5-step control deck designed for live executive presentations and multi-modal video synthesis.
+The Omni Portal features a fixed-viewport, 6-step control deck designed for live executive presentations and multi-modal video synthesis.
 
-### Step 1: Select Scenario Template & Visual Theme
-Choose from curated cinematic scenarios (Cyberpunk, Anime, Film Noir, Claymation, etc.) or write a custom video prompt. Each scenario includes instant local video previews and aspect ratio controls.
-
-![Step 1: Scenario Selection](docs/assets/screenshots/step-1-scenario-cards.png)
-
-*Selected Scenario Details:*
-![Step 1: Selected Scenario](docs/assets/screenshots/step-1-scenario-selected.png)
+### Step 1: Give a Name to Your Character
+Enter a name for your character to personalize the campaign. This name is woven into dialogue suggestions and the review summary in later steps.
 
 ---
 
-### Step 2: Dialogue & Multilingual Lip-Sync
+### Step 2: Select Your Hero Product
+Pick a hero product preset from the catalog. The product's visual description flows into the scenario prompt so Gemini Omni knows what to feature on-screen.
+
+---
+
+### Step 3: Dialogue & Multilingual Lip-Sync
 Enter the line of dialogue you want your character to speak. Select from **10 supported languages** (*English, Hindi, Tamil, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati, Punjabi*). Gemini Omni automatically synthesizes the speech and generates frame-accurate lip-sync.
 
-![Step 2: Dialogue & Language Selection](docs/assets/screenshots/step-2-dialogue.png)
+![Step 3: Dialogue & Language Selection](docs/assets/screenshots/step-2-dialogue.png)
 
 ---
 
-### Step 3: Presenter Workbench (Character Reference)
+### Step 4: Presenter Workbench (Character Reference)
 Choose your presenter character using preset avatars, upload a custom portrait photo, or capture a live webcam photo. This portrait serves as the character reference for the video.
 
-![Step 3: Presenter Workbench](docs/assets/screenshots/step-3-presenter.png)
+![Step 4: Presenter Workbench](docs/assets/screenshots/step-3-presenter.png)
 
 ---
 
-### Step 4: Audio Track Integration (Optional)
-Optionally attach audio to guide video rhythm. Select preset audio tracks, record live microphone voiceovers, or upload custom audio files.
+### Step 5: Choose Scenario Background / Theme
+Choose from curated cinematic scenarios (Bollywood Romance, Cyberpunk Bengaluru, Monsoon Drama, Mythology Fusion, Pixar Style) or write a custom video prompt. Each scenario ships with an inline video preview.
 
-![Step 4: Audio Integration](docs/assets/screenshots/step-4-audio.png)
+![Step 5: Scenario Cards](docs/assets/screenshots/step-1-scenario-cards.png)
+
+*Selected Scenario Details:*
+![Step 5: Selected Scenario](docs/assets/screenshots/step-1-scenario-selected.png)
 
 ---
 
-### Step 5: Review & Generate
+### Step 6: Review & Create
 Review your final video specs, character reference, prompt parameters, and target language. Click the animated **Generate** button to launch Gemini Enterprise video generation (or use **Test Mode** for instant offline mocks).
 
-![Step 5: Review & Generate](docs/assets/screenshots/step-5-review-generate.png)
+![Step 6: Review & Generate](docs/assets/screenshots/step-5-review-generate.png)
 
 ---
 
-### Result Delivery & Mobile QR Sharing
+### Step 7: Result Delivery & Mobile QR Sharing
 Watch your HD video in the built-in player, download the MP4 file, copy the share link, or **scan the QR code** on any mobile phone to instantly view and play the video on mobile devices!
 
 ![Result Delivery Hub](docs/assets/screenshots/result-delivery-layout.png)
@@ -214,7 +217,7 @@ GEMINI_API_KEY=AIzaSy...
 If you are giving a live demo without active GCP connectivity or want to test UI flows without incurring API fees:
 
 1. In the sidebar of the web app, toggle **Test Mode** to `ON`.
-2. Complete the 5-step wizard and click **Generate**.
+2. Complete the 6-step wizard and click **Generate**.
 3. The app will simulate real generation progress and deliver a mock video instantly!
 
 Alternatively, enable Test Mode globally in `backend/.env`:

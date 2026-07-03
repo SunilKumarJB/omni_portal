@@ -35,48 +35,49 @@ The Omni Portal features a fixed-viewport, 6-step control deck designed for live
 ### Step 1: Give a Name to Your Character
 Enter a name for your character to personalize the campaign. This name is woven into dialogue suggestions and the review summary in later steps.
 
+![Step 1: Name Your Character](docs/assets/screenshots/step-1-name.png)
+
 ---
 
 ### Step 2: Select Your Hero Product
 Pick a hero product preset from the catalog. The product's visual description flows into the scenario prompt so Gemini Omni knows what to feature on-screen.
+
+![Step 2: Hero Product](docs/assets/screenshots/step-2-product.png)
 
 ---
 
 ### Step 3: Dialogue & Multilingual Lip-Sync
 Enter the line of dialogue you want your character to speak. Select from **10 supported languages** (*English, Hindi, Tamil, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati, Punjabi*). Gemini Omni automatically synthesizes the speech and generates frame-accurate lip-sync.
 
-![Step 3: Dialogue & Language Selection](docs/assets/screenshots/step-2-dialogue.png)
+![Step 3: Dialogue & Language Selection](docs/assets/screenshots/step-3-dialogue.png)
 
 ---
 
 ### Step 4: Presenter Workbench (Character Reference)
 Choose your presenter character using preset avatars, upload a custom portrait photo, or capture a live webcam photo. This portrait serves as the character reference for the video.
 
-![Step 4: Presenter Workbench](docs/assets/screenshots/step-3-presenter.png)
+![Step 4: Presenter Workbench](docs/assets/screenshots/step-4-presenter.png)
 
 ---
 
 ### Step 5: Choose Scenario Background / Theme
 Choose from curated cinematic scenarios (Bollywood Romance, Cyberpunk Bengaluru, Monsoon Drama, Mythology Fusion, Pixar Style) or write a custom video prompt. Each scenario ships with an inline video preview.
 
-![Step 5: Scenario Cards](docs/assets/screenshots/step-1-scenario-cards.png)
-
-*Selected Scenario Details:*
-![Step 5: Selected Scenario](docs/assets/screenshots/step-1-scenario-selected.png)
+![Step 5: Scenario Background](docs/assets/screenshots/step-5-scenario.png)
 
 ---
 
 ### Step 6: Review & Create
 Review your final video specs, character reference, prompt parameters, and target language. Click the animated **Generate** button to launch Gemini Enterprise video generation (or use **Test Mode** for instant offline mocks).
 
-![Step 6: Review & Generate](docs/assets/screenshots/step-5-review-generate.png)
+![Step 6: Review & Generate](docs/assets/screenshots/step-6-review.png)
 
 ---
 
 ### Step 7: Result Delivery & Mobile QR Sharing
 Watch your HD video in the built-in player, download the MP4 file, copy the share link, or **scan the QR code** on any mobile phone to instantly view and play the video on mobile devices!
 
-![Result Delivery Hub](docs/assets/screenshots/result-delivery-layout.png)
+![Step 7: Result Delivery Hub](docs/assets/screenshots/step-7-result.png)
 
 ---
 

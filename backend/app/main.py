@@ -49,7 +49,7 @@ async def health():
         "storage_backend": settings.STORAGE_BACKEND,
         "db_backend": settings.DB_BACKEND,
         "models": {
-            "omni": settings.OMNI_MODEL,
+            "gemini": settings.GEMINI_MODEL or settings.OMNI_MODEL,
         },
     }
 

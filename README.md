@@ -26,6 +26,55 @@ The platform provides a 5-step interactive wizard designed for live presentation
 
 ---
 
+## 📖 How to Use the App (Step-by-Step User Guide)
+
+The Omni Portal features a fixed-viewport, 5-step control deck designed for live executive presentations and multi-modal video synthesis.
+
+### Step 1: Select Scenario Template & Visual Theme
+Choose from curated cinematic scenarios (Cyberpunk, Anime, Film Noir, Claymation, etc.) or write a custom video prompt. Each scenario includes instant local video previews and aspect ratio controls.
+
+![Step 1: Scenario Selection](docs/assets/screenshots/step-1-scenario-cards.png)
+
+*Selected Scenario Details:*
+![Step 1: Selected Scenario](docs/assets/screenshots/step-1-scenario-selected.png)
+
+---
+
+### Step 2: Dialogue & Multilingual Lip-Sync
+Enter the line of dialogue you want your character to speak. Select from **10 supported languages** (*English, Hindi, Tamil, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati, Punjabi*). Gemini Omni automatically synthesizes the speech and generates frame-accurate lip-sync.
+
+![Step 2: Dialogue & Language Selection](docs/assets/screenshots/step-2-dialogue.png)
+
+---
+
+### Step 3: Presenter Workbench (Character Reference)
+Choose your presenter character using preset avatars, upload a custom portrait photo, or capture a live webcam photo. This portrait serves as the character reference for the video.
+
+![Step 3: Presenter Workbench](docs/assets/screenshots/step-3-presenter.png)
+
+---
+
+### Step 4: Audio Track Integration (Optional)
+Optionally attach audio to guide video rhythm. Select preset audio tracks, record live microphone voiceovers, or upload custom audio files.
+
+![Step 4: Audio Integration](docs/assets/screenshots/step-4-audio.png)
+
+---
+
+### Step 5: Review & Generate
+Review your final video specs, character reference, prompt parameters, and target language. Click the animated **Generate** button to launch Vertex AI video generation (or use **Test Mode** for instant offline mocks).
+
+![Step 5: Review & Generate](docs/assets/screenshots/step-5-review-generate.png)
+
+---
+
+### Result Delivery & Mobile QR Sharing
+Watch your HD video in the built-in player, download the MP4 file, copy the share link, or **scan the QR code** on any mobile phone to instantly view and play the video on mobile devices!
+
+![Result Delivery Hub](docs/assets/screenshots/result-delivery-layout.png)
+
+---
+
 ## 🏗️ Project Structure
 
 ```text
@@ -42,7 +91,6 @@ omni_portal/
 │   │       ├── db_service.py          # Firestore and local database backends
 │   │       └── qr_service.py          # Mobile QR code generation
 │   ├── scripts/
-│   │   ├── test_api_calls.py          # Connectivity test script for Omni API
 │   │   └── generate_previews.py       # Scenario preview generator script
 │   ├── tests/                         # Backend pytest suite
 │   ├── Dockerfile                     # Backend container setup
@@ -105,11 +153,10 @@ GCP_PROJECT_ID=your-gcp-project-id
 GCP_LOCATION=us-central1
 GCS_BUCKET_NAME=your-gcs-bucket-name
 
-# Omni Settings (Vertex AI)
-OMNI_MODEL=gemini-omni-flash-preview
-OMNI_ENVIRONMENT=prod
-OMNI_REGION=us-central1
-# Optional: OMNI_API_KEY=your-gemini-api-key
+# Gemini / Omni Settings (Vertex AI)
+GEMINI_MODEL=gemini-omni-flash-preview
+OMNI_REGION=global
+# Optional: GEMINI_API_KEY=your-gemini-api-key
 
 # Storage & DB Mode (set to "local" for zero-cloud runs)
 STORAGE_BACKEND=local
@@ -155,17 +202,10 @@ gcloud auth application-default login
 ```
 
 #### Option B: API Key
-If using an API key, set `OMNI_API_KEY` in your `backend/.env`:
+If using an API key, set `GEMINI_API_KEY` in your `backend/.env`:
 
 ```env
-OMNI_API_KEY=AIzaSy...
-```
-
-### Step 3: Verify Connection
-Run the included connection test script to verify authentication and model reachability:
-
-```bash
-make test-connection
+GEMINI_API_KEY=AIzaSy...
 ```
 
 ---
@@ -269,10 +309,9 @@ You can also deploy both frontend and backend to Cloud Run using `./deploy-cloud
 | `GCP_PROJECT_ID` | Google Cloud Project ID | `""` |
 | `GCP_LOCATION` | Default GCP region | `us-central1` |
 | `GCS_BUCKET_NAME` | Cloud Storage bucket name for generated videos | `your-gcs-bucket-name` |
-| `OMNI_MODEL` | Omni model identifier | `gemini-omni-flash-preview` |
-| `OMNI_ENVIRONMENT` | Target host environment (`prod`) | `prod` |
-| `OMNI_REGION` | Vertex AI location region | `us-central1` |
-| `OMNI_API_KEY` | Optional API Key for Vertex AI authentication | `""` |
+| `GEMINI_MODEL` | Gemini / Omni model identifier | `gemini-omni-flash-preview` |
+| `OMNI_REGION` | Vertex AI location region | `global` |
+| `GEMINI_API_KEY` | Optional API Key for Vertex AI / Gemini authentication | `""` |
 | `OMNI_ENDPOINT_URL` | Optional custom endpoint URL template | `""` |
 | `STORAGE_BACKEND` | Storage strategy (`local` or `gcs`) | `local` |
 | `DB_BACKEND` | Metadata database backend (`local` or `firestore`) | `local` |
@@ -297,7 +336,6 @@ From the repo root:
 | `make lint` | Lint codebase (Ruff for backend, Biome for frontend) |
 | `make format` | Format codebase (Ruff for backend, Biome for frontend) |
 | `make check` | Execute full check pipeline (`format` ➔ `lint` ➔ `test`) |
-| `make test-connection` | Execute live Vertex AI connectivity test script |
 | `make clean` | Reset build outputs, caches, and virtual environments |
 
 ---
@@ -305,3 +343,16 @@ From the repo root:
 ## 📄 License
 
 This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
+
+---
+
+## 👥 Authors
+
+- [Sunil Kumar](https://www.linkedin.com/in/sunilkumar88/)
+- [Vanshika Bansal](https://www.linkedin.com/in/vanshika-bansal-dataenthu/)
+- [Adhish Thite](https://www.linkedin.com/in/adhish-thite/)
+
+---
+
+*Built with Gemini, Veo, Imagen & FFmpeg on Google Cloud. A Gemini use-case demonstration. Not an official Google product.*
+

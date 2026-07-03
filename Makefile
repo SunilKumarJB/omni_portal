@@ -1,4 +1,4 @@
-.PHONY: install start start-be start-fe clean test-connection format lint test check
+.PHONY: install start start-be start-fe clean format lint test check
 
 install:
 	@echo "Installing backend dependencies..."
@@ -52,7 +52,3 @@ check:
 	$(MAKE) lint
 	$(MAKE) test
 	$(MAKE) format
-
-test-connection:
-	@echo "Running backend live connectivity test..."
-	cd backend && $(MAKE) test-connection

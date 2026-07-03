@@ -15,10 +15,6 @@ import google.auth.transport.requests
 
 from app.config import settings
 
-_ENVIRONMENTS = {
-    "prod": "aiplatform.googleapis.com",
-}
-
 _ASPECT_RATIO_MAP = {
     "16:9": "Landscape (16:9)",
     "9:16": "Portrait (9:16)",
@@ -43,21 +39,18 @@ _LANGUAGE_NAMES = {
 
 def _api_endpoint() -> str:
     project = settings.OMNI_PROJECT_ID or settings.GCP_PROJECT_ID
+    region = settings.OMNI_REGION or "global"
     if settings.OMNI_ENDPOINT_URL:
         return settings.OMNI_ENDPOINT_URL.format(
             project=project,
-            region=settings.OMNI_REGION,
-            model=settings.OMNI_MODEL,
+            region=region,
+            model=settings.GEMINI_MODEL or settings.OMNI_MODEL,
         )
-    host = _ENVIRONMENTS.get(settings.OMNI_ENVIRONMENT, _ENVIRONMENTS["prod"])
-    if (
-        host == "aiplatform.googleapis.com"
-        and settings.OMNI_REGION
-        and settings.OMNI_REGION != "global"
-    ):
-        host = f"{settings.OMNI_REGION}-aiplatform.googleapis.com"
+    host = "aiplatform.googleapis.com"
+    if region != "global":
+        host = f"{region}-aiplatform.googleapis.com"
     return (
-        f"https://{host}/v1beta1/projects/{project}/locations/{settings.OMNI_REGION}/interactions"
+        f"https://{host}/v1beta1/projects/{project}/locations/{region}/interactions"
     )
 
 
@@ -98,8 +91,9 @@ async def _get_cached_token() -> str:
 
 
 async def _auth_headers() -> dict:
-    if settings.OMNI_API_KEY:
-        return {"X-Goog-Api-Key": settings.OMNI_API_KEY, "Content-Type": "application/json"}
+    api_key = settings.GEMINI_API_KEY or settings.OMNI_API_KEY
+    if api_key:
+        return {"X-Goog-Api-Key": api_key, "Content-Type": "application/json"}
     token = await _get_cached_token()
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
@@ -164,7 +158,7 @@ def _compose_request(
 ) -> dict:
     omni_ratio = _ASPECT_RATIO_MAP.get(aspect_ratio, "Landscape (16:9)")
     return {
-        "model": settings.OMNI_MODEL,
+        "model": settings.GEMINI_MODEL or settings.OMNI_MODEL,
         "input": [
             {
                 "type": "text",

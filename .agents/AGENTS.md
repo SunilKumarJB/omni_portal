@@ -29,12 +29,6 @@
 - The Generate button has an animated Google-color border on hover/focus. Preserve the treatment for both real Omni generation and Test Mode.
 - Do not use browser screenshots for every iteration. The user will visually verify and send screenshots when needed. Use TypeScript/build checks by default unless a screenshot is explicitly useful or requested.
 
-## Testing Backend Connectivity
-
-To verify if the GCP backend API (Gemini Omni) is authenticated and working under real mode:
-1. Run `make test-connection` in the `backend/` directory.
-2. This runs the connectivity script at `backend/scripts/test_api_calls.py` which triggers a video generation to verify Omni is reachable.
-
 ## Unified Makefile Interface
 
 The root directory contains a unified `Makefile` to manage the entire full-stack project. Always use these commands for local operations:
@@ -47,7 +41,6 @@ The root directory contains a unified `Makefile` to manage the entire full-stack
 * **`make lint`**: Lints the entire codebase (Ruff for backend, Biome for frontend).
 * **`make test`**: Runs the test suite across both frontend and backend (`uv run pytest` for backend).
 * **`make check`**: Runs the full verification pipeline: `format ➔ lint ➔ test ➔ format`.
-* **`make test-connection`**: Executes the live backend API connectivity test script to verify GCP model responses.
 * **`make clean`**: Resets and cleans build folders, virtual environments, and caches across the project.
 
 ## Backend Rules

@@ -13,9 +13,8 @@ REPO="gcr.io/${PROJECT_ID}"
 # Each falls back to a sensible default; change a model/bucket here (or export it)
 # and redeploy — no code edit required.
 GCS_BUCKET="${GCS_BUCKET_NAME:-your-gcs-bucket-name}"
-OMNI_MODEL="${OMNI_MODEL:-gemini-omni-flash-preview}"
-OMNI_ENVIRONMENT="${OMNI_ENVIRONMENT:-prod}"        # prod
-OMNI_REGION="${OMNI_REGION:-us-central1}"            # us-central1 | global
+GEMINI_MODEL="${GEMINI_MODEL:-${OMNI_MODEL:-gemini-omni-flash-preview}}"
+OMNI_REGION="${OMNI_REGION:-global}"            # global (default) | us-central1
 # --------------------------
 
 echo "🚀 Deploying Omni Video Generator to Cloud Run (project: ${PROJECT_ID})"
@@ -47,7 +46,7 @@ gcloud run deploy "${BACKEND_SERVICE}" \
   --concurrency 80 \
   --no-cpu-throttling \
   --min-instances 1 \
-  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},GCS_BUCKET_NAME=${GCS_BUCKET},OMNI_MODEL=${OMNI_MODEL},OMNI_ENVIRONMENT=${OMNI_ENVIRONMENT},OMNI_REGION=${OMNI_REGION},STORAGE_BACKEND=gcs,DB_BACKEND=firestore,TEST_MODE=false"
+  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},GCS_BUCKET_NAME=${GCS_BUCKET},GEMINI_MODEL=${GEMINI_MODEL},OMNI_REGION=${OMNI_REGION},STORAGE_BACKEND=gcs,DB_BACKEND=firestore,TEST_MODE=false"
 # FRONTEND_URL + ALLOWED_ORIGINS are set further down, once the frontend URL is known.
 
 BACKEND_URL=$(gcloud run services describe "${BACKEND_SERVICE}" \
@@ -95,4 +94,3 @@ echo ""
 echo "⚠️  Still verify manually:"
 echo "   1. GCS bucket '${GCS_BUCKET}' exists and the runtime SA can write to it"
 echo "   2. Firestore database is initialized in project '${PROJECT_ID}'"
-echo "   3. OMNI_ENVIRONMENT='${OMNI_ENVIRONMENT}' is correct for this project"

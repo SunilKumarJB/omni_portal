@@ -20,12 +20,13 @@ class Settings(BaseSettings):
     GCS_BUCKET_NAME: str = "your-gcs-bucket-name"
     FIRESTORE_DATABASE_ID: str = "omni-portal-demo-store"
 
-    # Omni (Vertex AI / Interactions API) settings
-    OMNI_MODEL: str = "gemini-omni-flash-preview"
-    OMNI_ENVIRONMENT: str = "prod"  # prod
-    OMNI_REGION: str = "us-central1"  # us-central1 | global
+    # Omni / Gemini (Vertex AI / Interactions API) settings
+    GEMINI_MODEL: str = "gemini-omni-flash-preview"
+    OMNI_MODEL: str = ""  # Backward compatibility alias for GEMINI_MODEL
+    OMNI_REGION: str = "global"  # global (default)
     OMNI_PROJECT_ID: str = ""  # defaults to GCP_PROJECT_ID when empty
-    OMNI_API_KEY: str = ""  # Optional API key override (if not using ADC)
+    GEMINI_API_KEY: str = ""  # Optional API key override (if not using ADC)
+    OMNI_API_KEY: str = ""  # Backward compatibility alias for GEMINI_API_KEY
     OMNI_ENDPOINT_URL: str = ""  # Optional custom endpoint URL template
     OMNI_MAX_WAIT_SECONDS: int = 600
     OMNI_DEFAULT_DURATION: int = 10

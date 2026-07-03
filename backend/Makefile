@@ -1,4 +1,4 @@
-.PHONY: install run start clean format lint test test-connection check
+.PHONY: install run start clean format lint test check
 
 install:
 	uv sync --group dev
@@ -23,9 +23,6 @@ lint:
 
 test:
 	uv run pytest
-
-test-connection:
-	uv run python scripts/test_api_calls.py
 
 check:
 	$(MAKE) format

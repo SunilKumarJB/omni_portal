@@ -48,7 +48,7 @@ export default {
           DEFAULT: 'hsl(var(--popover) / <alpha-value>)',
           foreground: 'hsl(var(--popover-foreground) / <alpha-value>)',
         },
-        // GML four-color AI gradient — brand constants, theme-independent
+        // Four-color AI gradient — brand constants, theme-independent
         ai: {
           blue: '#2986FF',
           red: '#EA4335',

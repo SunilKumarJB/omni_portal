@@ -20,7 +20,7 @@ from app.api.routes import generate, videos
 
 app = FastAPI(
     title="The Omni Portal",
-    description="AI-powered video generation using Omni and Nano Banana",
+    description="AI-powered video generation on Google Cloud Gemini Enterprise Agent Platform",
     version="1.0.0",
 )
 
@@ -49,7 +49,7 @@ async def health():
         "storage_backend": settings.STORAGE_BACKEND,
         "db_backend": settings.DB_BACKEND,
         "models": {
-            "gemini": settings.GEMINI_MODEL or settings.OMNI_MODEL,
+            "gemini": settings.GEMINI_MODEL,
         },
     }
 

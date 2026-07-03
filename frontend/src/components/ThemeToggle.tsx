@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 /**
- * Flips the brand's polarity (the GML system is defined in both black-on-white
+ * Flips the brand's polarity (the system is defined in both black-on-white
  * and white-on-black). Defaults to dark; the choice persists via next-themes.
  */
 export default function ThemeToggle() {

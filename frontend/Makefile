@@ -1,4 +1,4 @@
-.PHONY: install start run build preview clean format lint test check
+.PHONY: install start run build preview clean format lint check
 
 install:
 	npm install
@@ -20,13 +20,9 @@ format:
 lint:
 	npx @biomejs/biome check --write .
 
-test:
-	@echo "No frontend tests configured."
-
 check:
 	$(MAKE) format
 	$(MAKE) lint
-	$(MAKE) test
 	$(MAKE) format
 
 clean:

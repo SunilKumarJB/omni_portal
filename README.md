@@ -43,11 +43,43 @@ The Omni Portal is a fixed-viewport, 6-step control deck that takes a user throu
 | 5 | **Scenario** | One of five cinematic templates (Bollywood Romance, Cyberpunk Bengaluru, Monsoon Drama, Mythology Fusion, Pixar Style) or a fully custom prompt. |
 | 6 | **Review & generate** | Final spec, then a single **Generate** button. |
 
-Once generation finishes, the result screen delivers the MP4 with a download link, a share link, and a mobile-scannable QR code:
+**Languages supported for dialogue & lip-sync:** English, Hindi, Tamil, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati, Punjabi.
+
+### Walkthrough
+
+Steps 1–2 (Name and Hero Product) are compact text/preset pickers. Screenshots below cover the steps with the most visual density.
+
+**Step 3 — Dialogue**
+
+Type the line and pick a language. Gemini Omni handles synthesis and lip-sync at generation time.
+
+![Dialogue step](docs/assets/screenshots/step-2-dialogue.png)
+
+**Step 4 — Presenter**
+
+Pick a preset avatar, upload a portrait, or capture a photo from the webcam.
+
+![Presenter step](docs/assets/screenshots/step-3-presenter.png)
+
+**Step 5 — Scenario**
+
+Browse the scenario cards, then confirm your pick to lock in the visual style.
+
+![Scenario cards](docs/assets/screenshots/step-1-scenario-cards.png)
+
+![Scenario selected](docs/assets/screenshots/step-1-scenario-selected.png)
+
+**Step 6 — Review & Generate**
+
+Final spec sheet, then a single click to launch generation.
+
+![Review & Generate](docs/assets/screenshots/step-5-review-generate.png)
+
+### Result
+
+Once generation finishes, the result screen delivers the MP4 with a download link, a share link, and a mobile-scannable QR code.
 
 ![Result delivery](docs/assets/screenshots/result-delivery-layout.png)
-
-**Languages supported for dialogue & lip-sync:** English, Hindi, Tamil, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati, Punjabi.
 
 ---
 

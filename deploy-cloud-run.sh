@@ -5,16 +5,16 @@ set -e
 # ---- CONFIGURE THESE (override by exporting the env var before running) ----
 PROJECT_ID="${GCP_PROJECT_ID:-your-project-id}"
 REGION="${GCP_LOCATION:-us-central1}"
-BACKEND_SERVICE="omni-video-backend"
-FRONTEND_SERVICE="omni-video-frontend"
+BACKEND_SERVICE="${BACKEND_SERVICE:-omni-video-backend}"
+FRONTEND_SERVICE="${FRONTEND_SERVICE:-omni-video-frontend}"
 REPO="gcr.io/${PROJECT_ID}"
 
 # Runtime config — single source of truth for the backend's pydantic Settings.
 # Each falls back to a sensible default; change a model/bucket here (or export it)
 # and redeploy — no code edit required.
 GCS_BUCKET="${GCS_BUCKET_NAME:-your-gcs-bucket-name}"
-GEMINI_MODEL="${GEMINI_MODEL:-${OMNI_MODEL:-gemini-omni-flash-preview}}"
-OMNI_REGION="${OMNI_REGION:-global}"            # global (default) | us-central1
+GEMINI_MODEL="${GEMINI_MODEL:-gemini-omni-flash-preview}"
+REGION="${REGION:-global}"                       # model interactions region
 # --------------------------
 
 echo "🚀 Deploying Omni Video Generator to Cloud Run (project: ${PROJECT_ID})"
@@ -46,7 +46,7 @@ gcloud run deploy "${BACKEND_SERVICE}" \
   --concurrency 80 \
   --no-cpu-throttling \
   --min-instances 1 \
-  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},GCS_BUCKET_NAME=${GCS_BUCKET},GEMINI_MODEL=${GEMINI_MODEL},OMNI_REGION=${OMNI_REGION},STORAGE_BACKEND=gcs,DB_BACKEND=firestore,TEST_MODE=false"
+  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},GCS_BUCKET_NAME=${GCS_BUCKET},GEMINI_MODEL=${GEMINI_MODEL},REGION=${REGION},STORAGE_BACKEND=gcs,DB_BACKEND=firestore,TEST_MODE=false"
 # FRONTEND_URL + ALLOWED_ORIGINS are set further down, once the frontend URL is known.
 
 BACKEND_URL=$(gcloud run services describe "${BACKEND_SERVICE}" \

@@ -31,6 +31,7 @@ node_modules/
 *.cert
 service-account*.json
 credentials*.json
+gcp-credentials*.json
 gcp-key*.json
 application_default_credentials.json
 
@@ -46,4 +47,4 @@ backend/storage/
 Thumbs.db
 
 # ── Docs ─────────────────────────────────────────────────────
-*.md
+docs/

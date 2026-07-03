@@ -34,14 +34,6 @@ export interface CharacterPreset {
   img: string;
 }
 
-export interface AudioPreset {
-  id: string;
-  name: string;
-  bpm: number;
-  mood: string;
-  src: string;
-}
-
 export type GenerationStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface GenerateVideoInput {
@@ -50,9 +42,7 @@ export interface GenerateVideoInput {
   dialogue?: string;
   language?: string;
   characterPresetId?: string;
-  audioPresetId?: string;
   characterImage?: File | null;
-  audioFile?: File | null;
 }
 
 export interface VideoRequestData {

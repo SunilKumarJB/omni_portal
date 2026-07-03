@@ -19,7 +19,7 @@ export function PortalMark() {
 
 /**
  * The four-color accent, used here as the single sanctioned "pop of color" in an
- * otherwise black-and-white shell (GML "Four Color Accent" usage).
+ * otherwise black-and-white shell.
  */
 export function GcpBadge() {
   return (

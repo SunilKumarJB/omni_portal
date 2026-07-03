@@ -1,5 +1,5 @@
 """
-Omni video generation via Vertex Interactions API (gemini-omni-flash-preview).
+Omni video generation via Gemini Enterprise Interactions API (gemini-omni-flash-preview).
 Supports T2V with reference images, audio-driven generation, and V2V editing.
 """
 
@@ -18,7 +18,6 @@ from app.config import settings
 _ASPECT_RATIO_MAP = {
     "16:9": "Landscape (16:9)",
     "9:16": "Portrait (9:16)",
-    "1:1": "Square (1:1)",
 }
 
 # Maps the UI's language codes (DialogueSelector.tsx) to human-readable names so the
@@ -38,20 +37,17 @@ _LANGUAGE_NAMES = {
 
 
 def _api_endpoint() -> str:
+    # Endpoint per the Gemini Enterprise Agent Platform docs for
+    # gemini-omni-flash-preview (Preview, released 2026-06-30):
+    # https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/omni-flash-preview
+    # The model is global-only. Override via OMNI_ENDPOINT_URL when the API surface changes.
     project = settings.OMNI_PROJECT_ID or settings.GCP_PROJECT_ID
-    region = settings.OMNI_REGION or "global"
     if settings.OMNI_ENDPOINT_URL:
         return settings.OMNI_ENDPOINT_URL.format(
             project=project,
-            region=region,
-            model=settings.GEMINI_MODEL or settings.OMNI_MODEL,
+            model=settings.GEMINI_MODEL,
         )
-    host = "aiplatform.googleapis.com"
-    if region != "global":
-        host = f"{region}-aiplatform.googleapis.com"
-    return (
-        f"https://{host}/v1beta1/projects/{project}/locations/{region}/interactions"
-    )
+    return f"https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/interactions"
 
 
 # Thread-safe async-safe Google OAuth2 Token Cache
@@ -91,9 +87,8 @@ async def _get_cached_token() -> str:
 
 
 async def _auth_headers() -> dict:
-    api_key = settings.GEMINI_API_KEY or settings.OMNI_API_KEY
-    if api_key:
-        return {"X-Goog-Api-Key": api_key, "Content-Type": "application/json"}
+    if settings.GEMINI_API_KEY:
+        return {"X-Goog-Api-Key": settings.GEMINI_API_KEY, "Content-Type": "application/json"}
     token = await _get_cached_token()
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
@@ -158,7 +153,7 @@ def _compose_request(
 ) -> dict:
     omni_ratio = _ASPECT_RATIO_MAP.get(aspect_ratio, "Landscape (16:9)")
     return {
-        "model": settings.GEMINI_MODEL or settings.OMNI_MODEL,
+        "model": settings.GEMINI_MODEL,
         "input": [
             {
                 "type": "text",

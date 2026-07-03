@@ -12,9 +12,7 @@ export async function generateVideo({
   dialogue,
   language,
   characterPresetId,
-  audioPresetId,
   characterImage,
-  audioFile,
 }: GenerateVideoInput): Promise<VideoRequestData> {
   const form = new FormData();
   form.append('prompt', prompt);
@@ -22,9 +20,7 @@ export async function generateVideo({
   if (dialogue) form.append('dialogue', dialogue);
   if (language) form.append('language', language);
   if (characterPresetId) form.append('character_preset_id', characterPresetId);
-  if (audioPresetId) form.append('audio_preset_id', audioPresetId);
   if (characterImage) form.append('character_image', characterImage);
-  if (audioFile) form.append('audio_file', audioFile);
 
   const { data } = await api.post('/generate/video', form, { timeout: 60000 });
   return data;

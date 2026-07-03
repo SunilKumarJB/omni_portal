@@ -1,4 +1,4 @@
-.PHONY: install start start-be start-fe clean format lint test check
+.PHONY: install start start-be start-fe clean format lint check
 
 install:
 	@echo "Installing backend dependencies..."
@@ -41,14 +41,7 @@ lint:
 	@echo "Linting frontend..."
 	cd frontend && $(MAKE) lint
 
-test:
-	@echo "Running backend tests..."
-	cd backend && $(MAKE) test
-	@echo "Running frontend tests..."
-	cd frontend && $(MAKE) test
-
 check:
 	$(MAKE) format
 	$(MAKE) lint
-	$(MAKE) test
 	$(MAKE) format

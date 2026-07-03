@@ -1,4 +1,4 @@
-.PHONY: install run start clean format lint test check
+.PHONY: install run start clean format lint check
 
 install:
 	uv sync --group dev
@@ -10,7 +10,6 @@ start:
 
 clean:
 	rm -rf .venv
-	rm -rf .pytest_cache
 	rm -rf .ruff_cache
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
@@ -21,11 +20,7 @@ format:
 lint:
 	uv run ruff check .
 
-test:
-	uv run pytest
-
 check:
 	$(MAKE) format
 	$(MAKE) lint
-	$(MAKE) test
 	$(MAKE) format

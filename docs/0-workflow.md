@@ -16,7 +16,7 @@ This document outlines the end-to-end full-stack architecture, user selection fl
 
 ## 1. Full-Stack Architecture & User Selection Flow
 
-This diagram illustrates the step-by-step wizard flow in the React frontend, how the selections are packed and dispatched, and how the FastAPI backend orchestrates parallel file transfers, background tasks, and Google Vertex AI model interactions.
+This diagram illustrates the step-by-step wizard flow in the React frontend, how the selections are packed and dispatched, and how the FastAPI backend orchestrates parallel file transfers, background tasks, and Gemini Enterprise Agent Platform model interactions.
 
 ```mermaid
 graph TD
@@ -44,7 +44,7 @@ graph TD
         L --> N["Read stored GCS asset bytes (concurrently)"]
         N -->|Generate Enriched Prompt| O["omni_service.generate_video"]
         O -->|Thread-safe Access Token| P["Get Cached OAuth2 Token (Bypass Auth Server if valid)"]
-        O -->|POST Vertex interactions| Q["Vertex AI Interactions API (model: OMNI_MODEL from .env)"]
+        O -->|POST interactions| Q["Gemini Enterprise Interactions API (model: GEMINI_MODEL from .env)"]
         Q -->|Poll Status every 10s via HTTPX| R{"Check Omni Generation Status"}
         R -->|in_progress| R
         R -->|completed| S["Download Video Bytes from Omni"]
@@ -78,7 +78,7 @@ sequenceDiagram
     participant BE as FastAPI Backend
     participant Storage as GCS/Local Storage
     participant Auth as Google OAuth Cache
-    participant Vertex as Vertex AI Omni API
+    participant Vertex as Gemini Enterprise Omni API
 
     User->>FE: Fills wizard & clicks "Generate"
     activate FE
@@ -153,7 +153,7 @@ sequenceDiagram
 * **Backend**: Image uploads, presenter avatars, dialogue audio tracks, and source video guides are uploaded to GCS concurrently using `asyncio.gather` in the API endpoint.
 
 ### 🧵 Thread-Offloaded Non-Blocking Event Loop
-* Synchronous, blocking network operations from the Google Cloud Storage client (`upload_from_string`, `download_as_bytes`) and Vertex AI SDK (`generate_videos`, `operations.get`) are offloaded to background threads using `asyncio.to_thread`.
+* Synchronous, blocking network operations from the Google Cloud Storage client (`upload_from_string`, `download_as_bytes`) and Gemini Enterprise Agent Platform SDK (`generate_videos`, `operations.get`) are offloaded to background threads using `asyncio.to_thread`.
 * This preserves the FastAPI event loop, allowing the server to handle concurrent frontend requests without freezing.
 
 ### 🛡️ Thread-Safe Access Token Caching

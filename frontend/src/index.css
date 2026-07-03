@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 /*
-  GML 2026 brand tokens.
-  The brand is bi-tonal — "45% Black on White" and "45% White on Black" — so the
+  Brand tokens.
+  The system is bi-tonal — "45% Black on White" and "45% White on Black" — so the
   same semantic tokens are defined for both polarities. :root = light, .dark = dark.
   Hue/sat are 0 0% everywhere (pure neutral) by design: the brand speaks in B/W;
   color enters only through the AI gradient + functional status hues below.
@@ -44,12 +44,12 @@
     --input: 0 0% 90%;
     --ring: 0 0% 20%;
 
-    /* GML AI gradient — four core colors, theme-independent */
+    /* AI gradient — four core colors, theme-independent */
     --ai-blue: 213 100% 58%; /* #2986FF */
     --ai-red: 4 80% 58%; /* #EA4335 */
     --ai-yellow: 44 100% 53%; /* #FFC30E */
     --ai-green: 137 62% 46%; /* #2EBA53 */
-    --gml-ai-gradient: linear-gradient(
+    --ai-gradient: linear-gradient(
       115deg,
       hsl(var(--ai-green)),
       hsl(var(--ai-yellow)),
@@ -173,7 +173,7 @@
   /*
     The primary brand moment: the four-color AI gradient hugging the TOP edge,
     spread left→right (green · yellow · red · blue) and masked to fade downward.
-    Anchored to the top-left per the GML "top corner" orientation rule, but spanning
+    Anchored to the top-left per the "top corner" orientation rule, but spanning
     the full width so it reads as a top band rather than a sidebar-only accent.
   */
   .ai-gradient-top {
@@ -196,7 +196,7 @@
 
   /* The crisp 4-color brand line, used as a thin hairline accent (e.g. atop the hero card) */
   .ai-gradient-line {
-    background: var(--gml-ai-gradient);
+    background: var(--ai-gradient);
   }
 
   .generate-google-border {

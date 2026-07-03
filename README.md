@@ -1,6 +1,4 @@
-# The Omni Portal
-
-**A wizard-driven web app for generating short cinematic videos with Google's `gemini-omni-flash-preview` on the Gemini Enterprise Agent Platform.** Type a name, pick a product, write a line of dialogue, choose a presenter and a scenario — get an HD video back with a QR code you can scan from your phone.
+# 🎬 The Omni Portal — Gemini Omni Video Generator
 
 [![Google Cloud](https://img.shields.io/badge/Google%20Cloud-Gemini%20Enterprise-4285F4?style=flat&logo=google-cloud&logoColor=white)](https://cloud.google.com/products/gemini)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -9,172 +7,235 @@
 [![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-![The Omni Portal — brand shell](docs/assets/screenshots/portal-brand-reset.png)
+**The Omni Portal** is an executive-ready, fixed-viewport control deck built for **Gemini Omni** (`gemini-omni-flash-preview`) video generation on the **Gemini Enterprise Agent Platform** (formerly Vertex AI).
 
-> **Model:** `gemini-omni-flash-preview` is a public preview model on the Gemini Enterprise Agent Platform (formerly Vertex AI). Enable the platform's API on your GCP project and you're ready to go. No GCP access? Flip **Test Mode** in the sidebar to walk through the full wizard against a mocked backend — no credentials required.
+The platform provides a 5-step interactive wizard designed for live presentations, executive demonstrations, and multi-modal video creation workflows: choose a cinematic scenario, specify multilingual dialogue with lip-sync, capture or upload character portraits, synchronize audio tracks, and generate high-definition shareable videos.
 
----
-
-## Contents
-
-- [What it does](#what-it-does)
-- [Try it in 30 seconds (Test Mode)](#try-it-in-30-seconds-test-mode)
-- [Local development](#local-development)
-- [Gemini Enterprise Agent Platform setup](#gemini-enterprise-agent-platform-setup)
-- [Production deployment](#production-deployment)
-- [Architecture](#architecture)
-- [Project structure](#project-structure)
-- [Environment variables](#environment-variables)
-- [Make targets](#make-targets)
-- [License & credits](#license--credits)
+> **Model:** `gemini-omni-flash-preview` is a public preview model on the Gemini Enterprise Agent Platform. Enable the platform's API on your GCP project and you're ready to go. No GCP access? Toggle **Test Mode** in the sidebar (or set `TEST_MODE=true` in `backend/.env`) to run the full wizard end-to-end with a mocked video.
 
 ---
 
-## What it does
+## ✨ Features
 
-The Omni Portal is a fixed-viewport, 6-step control deck that takes a user through the inputs Gemini Omni needs and produces a shareable HD video.
-
-| Step | Screen | What it captures |
-| :--- | :--- | :--- |
-| 1 | **Character name** | The director-facing handle woven into later prompts. |
-| 2 | **Hero product** | One of five product presets; its visual description flows into the scene prompt. |
-| 3 | **Dialogue (optional)** | A line of speech in one of 10 languages. Gemini Omni handles lip-sync. |
-| 4 | **Presenter** | Preset avatar, uploaded portrait, or live webcam capture — the character reference the model conditions on. |
-| 5 | **Scenario** | One of five cinematic templates (Bollywood Romance, Cyberpunk Bengaluru, Monsoon Drama, Mythology Fusion, Pixar Style) or a fully custom prompt. |
-| 6 | **Review & generate** | Final spec, then a single **Generate** button. |
-
-**Languages supported for dialogue & lip-sync:** English, Hindi, Tamil, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati, Punjabi.
-
-### Walkthrough
-
-Steps 1–2 (Name and Hero Product) are compact text/preset pickers. Screenshots below cover the steps with the most visual density.
-
-**Step 3 — Dialogue**
-
-Type the line and pick a language. Gemini Omni handles synthesis and lip-sync at generation time.
-
-![Dialogue step](docs/assets/screenshots/step-2-dialogue.png)
-
-**Step 4 — Presenter**
-
-Pick a preset avatar, upload a portrait, or capture a photo from the webcam.
-
-![Presenter step](docs/assets/screenshots/step-3-presenter.png)
-
-**Step 5 — Scenario**
-
-Browse the scenario cards, then confirm your pick to lock in the visual style.
-
-![Scenario cards](docs/assets/screenshots/step-1-scenario-cards.png)
-
-![Scenario selected](docs/assets/screenshots/step-1-scenario-selected.png)
-
-**Step 6 — Review & Generate**
-
-Final spec sheet, then a single click to launch generation.
-
-![Review & Generate](docs/assets/screenshots/step-5-review-generate.png)
-
-### Result
-
-Once generation finishes, the result screen delivers the MP4 with a download link, a share link, and a mobile-scannable QR code.
-
-![Result delivery](docs/assets/screenshots/result-delivery-layout.png)
+- 🎬 **Scenario Presets & Custom Prompts**: Pre-built cinematic templates (Cyberpunk, Anime, Film Noir, Claymation, etc.) with video previews.
+- 🗣️ **Multilingual Dialogue & Lip-Sync**: Native speech instruction prompt synthesis across 10 languages (*English, Hindi, Tamil, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati, Punjabi*).
+- 👤 **Presenter Workbench**: Character-to-video reference mapping via preset avatars, webcam photo capture, or portrait image uploads.
+- 🎵 **Multimodal Audio Sync**: Synchronize video generation with uploaded audio files, live microphone recordings, or ambient music.
+- ☁️ **Native Gemini Enterprise Integration**: Direct communication with the Gemini Enterprise Interactions API supporting both **Google Application Default Credentials (ADC)** and **API Keys**.
+- 🧪 **Offline Test Mode**: Built-in mock mode allowing instant frontend-local generation without GCP infrastructure or API charges.
+- 📱 **Share & Delivery Hub**: Instant HD video playback, downloadable MP4s, QR code generation for mobile sharing, render metadata, and prompt details.
+- 🖥️ **Fixed-Viewport Control Deck**: Designed for 1280x720+ presentation displays with no page-level scrolling.
 
 ---
 
-## Try it in 30 seconds (Test Mode)
+## 📖 How to Use the App (Step-by-Step User Guide)
 
-Zero GCP setup required — Test Mode mocks the backend response with a sample video so you can exercise the whole UI.
+The Omni Portal features a fixed-viewport, 5-step control deck designed for live executive presentations and multi-modal video synthesis.
 
-```bash
-make install    # backend (uv) + frontend (npm)
-make start      # runs FastAPI on :8000 and Vite on :5173
+### Step 1: Select Scenario Template & Visual Theme
+Choose from curated cinematic scenarios (Cyberpunk, Anime, Film Noir, Claymation, etc.) or write a custom video prompt. Each scenario includes instant local video previews and aspect ratio controls.
+
+![Step 1: Scenario Selection](docs/assets/screenshots/step-1-scenario-cards.png)
+
+*Selected Scenario Details:*
+![Step 1: Selected Scenario](docs/assets/screenshots/step-1-scenario-selected.png)
+
+---
+
+### Step 2: Dialogue & Multilingual Lip-Sync
+Enter the line of dialogue you want your character to speak. Select from **10 supported languages** (*English, Hindi, Tamil, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati, Punjabi*). Gemini Omni automatically synthesizes the speech and generates frame-accurate lip-sync.
+
+![Step 2: Dialogue & Language Selection](docs/assets/screenshots/step-2-dialogue.png)
+
+---
+
+### Step 3: Presenter Workbench (Character Reference)
+Choose your presenter character using preset avatars, upload a custom portrait photo, or capture a live webcam photo. This portrait serves as the character reference for the video.
+
+![Step 3: Presenter Workbench](docs/assets/screenshots/step-3-presenter.png)
+
+---
+
+### Step 4: Audio Track Integration (Optional)
+Optionally attach audio to guide video rhythm. Select preset audio tracks, record live microphone voiceovers, or upload custom audio files.
+
+![Step 4: Audio Integration](docs/assets/screenshots/step-4-audio.png)
+
+---
+
+### Step 5: Review & Generate
+Review your final video specs, character reference, prompt parameters, and target language. Click the animated **Generate** button to launch Gemini Enterprise video generation (or use **Test Mode** for instant offline mocks).
+
+![Step 5: Review & Generate](docs/assets/screenshots/step-5-review-generate.png)
+
+---
+
+### Result Delivery & Mobile QR Sharing
+Watch your HD video in the built-in player, download the MP4 file, copy the share link, or **scan the QR code** on any mobile phone to instantly view and play the video on mobile devices!
+
+![Result Delivery Hub](docs/assets/screenshots/result-delivery-layout.png)
+
+---
+
+## 🏗️ Project Structure
+
+```text
+omni_portal/
+├── backend/
+│   ├── app/
+│   │   ├── main.py                    # FastAPI application entrypoint
+│   │   ├── config.py                  # Pydantic environment settings
+│   │   ├── api/routes/                # API route handlers (/generate, /videos, /assets)
+│   │   ├── models/                    # Pydantic schemas and request models
+│   │   └── services/
+│   │       ├── omni_service.py        # Gemini Enterprise Interactions API client
+│   │       ├── storage_service.py     # GCS and local storage backends
+│   │       ├── db_service.py          # Firestore and local database backends
+│   │       └── qr_service.py          # Mobile QR code generation
+│   ├── Dockerfile                     # Backend container setup
+│   ├── pyproject.toml                 # Dependencies (uv)
+│   └── uv.lock                        # Locked dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── pages/                     # Home wizard & VideoView pages
+│   │   ├── components/                # Wizard step components & Shadcn UI
+│   │   └── lib/                       # API client, prompt formatters, types
+│   ├── public/assets/                 # Static presets (videos, characters, audio)
+│   ├── Dockerfile                     # Nginx production frontend container
+│   ├── nginx.conf                     # Production Nginx reverse proxy configuration
+│   ├── tsconfig.json                  # Strict TypeScript configuration
+│   └── vite.config.ts                 # Vite dev server & proxy setup
+├── docs/                              # Architecture and state documentation
+├── deploy-cloud-run.sh                # Automated Cloud Run deployment script
+├── deploy-firebase.sh                 # Firebase Hosting deployment script
+├── docker-compose.yml                 # Docker Compose full-stack setup
+├── Makefile                           # Root task runner
+└── README.md                          # Main documentation
 ```
 
-Open [http://localhost:5173](http://localhost:5173), flip the **Test Mode** switch in the sidebar (or set `TEST_MODE=true` in `backend/.env`), and walk through the wizard.
+---
 
-**Prerequisites:** Node.js 18+, Python 3.12+, and [`uv`](https://docs.astral.sh/uv/getting-started/installation/).
+## 🛠️ Prerequisites
+
+Ensure you have the following tools installed on your system:
+
+- **Node.js**: `v18.0.0` or higher
+- **Python**: `3.12` or higher
+- **`uv`**: Fast Python package installer ([Install uv](https://docs.astral.sh/uv/getting-started/installation/))
+- **Google Cloud SDK (`gcloud`)**: Required for real GCP / Gemini Enterprise Agent Platform deployment ([Install gcloud](https://cloud.google.com/sdk/docs/install))
 
 ---
 
-## Local development
+## 🚀 Quick Start (Local Setup)
 
-For real Gemini Omni generation you'll also need the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install).
+### 1. Bootstrap Workspace Dependencies
 
-### 1. Install
+Run `make install` from the project root to install all backend (`uv`) and frontend (`npm`) dependencies:
 
 ```bash
 make install
 ```
 
-### 2. Configure
+### 2. Configure Environment Variables
+
+Create a `.env` file in the `backend/` directory by copying `.env.example`:
 
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-Fill in your GCP settings. The `.env.example` file documents every variable — the minimum you'll want to change:
+Edit `backend/.env` with your settings:
 
 ```env
+# GCP Configuration
 GCP_PROJECT_ID=your-gcp-project-id
 GCP_LOCATION=us-central1
 GCS_BUCKET_NAME=your-gcs-bucket-name
 
-# Keep local for offline dev; switch to gcs/firestore for shared/prod runs
+# Gemini / Omni Settings (Gemini Enterprise Agent Platform)
+GEMINI_MODEL=gemini-omni-flash-preview
+REGION=global
+# Optional: GEMINI_API_KEY=your-gemini-api-key
+
+# Storage & DB Mode (set to "local" for zero-cloud runs)
 STORAGE_BACKEND=local
 DB_BACKEND=local
 
-# Skip the Gemini Enterprise Agent Platform entirely
+# Set to true for quick local testing without GCP calls
 TEST_MODE=false
 ```
 
-### 3. Run
+### 3. Start Development Servers
+
+Start both the backend (FastAPI) and frontend (Vite) concurrently:
 
 ```bash
-make start          # both servers
-make start-be       # backend only (uvicorn on :8000)
-make start-fe       # frontend only (Vite on :5173)
+make start
 ```
 
-Vite proxies `/api` and `/storage` to the backend, so the frontend origin (`localhost:5173`) is all you need in the browser.
+Open your browser and navigate to:
+👉 **`http://localhost:5173`**
 
 ---
 
-## Gemini Enterprise Agent Platform setup
+## ☁️ Gemini Enterprise Agent Platform & Gemini Omni Setup
 
-### 1. Enable the required Google Cloud APIs
+To use **real Gemini Omni video generation**, complete the following setup steps on Google Cloud Platform:
+
+### Step 1: Enable the required APIs
+Ensure the Gemini Enterprise Agent Platform API is enabled in your GCP project:
 
 ```bash
-gcloud services enable \
-  aiplatform.googleapis.com \
-  storage.googleapis.com \
-  firestore.googleapis.com \
-  --project=YOUR_PROJECT_ID
+gcloud services enable aiplatform.googleapis.com storage.googleapis.com firestore.googleapis.com --project=YOUR_PROJECT_ID
 ```
 
-### 2. Authenticate
+### Step 2: Authenticate Local Environment
 
-**Option A — Application Default Credentials (recommended for local dev):**
+You can authenticate using either **Application Default Credentials (ADC)** or a **Gemini API Key**:
+
+#### Option A: Application Default Credentials (Recommended)
+Log in with your GCP identity:
 
 ```bash
 gcloud auth application-default login
 ```
 
-**Option B — API key:** set `GEMINI_API_KEY=AIzaSy…` in `backend/.env`.
+#### Option B: API Key
+If using an API key, set `GEMINI_API_KEY` in your `backend/.env`:
 
-That's it — with either credential in place and `TEST_MODE=false`, the backend will call the real Gemini Enterprise Agent Platform Interactions API.
+```env
+GEMINI_API_KEY=AIzaSy...
+```
 
 ---
 
-## Production deployment
+## 🧪 Local Test Mode (Offline Demo)
 
-<details>
-<summary><b>Cloud Run (backend) + Firebase Hosting (frontend) — recommended</b></summary>
+If you are giving a live demo without active GCP connectivity or want to test UI flows without incurring API fees:
 
-Firebase Hosting gives you an HTTPS URL, which mobile browsers require to open scanned QR-code links.
+1. In the sidebar of the web app, toggle **Test Mode** to `ON`.
+2. Complete the 5-step wizard and click **Generate**.
+3. The app will simulate real generation progress and deliver a mock video instantly!
 
-**Deploy the backend to Cloud Run:**
+Alternatively, enable Test Mode globally in `backend/.env`:
+
+```env
+TEST_MODE=true
+```
+
+---
+
+## 🚢 Production Deployment Guide (Cloud Run + Firebase Hosting)
+
+For a full production deployment with working mobile QR codes:
+- **Backend**: Deployed to **Google Cloud Run** (handles Gemini Omni model generation & FastAPI routes).
+- **Frontend**: Deployed to **Firebase Hosting** (provides an HTTPS domain required for mobile QR scanning).
+
+---
+
+### Step 1: Deploy Backend to Cloud Run
+
+Set your GCP environment variables and run the included deployment script:
 
 ```bash
 export GCP_PROJECT_ID="your-gcp-project-id"
@@ -184,18 +245,31 @@ export GCS_BUCKET_NAME="your-gcs-bucket-name"
 ./deploy-cloud-run.sh
 ```
 
-The script builds & pushes the container and deploys with `--no-cpu-throttling` + `--min-instances 1` so the 3–8 minute background generation task doesn't get killed while the response is already returned. A more robust design would move generation to Cloud Tasks / Pub/Sub — this deployment shape is sufficient for demos and low-traffic use.
+This builds and deploys the backend container (`omni-video-backend`) to Cloud Run with `--no-cpu-throttling` so multi-minute background video generation tasks run without interruption.
 
-**Deploy the frontend to Firebase Hosting:**
+Note down your deployed **Backend URL** (e.g., `https://omni-video-backend-xyz.a.run.app`).
 
-1. In [console.firebase.google.com](https://console.firebase.google.com/), add Firebase to your GCP project.
-2. Run:
-   ```bash
-   export GCP_PROJECT_ID="your-gcp-project-id"
-   ./deploy-firebase.sh
-   ```
+---
 
-**Wire the backend to the frontend URL** so QR-code links resolve:
+### Step 2: Deploy Frontend to Firebase Hosting
+
+Firebase Hosting provides a secure HTTPS URL (`https://<project-id>.web.app`) required for mobile phones to scan and open video pages.
+
+1. **Enable Firebase** (One-time setup): Open [console.firebase.google.com](https://console.firebase.google.com/), click **Add project**, select your GCP project, and click **Add Firebase**.
+2. **Deploy Frontend**:
+
+```bash
+export GCP_PROJECT_ID="your-gcp-project-id"
+./deploy-firebase.sh
+```
+
+Your frontend is now live at `https://your-gcp-project-id.web.app`!
+
+---
+
+### Step 3: Wire Backend & Frontend (Enable Mobile QR Codes)
+
+Update your Cloud Run backend settings to set `FRONTEND_URL` and CORS:
 
 ```bash
 gcloud run services update omni-video-backend \
@@ -203,138 +277,79 @@ gcloud run services update omni-video-backend \
   --update-env-vars "FRONTEND_URL=https://your-gcp-project-id.web.app,ALLOWED_ORIGINS=https://your-gcp-project-id.web.app"
 ```
 
-Every generated video now includes a QR code encoding `https://your-gcp-project-id.web.app/video/<request_id>`.
+Everything is wired up! Every video generated will produce a mobile-scannable QR code encoding `https://your-gcp-project-id.web.app/video/<request_id>`.
 
-</details>
+---
+
+### 📦 Alternative Deployment Methods (Optional)
 
 <details>
-<summary><b>Docker Compose — one-command local/VM full stack</b></summary>
+<summary><b>Option A: Docker Compose (Local / Virtual Machine)</b></summary>
 
 ```bash
 docker-compose up --build -d
 ```
-
-- Frontend: [http://localhost:3000](http://localhost:3000)
-- Backend: [http://localhost:8000](http://localhost:8000)
-
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:8000`
 </details>
 
 <details>
-<summary><b>All-Cloud-Run — both services on Cloud Run</b></summary>
+<summary><b>Option B: Standalone Cloud Run Frontend</b></summary>
 
-`./deploy-cloud-run.sh` deploys both the frontend and backend to Cloud Run and wires backend CORS and QR URLs to the frontend Cloud Run URL. Simpler than Firebase Hosting, but note that mobile-scannable QR codes still work only from HTTPS origins (Cloud Run URLs are HTTPS, so this is fine).
-
+You can also deploy both frontend and backend to Cloud Run using `./deploy-cloud-run.sh`. The script automatically wires backend CORS and QR URLs to the frontend Cloud Run URL.
 </details>
 
 ---
 
-## Architecture
+## 📋 Environment Variables Reference
 
-```
-       ┌─────────────────────┐        ┌──────────────────────────┐
-       │   Browser (Vite)    │        │  FastAPI (uvicorn)       │
-       │   React 19 + TS 6   │  /api  │  Pydantic settings       │
-       │   Shadcn + Tailwind │◄──────►│  BackgroundTasks queue   │
-       └─────────────────────┘        └────────────┬─────────────┘
-                                                   │
-                              ┌────────────────────┼────────────────────┐
-                              ▼                    ▼                    ▼
-                    ┌──────────────────┐  ┌──────────────┐  ┌────────────────┐
-                    │  Gemini Ent.     │  │  Cloud       │  │  Firestore     │
-                    │  Interactions    │  │  Storage     │  │  (or local     │
-                    │  (Gemini Omni)   │  │  (or local)  │  │   JSON store)  │
-                    └──────────────────┘  └──────────────┘  └────────────────┘
-```
-
-- **Frontend** is a single-page app; the wizard state lives in `Home.tsx` and each step is a lazy-loaded component. Templates & character presets are static assets under `frontend/public/assets/`.
-- **Backend** accepts a multipart POST to `/api/generate/video`, persists a request record, and kicks off generation in a FastAPI `BackgroundTask`. The client polls `/api/generate/status/<id>` until completion.
-- **Storage and DB backends are pluggable** — set `STORAGE_BACKEND=local|gcs` and `DB_BACKEND=local|firestore`. The local backends use disk + a JSON file so the app works with zero cloud services.
-- **Test Mode** short-circuits generation on the frontend and returns a canned sample video, so the whole UI is exercisable offline.
-
----
-
-## Project structure
-
-```text
-omni_portal/
-├── backend/
-│   ├── app/
-│   │   ├── main.py                    # FastAPI entrypoint, CORS, /health
-│   │   ├── config.py                  # Pydantic settings (loads backend/.env)
-│   │   ├── api/routes/                # /generate, /videos handlers
-│   │   ├── models/                    # Pydantic request/response schemas
-│   │   └── services/
-│   │       ├── omni_service.py        # Gemini Enterprise Interactions API client
-│   │       ├── storage_service.py     # GCS or local filesystem
-│   │       ├── db_service.py          # Firestore or local JSON store
-│   │       └── qr_service.py          # QR code generation for share links
-│   ├── Dockerfile
-│   ├── pyproject.toml                 # dependencies (uv)
-│   └── uv.lock
-├── frontend/
-│   ├── src/
-│   │   ├── pages/                     # Home (wizard), VideoView (share page)
-│   │   ├── components/                # Step components + Shadcn/Radix UI
-│   │   └── lib/                       # API client, prompt formatters, types
-│   ├── public/assets/                 # Preset videos, character portraits
-│   ├── Dockerfile                     # nginx production image
-│   ├── nginx.conf
-│   ├── tsconfig.json
-│   └── vite.config.ts
-├── docs/                              # Workflow & architecture docs
-├── deploy-cloud-run.sh                # Cloud Run deployment
-├── deploy-firebase.sh                 # Firebase Hosting deployment
-├── docker-compose.yml
-├── Makefile
-└── README.md
-```
-
----
-
-## Environment variables
-
-See [`backend/.env.example`](backend/.env.example) for the source of truth. Key variables:
-
-| Variable | Description | Default |
+| Variable | Description | Default Value |
 | :--- | :--- | :--- |
-| `GCP_PROJECT_ID` | Google Cloud project ID | `""` |
+| `GCP_PROJECT_ID` | Google Cloud Project ID | `""` |
 | `GCP_LOCATION` | Default GCP region | `us-central1` |
-| `GCS_BUCKET_NAME` | Cloud Storage bucket for generated videos | `your-gcs-bucket-name` |
+| `GCS_BUCKET_NAME` | Cloud Storage bucket name for generated videos | `your-gcs-bucket-name` |
 | `GEMINI_MODEL` | Gemini Enterprise Agent Platform model identifier | `gemini-omni-flash-preview` |
 | `REGION` | Model interactions region (`global` recommended) | `global` |
 | `GEMINI_API_KEY` | Optional API key (skip if using ADC) | `""` |
-| `STORAGE_BACKEND` | `local` (disk) or `gcs` | `local` |
-| `DB_BACKEND` | `local` (JSON) or `firestore` | `local` |
-| `TEST_MODE` | Skip the platform call, return a canned sample video | `false` |
-| `BASE_URL` | Backend URL, used to build QR/share links | `http://localhost:8000` |
-| `FRONTEND_URL` | Frontend URL, encoded into QR codes | `http://localhost:5173` |
-| `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:5173,http://localhost:3000` |
+| `OMNI_ENDPOINT_URL` | Optional custom endpoint URL template | `""` |
+| `STORAGE_BACKEND` | Storage strategy (`local` or `gcs`) | `local` |
+| `DB_BACKEND` | Metadata database backend (`local` or `firestore`) | `local` |
+| `TEST_MODE` | If `true`, returns mock generation results | `false` |
+| `BASE_URL` | Backend URL for links and QR generation | `http://localhost:8000` |
+| `FRONTEND_URL` | Frontend URL for CORS configuration | `http://localhost:5173` |
+| `ALLOWED_ORIGINS` | Comma-separated CORS allowed origins | `http://localhost:5173,http://localhost:3000` |
 
 ---
 
-## Make targets
+## 🛠️ Makefile Commands
+
+From the repo root:
 
 | Command | Action |
 | :--- | :--- |
-| `make install` | Install backend (`uv sync`) + frontend (`npm install`) |
-| `make start` | Run both dev servers concurrently |
-| `make start-be` | Backend only (uvicorn on `:8000`) |
-| `make start-fe` | Frontend only (Vite on `:5173`) |
-| `make lint` | Ruff (backend) + Biome (frontend) |
-| `make format` | Ruff format + Biome format |
-| `make check` | `format` → `lint` → `format` |
-| `make clean` | Wipe build artifacts, caches, and virtualenvs |
+| `make install` | Install all dependencies (`uv sync` + `npm install`) |
+| `make start` | Run backend and frontend dev servers concurrently |
+| `make start-be` | Start backend dev server only (`uvicorn`) |
+| `make start-fe` | Start frontend dev server only (`vite`) |
+| `make lint` | Lint codebase (Ruff for backend, Biome for frontend) |
+| `make format` | Format codebase (Ruff for backend, Biome for frontend) |
+| `make check` | Execute full check pipeline (`format` ➔ `lint` ➔ `format`) |
+| `make clean` | Reset build outputs, caches, and virtual environments |
 
 ---
 
-## License & credits
+## 📄 License
 
-Released under the [Apache License 2.0](LICENSE).
+This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
 
-### Built by
+---
 
-[![Sunil Kumar](https://img.shields.io/badge/Sunil_Kumar-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/sunilkumar88/)
-[![Vanshika Bansal](https://img.shields.io/badge/Vanshika_Bansal-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/vanshika-bansal-dataenthu/)
-[![Adhish Thite](https://img.shields.io/badge/Adhish_Thite-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/adhish-thite/)
+## 👥 Authors
 
-> A Gemini use-case demonstration. Not an official Google product.
+- [Sunil Kumar](https://www.linkedin.com/in/sunilkumar88/)
+- [Vanshika Bansal](https://www.linkedin.com/in/vanshika-bansal-dataenthu/)
+- [Adhish Thite](https://www.linkedin.com/in/adhish-thite/)
+
+---
+
+*Built with Gemini, Veo, Imagen & FFmpeg on Google Cloud. A Gemini use-case demonstration. Not an official Google product.*

@@ -350,10 +350,10 @@ This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) fo
 
 ## 👥 Authors
 
-- [Sunil Kumar](https://www.linkedin.com/in/sunilkumar88/)
-- [Vanshika Bansal](https://www.linkedin.com/in/vanshika-bansal-dataenthu/)
-- [Adhish Thite](https://www.linkedin.com/in/adhish-thite/)
+[![Sunil Kumar](https://img.shields.io/badge/Sunil_Kumar-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/sunilkumar88/)
+[![Vanshika Bansal](https://img.shields.io/badge/Vanshika_Bansal-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/vanshika-bansal-dataenthu/)
+[![Adhish Thite](https://img.shields.io/badge/Adhish_Thite-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/adhish-thite/)
 
 ---
 
-*Built with Gemini, Veo, Imagen & FFmpeg on Google Cloud. A Gemini use-case demonstration. Not an official Google product.*
+> A Gemini use-case demonstration. Not an official Google product.

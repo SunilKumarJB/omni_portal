@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     OMNI_DEFAULT_DURATION: int = 10
     OMNI_DEFAULT_ASPECT_RATIO: str = "16:9"
 
+    # HTTP client / connection pooling settings
+    HTTP_MAX_KEEPALIVE_CONNECTIONS: int = 50
+    HTTP_MAX_CONNECTIONS: int = 200
+    HTTP_TIMEOUT_SECONDS: float = 60.0
+
     BASE_URL: str = "http://localhost:8000"
     FRONTEND_URL: str = "http://localhost:5173"
 

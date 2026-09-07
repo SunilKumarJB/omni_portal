@@ -2,12 +2,16 @@
 Unified storage service: GCS or local filesystem.
 """
 
-import aiofiles
 import asyncio
 from datetime import timedelta
+import logging
 from pathlib import Path
 from typing import Tuple
+
+import aiofiles
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 _gcs_client = None
 _bucket = None
@@ -16,38 +20,64 @@ _bucket = None
 _SIGNED_URL_TTL = timedelta(days=7)
 
 
-def _get_bucket():
-    global _gcs_client, _bucket
-    if _bucket is None:
+def _get_client():
+    global _gcs_client
+    if _gcs_client is None:
         from google.cloud import storage
 
         _gcs_client = storage.Client(project=settings.GCP_PROJECT_ID)
-        _bucket = _gcs_client.bucket(settings.GCS_BUCKET_NAME)
-    return _bucket
+    return _gcs_client
+
+
+def _get_bucket(bucket_name: str | None = None):
+    global _gcs_client, _bucket
+    target_name = bucket_name or settings.GCS_BUCKET_NAME
+    if target_name == settings.GCS_BUCKET_NAME and _bucket is not None:
+        return _bucket
+    client = _get_client()
+    bucket = client.bucket(target_name)
+    if target_name == settings.GCS_BUCKET_NAME:
+        _bucket = bucket
+    return bucket
 
 
 async def upload_bytes(
     data: bytes,
     path: str,
     content_type: str = "application/octet-stream",
+    save_local: bool = False,
 ) -> Tuple[str, str]:
     """
     Uploads bytes to storage.
-    Returns (public_url, storage_path)
+    Returns (public_url, storage_path).
     """
     if settings.STORAGE_BACKEND == "gcs" and not settings.TEST_MODE:
-        return await _upload_to_gcs(data, path, content_type)
+        try:
+            return await _upload_to_gcs(data, path, content_type, save_local=save_local)
+        except Exception as exc:
+            logger.warning(
+                "GCS upload failed for path %s (%s). Falling back to local storage.",
+                path,
+                exc,
+            )
+            return await _upload_to_local(data, path)
     return await _upload_to_local(data, path)
 
 
-async def _upload_to_gcs(data: bytes, path: str, content_type: str) -> Tuple[str, str]:
+async def _upload_to_gcs(
+    data: bytes,
+    path: str,
+    content_type: str,
+    save_local: bool = False,
+) -> Tuple[str, str]:
     bucket = _get_bucket()
     blob = bucket.blob(path)
     # Wrap blocking GCS upload in asyncio.to_thread
     await asyncio.to_thread(blob.upload_from_string, data, content_type=content_type)
-    # Also save to local storage so the local dev server can serve files without GCS 403 AccessDenied errors
-    local_url, _ = await _upload_to_local(data, path)
-    return local_url, f"gs://{settings.GCS_BUCKET_NAME}/{path}"
+    if save_local:
+        await _upload_to_local(data, path)
+    public_url = await asyncio.to_thread(_signed_url, blob)
+    return public_url, f"gs://{settings.GCS_BUCKET_NAME}/{path}"
 
 
 def _signed_url(blob) -> str:
@@ -63,22 +93,36 @@ def _signed_url(blob) -> str:
     import google.auth.transport.requests
 
     try:
-        creds, _ = google.auth.default()
-        creds.refresh(google.auth.transport.requests.Request())
-        sa_email = getattr(creds, "service_account_email", None)
-        if sa_email and sa_email != "default":
-            return blob.generate_signed_url(
-                version="v4",
-                expiration=_SIGNED_URL_TTL,
-                method="GET",
-                service_account_email=sa_email,
-                access_token=creds.token,
-            )
-        # Local ADC with a service-account key can sign directly.
+        try:
+            creds, _ = google.auth.default()
+            creds.refresh(google.auth.transport.requests.Request())
+            sa_email = getattr(creds, "service_account_email", None)
+            if sa_email and sa_email != "default":
+                return blob.generate_signed_url(
+                    version="v4",
+                    expiration=_SIGNED_URL_TTL,
+                    method="GET",
+                    service_account_email=sa_email,
+                    access_token=creds.token,
+                )
+        except Exception:
+            pass
+
+        # Local ADC with a service-account key or mock can sign directly.
         return blob.generate_signed_url(version="v4", expiration=_SIGNED_URL_TTL, method="GET")
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "Signed URL generation failed for blob %s (%s); falling back to public URL",
+            getattr(blob, "name", str(blob)),
+            exc,
+        )
         # Last resort: bucket/objects must be public for this to resolve.
-        return blob.public_url
+        try:
+            return blob.public_url
+        except Exception:
+            bucket_name = getattr(getattr(blob, "bucket", None), "name", settings.GCS_BUCKET_NAME)
+            blob_name = getattr(blob, "name", "")
+            return f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
 
 
 async def _upload_to_local(data: bytes, path: str) -> Tuple[str, str]:
@@ -95,19 +139,38 @@ async def get_public_url(storage_path: str) -> str:
     if storage_path.startswith("gs://"):
         bucket_and_path = storage_path[5:]
         parts = bucket_and_path.split("/", 1)
-        return f"https://storage.googleapis.com/{parts[0]}/{parts[1]}"
+        bucket_name = parts[0]
+        blob_name = parts[1] if len(parts) > 1 else ""
+        try:
+            bucket = _get_bucket(bucket_name)
+            blob = bucket.blob(blob_name)
+            return await asyncio.to_thread(_signed_url, blob)
+        except Exception as exc:
+            logger.warning(
+                "Failed to get signed URL for %s (%s). Returning static public URL.",
+                storage_path,
+                exc,
+            )
+            return f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
+
+    if storage_path.startswith(("http://", "https://")):
+        return storage_path
+
+    if storage_path.startswith(settings.LOCAL_STORAGE_PATH):
+        rel = Path(storage_path).relative_to(settings.LOCAL_STORAGE_PATH).as_posix().lstrip("/")
+        return f"{settings.BASE_URL}/storage/{rel}"
+
     if storage_path.startswith("/storage/"):
         return f"{settings.BASE_URL}{storage_path}"
-    return f"{settings.BASE_URL}/storage/{storage_path}"
+
+    clean_path = storage_path.lstrip("/")
+    return f"{settings.BASE_URL}/storage/{clean_path}"
 
 
 async def copy_gcs_to_local(gcs_uri: str, local_path: str) -> str:
     """Copy a GCS file to local storage and return the local URL."""
-    from google.cloud import storage as gcs
-
-    client = gcs.Client(project=settings.GCP_PROJECT_ID)
     bucket_name, blob_name = gcs_uri[5:].split("/", 1)
-    bucket = client.bucket(bucket_name)
+    bucket = _get_bucket(bucket_name)
     blob = bucket.blob(blob_name)
     # Wrap blocking GCS download in asyncio.to_thread
     data = await asyncio.to_thread(blob.download_as_bytes)
@@ -121,11 +184,8 @@ async def read_bytes(storage_path: str) -> Tuple[bytes, str]:
     Returns (data, content_type).
     """
     if storage_path.startswith("gs://"):
-        from google.cloud import storage as gcs
-
-        client = gcs.Client(project=settings.GCP_PROJECT_ID)
         bucket_name, blob_name = storage_path[5:].split("/", 1)
-        bucket = client.bucket(bucket_name)
+        bucket = _get_bucket(bucket_name)
         blob = bucket.blob(blob_name)
         # Wrap blocking GCS download in asyncio.to_thread
         data = await asyncio.to_thread(blob.download_as_bytes)

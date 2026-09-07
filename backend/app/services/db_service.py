@@ -11,7 +11,11 @@ from app.config import settings
 
 _firestore_client = None
 
-_LOCAL_DB_PATH = Path(settings.LOCAL_STORAGE_PATH) / "db"
+
+def _local_db_path() -> Path:
+    db_path = Path(settings.LOCAL_STORAGE_PATH) / "db"
+    db_path.mkdir(parents=True, exist_ok=True)
+    return db_path
 
 
 def _get_firestore():
@@ -31,8 +35,51 @@ def _now_iso() -> str:
 
 
 def _local_path(request_id: str) -> Path:
-    _LOCAL_DB_PATH.mkdir(parents=True, exist_ok=True)
-    return _LOCAL_DB_PATH / f"{request_id}.json"
+    return _local_db_path() / f"{request_id}.json"
+
+
+def is_timed_out(record: Dict[str, Any], timeout_seconds: Optional[float] = None) -> bool:
+    """
+    Check if a record in 'pending' or 'processing' status has exceeded the timeout threshold.
+    """
+    if record.get("status") not in ("pending", "processing"):
+        return False
+
+    updated_at_str = record.get("updated_at") or record.get("created_at")
+    if not updated_at_str:
+        return False
+
+    try:
+        updated_at = datetime.fromisoformat(updated_at_str)
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return False
+
+    now = datetime.now(timezone.utc)
+    limit = timeout_seconds if timeout_seconds is not None else settings.OMNI_MAX_WAIT_SECONDS
+    return (now - updated_at).total_seconds() >= limit
+
+
+async def apply_timeout_watchdog(
+    record: Dict[str, Any], timeout_seconds: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    If the record is pending or processing and timed out, update database record to
+    failed status with error 'Generation job timed out' and return the updated record.
+    """
+    if is_timed_out(record, timeout_seconds=timeout_seconds):
+        request_id = record.get("request_id")
+        if request_id:
+            updates = {
+                "status": "failed",
+                "error": "Generation job timed out",
+            }
+            await update_request(request_id, updates)
+            record["status"] = "failed"
+            record["error"] = "Generation job timed out"
+            record["updated_at"] = updates["updated_at"]
+    return record
 
 
 async def create_request(request_id: str, data: Dict[str, Any]) -> None:
@@ -57,7 +104,7 @@ async def get_request(request_id: str) -> Optional[Dict[str, Any]]:
     if settings.DB_BACKEND == "firestore" and not settings.TEST_MODE:
         db = _get_firestore()
         doc = await db.collection("video_requests").document(request_id).get()
-        return doc.to_dict() if doc.exists else None
+        record = doc.to_dict() if doc.exists else None
     else:
         path = _local_path(request_id)
         # exists() is a synchronous OS call on Path, but for metadata check it's fast.
@@ -66,7 +113,12 @@ async def get_request(request_id: str) -> Optional[Dict[str, Any]]:
             return None
         async with aiofiles.open(path, "r") as f:
             content = await f.read()
-        return json.loads(content)
+        record = json.loads(content)
+
+    if record is not None:
+        record = await apply_timeout_watchdog(record)
+
+    return record
 
 
 async def update_request(request_id: str, updates: Dict[str, Any]) -> None:

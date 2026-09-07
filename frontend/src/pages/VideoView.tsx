@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { formatPromptForDisplay } from '@/lib/prompt';
-import { getVideo } from '../lib/api';
+import { getVideo, subscribeToStatus } from '../lib/api';
 import type { GenerationStatus, VideoRequestData } from '../lib/types';
 
 const STATUS_CFG: Record<
@@ -33,16 +33,12 @@ export default function VideoView() {
   }, [requestId]);
 
   useEffect(() => {
+    if (!requestId) return;
     if (video?.status !== 'processing' && video?.status !== 'pending') return;
-    const t = setInterval(async () => {
-      if (!requestId) return;
-      try {
-        const d = await getVideo(requestId);
-        setVideo(d);
-        if (d.status === 'completed' || d.status === 'failed') clearInterval(t);
-      } catch {}
-    }, 6000);
-    return () => clearInterval(t);
+    const unsubscribe = subscribeToStatus(requestId, (updated) => {
+      setVideo(updated);
+    });
+    return () => unsubscribe();
   }, [video?.status, requestId]);
 
   async function load() {

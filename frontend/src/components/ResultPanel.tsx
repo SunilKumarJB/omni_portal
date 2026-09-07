@@ -20,7 +20,7 @@ import { Progress } from '@/components/ui/progress';
 import { formatPromptForDisplay } from '@/lib/prompt';
 import type { GenerationStatus, LanguageCode, VideoRequestData, VideoTemplate } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { getStatus } from '../lib/api';
+import { subscribeToStatus } from '../lib/api';
 import { FieldLabel } from './StepHeading';
 
 const LANG_NAMES: Record<LanguageCode, string> = {
@@ -60,15 +60,11 @@ export default function ResultPanel({
   const videoPageUrl = data.video_page_url || `${window.location.origin}/video/${data.request_id}`;
 
   useEffect(() => {
-    if (isDone) return;
-    const t = setInterval(async () => {
-      try {
-        const updated = await getStatus(data.request_id);
-        setData(updated);
-        if (updated.status === 'completed' || updated.status === 'failed') clearInterval(t);
-      } catch {}
-    }, 5000);
-    return () => clearInterval(t);
+    if (isDone || !data.request_id) return;
+    const unsubscribe = subscribeToStatus(data.request_id, (updated) => {
+      setData(updated);
+    });
+    return () => unsubscribe();
   }, [data.request_id, isDone]);
 
   function copyLink() {

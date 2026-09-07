@@ -2,11 +2,75 @@ import { Camera, Check, ImagePlus, RefreshCcw, Sparkles, Upload, UserRound, X } 
 import type React from 'react';
 import { lazy, Suspense, useCallback, useRef, useState } from 'react';
 import type WebcamClass from 'react-webcam';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { CharacterPreset } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import StepHeading from './StepHeading';
+
+const MAX_IMAGE_DIMENSION = 1024;
+const IMAGE_JPEG_QUALITY = 0.9;
+
+class UnsupportedImageError extends Error {}
+
+/**
+ * Downscales an image to at most MAX_IMAGE_DIMENSION on its long side and
+ * re-encodes it as JPEG, keeping upload/capture payloads small before they
+ * are sent to the backend. Throws UnsupportedImageError when the browser
+ * cannot decode the source file (e.g. HEIC in most non-Safari browsers).
+ */
+async function resizeImageToJpeg(file: File): Promise<File> {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new UnsupportedImageError(`Cannot decode image: ${file.name}`);
+  }
+
+  try {
+    const { width, height } = bitmap;
+    const longSide = Math.max(width, height);
+    const scale = longSide > MAX_IMAGE_DIMENSION ? MAX_IMAGE_DIMENSION / longSide : 1;
+    const targetWidth = Math.max(1, Math.round(width * scale));
+    const targetHeight = Math.max(1, Math.round(height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D context unavailable');
+    ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', IMAGE_JPEG_QUALITY),
+    );
+    if (!blob) throw new Error('Canvas encoding failed');
+
+    const baseName = file.name.replace(/\.[^./\\]+$/, '') || 'image';
+    return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
+  } finally {
+    bitmap.close();
+  }
+}
+
+/**
+ * Runs a File through resizeImageToJpeg and reports the outcome via toast.
+ * Undecodable formats are rejected outright; any other failure falls back
+ * to the original, unresized file so the user isn't blocked.
+ */
+async function optimizeImageFile(file: File): Promise<File | null> {
+  try {
+    return await resizeImageToJpeg(file);
+  } catch (err) {
+    if (err instanceof UnsupportedImageError) {
+      toast.error('Unsupported image format. Please use JPEG or PNG.');
+      return null;
+    }
+    toast.error('Could not optimize the image; using the original file.');
+    return file;
+  }
+}
 
 // Heavy dependency - only loaded when the user opens the camera tab.
 const Webcam = lazy(() => import('react-webcam'));
@@ -19,7 +83,7 @@ const PRESET_CHARS: CharacterPreset[] = [
     role: 'Farmer',
     avatar: '🌾',
     bg: '#1B5E20',
-    img: '/assets/characters/char_01.png',
+    img: '/assets/characters/char_01.jpg',
   },
   {
     id: 'char_02',
@@ -28,7 +92,7 @@ const PRESET_CHARS: CharacterPreset[] = [
     role: 'Traditional',
     avatar: '🪔',
     bg: '#BF360C',
-    img: '/assets/characters/char_02.png',
+    img: '/assets/characters/char_02.jpg',
   },
   {
     id: 'char_03',
@@ -37,7 +101,7 @@ const PRESET_CHARS: CharacterPreset[] = [
     role: 'Techie',
     avatar: '🧑‍💻',
     bg: '#1A237E',
-    img: '/assets/characters/char_03.png',
+    img: '/assets/characters/char_03.jpg',
   },
   {
     id: 'char_04',
@@ -46,7 +110,7 @@ const PRESET_CHARS: CharacterPreset[] = [
     role: 'Influencer',
     avatar: '🌟',
     bg: '#E65100',
-    img: '/assets/characters/char_04.png',
+    img: '/assets/characters/char_04.jpg',
   },
   {
     id: 'char_05',
@@ -55,7 +119,7 @@ const PRESET_CHARS: CharacterPreset[] = [
     role: 'Merchant',
     avatar: '🏪',
     bg: '#FBBC05',
-    img: '/assets/characters/char_05.png',
+    img: '/assets/characters/char_05.jpg',
   },
   {
     id: 'char_06',
@@ -64,7 +128,7 @@ const PRESET_CHARS: CharacterPreset[] = [
     role: 'Director',
     avatar: '👩‍💼',
     bg: '#4A148C',
-    img: '/assets/characters/char_06.png',
+    img: '/assets/characters/char_06.jpg',
   },
 ];
 
@@ -216,16 +280,26 @@ export default function CharacterSelector({
     setCameraActive(false);
     fetch(src)
       .then((r) => r.blob())
-      .then((blob) => {
-        setCharacterImageFile(new File([blob], 'capture.png', { type: 'image/png' }));
+      .then(async (blob) => {
+        const original = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+        const optimized = await optimizeImageFile(original);
+        setCharacterImageFile(optimized ?? original);
         setSelectedCharacter(null);
       });
   }, [setCharacterImageFile, setSelectedCharacter]);
 
-  function handleUpload(file: File | undefined) {
+  const handleCameraError = useCallback(() => {
+    toast.error('Camera not available. Use Upload instead.');
+    setCameraActive(false);
+    setTab('upload');
+  }, []);
+
+  async function handleUpload(file: File | undefined) {
     if (!file?.type.startsWith('image/')) return;
-    setUploadPreview(URL.createObjectURL(file));
-    setCharacterImageFile(file);
+    const optimized = await optimizeImageFile(file);
+    if (!optimized) return;
+    setUploadPreview(URL.createObjectURL(optimized));
+    setCharacterImageFile(optimized);
     setSelectedCharacter(null);
     setCaptured(null);
   }
@@ -375,9 +449,15 @@ export default function CharacterSelector({
                         <Webcam
                           ref={webcamRef}
                           screenshotFormat="image/jpeg"
+                          screenshotQuality={0.92}
                           className="h-full w-full object-cover"
                           mirrored
-                          videoConstraints={{ facingMode: 'user' }}
+                          videoConstraints={{
+                            facingMode: 'user',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                          }}
+                          onUserMediaError={handleCameraError}
                         />
                       </Suspense>
                     </div>

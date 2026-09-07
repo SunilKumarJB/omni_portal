@@ -145,8 +145,15 @@ const TAILORED_PROMPTS: Record<string, Record<'active' | 'relaxed' | 'vehicle', 
   },
 };
 
-function TemplateThumbnail({ tpl }: { tpl: VideoTemplate }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+interface TemplateThumbnailProps {
+  tpl: VideoTemplate;
+  /** Detail panel keeps the classic autoplay/loop preview; cards default to hover-to-play. */
+  autoPlay?: boolean;
+  /** Card grid only: lets the parent drive play/pause on hover and focus. */
+  videoRef?: (el: HTMLVideoElement | null) => void;
+}
+
+function TemplateThumbnail({ tpl, autoPlay = false, videoRef }: TemplateThumbnailProps) {
   const [videoFailed, setVideoFailed] = useState(false);
 
   if (!tpl.videoSrc) {
@@ -162,7 +169,7 @@ function TemplateThumbnail({ tpl }: { tpl: VideoTemplate }) {
           src={tpl.videoSrc}
           poster={tpl.poster || undefined}
           muted
-          autoPlay
+          autoPlay={autoPlay}
           loop
           playsInline
           preload="metadata"
@@ -213,29 +220,48 @@ export default function PromptSelector({
   setVideoPrompt,
   dialogueText,
 }: PromptSelectorProps) {
+  const videoElsRef = useRef<Map<string, HTMLVideoElement>>(new Map());
+
+  function buildPromptForTemplate(tpl: VideoTemplate): string {
+    if (tpl.id === 'custom') return '';
+
+    const pName = selectedProduct?.name || 'our product';
+    const pVisual = selectedProduct?.visualDescription || 'interacting with the product';
+    const cName = userName || 'our character';
+    const pId = selectedProduct?.id || '';
+
+    const posture = PRODUCT_POSTURES[pId] || 'active';
+    let basePrompt = TAILORED_PROMPTS[tpl.id]?.[posture] || tpl.prompt;
+
+    // Dynamically inject the product name into the scenario prompt for maximum customization
+    basePrompt = basePrompt
+      .replace(/the product/g, pName)
+      .replace(/the vehicle/g, pName)
+      .replace(/product's/g, `${pName}'s`)
+      .replace(/vehicle's/g, `${pName}'s`);
+
+    return `A premium high-fidelity commercial for ${pName}, starring the character ${cName} (represented by [REF_Character]). In the scene, [REF_Character] is ${pVisual}. ${basePrompt}`;
+  }
+
   function selectTemplate(tpl: VideoTemplate) {
     setSelectedTemplate(tpl);
-    if (tpl.id !== 'custom') {
-      const pName = selectedProduct?.name || 'our product';
-      const pVisual = selectedProduct?.visualDescription || 'interacting with the product';
-      const cName = userName || 'our character';
-      const pId = selectedProduct?.id || '';
+    setVideoPrompt(buildPromptForTemplate(tpl));
+  }
 
-      const posture = PRODUCT_POSTURES[pId] || 'active';
-      let basePrompt = TAILORED_PROMPTS[tpl.id]?.[posture] || tpl.prompt;
+  function playCardVideo(id: string) {
+    const el = videoElsRef.current.get(id);
+    if (!el) return;
+    el.currentTime = 0;
+    void el.play().catch(() => {
+      // Autoplay/hover-play can be rejected by the browser; the poster/last frame stays visible.
+    });
+  }
 
-      // Dynamically inject the product name into the scenario prompt for maximum customization
-      basePrompt = basePrompt
-        .replace(/the product/g, pName)
-        .replace(/the vehicle/g, pName)
-        .replace(/product's/g, `${pName}'s`)
-        .replace(/vehicle's/g, `${pName}'s`);
-
-      const synthesized = `A premium high-fidelity commercial for ${pName}, starring the character ${cName} (represented by [REF_Character]). In the scene, [REF_Character] is ${pVisual}. ${basePrompt}`;
-      setVideoPrompt(synthesized);
-    } else {
-      setVideoPrompt('');
-    }
+  function pauseCardVideo(id: string) {
+    const el = videoElsRef.current.get(id);
+    if (!el) return;
+    el.pause();
+    el.currentTime = 0;
   }
 
   const isCustom = selectedTemplate?.id === 'custom';
@@ -260,6 +286,10 @@ export default function PromptSelector({
               return (
                 <div
                   key={tpl.id}
+                  onMouseEnter={() => playCardVideo(tpl.id)}
+                  onMouseLeave={() => pauseCardVideo(tpl.id)}
+                  onFocus={() => playCardVideo(tpl.id)}
+                  onBlur={() => pauseCardVideo(tpl.id)}
                   className={cn(
                     'group relative min-h-0 min-w-0 overflow-hidden rounded-xl border bg-card transition-all duration-200',
                     'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background',
@@ -277,7 +307,13 @@ export default function PromptSelector({
                   />
 
                   <div className="pointer-events-none relative z-10 flex h-full min-h-0 min-w-0 flex-col">
-                    <TemplateThumbnail tpl={tpl} />
+                    <TemplateThumbnail
+                      tpl={tpl}
+                      videoRef={(el) => {
+                        if (el) videoElsRef.current.set(tpl.id, el);
+                        else videoElsRef.current.delete(tpl.id);
+                      }}
+                    />
 
                     <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
                       <div className="flex items-start justify-between gap-2">
@@ -325,7 +361,7 @@ export default function PromptSelector({
         <div className="min-h-0 space-y-3 lg:col-span-5">
           {selectedTemplate ? (
             <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <TemplateThumbnail tpl={selectedTemplate} />
+              <TemplateThumbnail tpl={selectedTemplate} autoPlay />
               <div className="flex min-h-0 flex-1 flex-col space-y-3 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
@@ -375,7 +411,7 @@ export default function PromptSelector({
                     </div>
                     {!isCustom && (
                       <button
-                        onClick={() => setVideoPrompt(selectedTemplate.prompt)}
+                        onClick={() => setVideoPrompt(buildPromptForTemplate(selectedTemplate))}
                         className="text-xs xl:text-sm text-muted-foreground transition-colors hover:text-foreground underline underline-offset-2"
                       >
                         Reset to original

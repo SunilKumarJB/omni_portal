@@ -13,7 +13,7 @@ REPO="gcr.io/${PROJECT_ID}"
 # Each falls back to a sensible default; change a model/bucket here (or export it)
 # and redeploy — no code edit required.
 GCS_BUCKET="${GCS_BUCKET_NAME:-your-gcs-bucket-name}"
-GEMINI_MODEL="${GEMINI_MODEL:-gemini-omni-flash-preview}"
+GEMINI_MODEL="${GEMINI_MODEL:-gemini-omni-1.1-flash-preview}"
 REGION="${REGION:-global}"                       # model interactions region
 # --------------------------
 

@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     FIRESTORE_DATABASE_ID: str = ""
 
     # Omni / Gemini (Gemini Enterprise Agent Platform / Interactions API) settings
-    GEMINI_MODEL: str = "gemini-omni-flash-preview"
+    GEMINI_MODEL: str = "gemini-omni-1.1-flash-preview"
     REGION: str = "global"  # global (default)
     OMNI_PROJECT_ID: str = ""  # defaults to GCP_PROJECT_ID when empty
     GEMINI_API_KEY: str = ""  # Optional API key override (if not using ADC)
@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     OMNI_MAX_WAIT_SECONDS: int = 600
     OMNI_DEFAULT_DURATION: int = 10
     OMNI_DEFAULT_ASPECT_RATIO: str = "16:9"
+
+    # HTTP client / connection pooling settings
+    HTTP_MAX_KEEPALIVE_CONNECTIONS: int = 50
+    HTTP_MAX_CONNECTIONS: int = 200
+    HTTP_TIMEOUT_SECONDS: float = 60.0
 
     BASE_URL: str = "http://localhost:8000"
     FRONTEND_URL: str = "http://localhost:5173"

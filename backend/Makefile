@@ -1,4 +1,4 @@
-.PHONY: install run start clean format lint check
+.PHONY: install run start dev test clean format lint check
 
 install:
 	uv sync --group dev
@@ -7,6 +7,11 @@ run: start
 
 start:
 	uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+dev: start
+
+test:
+	uv run pytest
 
 clean:
 	rm -rf .venv
@@ -23,4 +28,4 @@ lint:
 check:
 	$(MAKE) format
 	$(MAKE) lint
-	$(MAKE) format
+	$(MAKE) test

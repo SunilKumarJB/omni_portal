@@ -1,11 +1,23 @@
 """
 Core generation endpoints: prompt suggestion and video generation.
-Video generation uses the Omni Interactions API (gemini-omni-flash-preview).
+Video generation uses the Omni Interactions API (gemini-omni-1.1-flash-preview).
 """
 
 import uuid
 import asyncio
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
+import json
+from typing import Optional
+import httpx
+from fastapi import (
+    APIRouter,
+    UploadFile,
+    File,
+    Form,
+    HTTPException,
+    BackgroundTasks,
+    Request,
+)
+from fastapi.responses import StreamingResponse
 from app.models.schemas import VideoRequestStatus
 from app.services import (
     omni_service,
@@ -16,6 +28,8 @@ from app.services import (
 from app.config import settings
 
 router = APIRouter(prefix="/generate", tags=["generate"])
+
+STREAM_POLL_INTERVAL: float = 1.5
 
 
 @router.post("/video", response_model=VideoRequestStatus)
@@ -58,10 +72,13 @@ async def generate_video(
     # Upload any provided files and retain their storage paths for the background task
     character_image_local = None
     character_image_mime = None
+    character_image_uri = None
     audio_local = None
     audio_mime = None
+    audio_uri = None
     source_video_local = None
     source_video_mime = None
+    source_video_uri = None
 
     character_bytes = None
     audio_bytes = None
@@ -69,59 +86,58 @@ async def generate_video(
 
     # Define upload coroutines to run concurrently in parallel
     async def upload_character():
-        nonlocal character_image_local, character_image_mime, character_bytes
+        nonlocal character_image_local, character_image_mime, character_image_uri, character_bytes
         if character_image and character_image.filename:
             character_bytes = await character_image.read()
-            url, local_path = await storage_service.upload_bytes(
+            url, storage_path = await storage_service.upload_bytes(
                 character_bytes,
                 f"{request_id}/character.png",
                 character_image.content_type,
             )
-            character_image_local = local_path
+            character_image_local = storage_path
             character_image_mime = character_image.content_type
+            if storage_path.startswith("gs://"):
+                character_image_uri = storage_path
+                character_bytes = None
             record["character_image_url"] = url
 
     async def upload_audio():
-        nonlocal audio_local, audio_mime, audio_bytes
+        nonlocal audio_local, audio_mime, audio_uri, audio_bytes
         if audio_file and audio_file.filename:
             audio_bytes = await audio_file.read()
-            url, local_path = await storage_service.upload_bytes(
+            url, storage_path = await storage_service.upload_bytes(
                 audio_bytes,
                 f"{request_id}/audio{_ext(audio_file.filename)}",
                 audio_file.content_type,
             )
-            audio_local = local_path
+            audio_local = storage_path
             audio_mime = audio_file.content_type
+            if storage_path.startswith("gs://"):
+                audio_uri = storage_path
+                audio_bytes = None
             record["audio_url"] = url
 
     async def upload_video():
-        nonlocal source_video_local, source_video_mime, source_video_bytes
+        nonlocal source_video_local, source_video_mime, source_video_uri, source_video_bytes
         if source_video and source_video.filename:
             source_video_bytes = await source_video.read()
-            url, local_path = await storage_service.upload_bytes(
+            url, storage_path = await storage_service.upload_bytes(
                 source_video_bytes,
                 f"{request_id}/source_video{_ext(source_video.filename)}",
                 source_video.content_type,
             )
-            source_video_local = local_path
+            source_video_local = storage_path
             source_video_mime = source_video.content_type
+            if storage_path.startswith("gs://"):
+                source_video_uri = storage_path
+                source_video_bytes = None
             record["source_video_url"] = url
 
     # Run independent file uploads in parallel
     await asyncio.gather(upload_character(), upload_audio(), upload_video())
 
-    # Generate and store QR code immediately (offload CPU-bound image generation to worker thread)
-    video_page = qr_service.video_page_url(request_id)
-    try:
-        qr_bytes = await asyncio.to_thread(qr_service.generate_qr_bytes, video_page)
-    except Exception:
-        qr_bytes = await asyncio.to_thread(qr_service.generate_qr_bytes_simple, video_page)
-
-    qr_url, _ = await storage_service.upload_bytes(
-        qr_bytes, f"{request_id}/qr_code.png", "image/png"
-    )
-    record["qr_code_url"] = qr_url
-    record["video_page_url"] = video_page
+    record["video_page_url"] = qr_service.video_page_url(request_id)
+    record["qr_code_url"] = f"/api/videos/{request_id}/qr.png"
 
     if settings.TEST_MODE:
         record["video_url"] = (
@@ -149,10 +165,21 @@ async def generate_video(
         character_image_local=character_image_local,
         audio_local=audio_local,
         source_video_local=source_video_local,
+        character_image_uri=character_image_uri,
+        audio_uri=audio_uri,
+        source_video_uri=source_video_uri,
     )
 
     current = await db_service.get_request(request_id)
     return VideoRequestStatus(**_to_status(current))
+
+
+def map_progress_to_band(fraction: float, start: int = 30, end: int = 90) -> int:
+    """
+    Map a calibrated progress fraction in [0.0, 1.0] smoothly into the [start, end] progress band.
+    """
+    clamped_fraction = max(0.0, min(1.0, float(fraction)))
+    return start + int((end - start) * clamped_fraction)
 
 
 @router.get("/status/{request_id}", response_model=VideoRequestStatus)
@@ -160,25 +187,82 @@ async def get_status(request_id: str):
     record = await db_service.get_request(request_id)
     if not record:
         raise HTTPException(404, "Request not found")
+    record = await db_service.apply_timeout_watchdog(record)
     return VideoRequestStatus(**_to_status(record))
+
+
+@router.get("/stream/{request_id}")
+async def stream_status(request_id: str, request: Request):
+    """
+    Stream video generation status updates using Server-Sent Events (SSE).
+    Polls db_service at tight intervals and emits data: <json>\n\n events.
+    Cleanly terminates when completed, failed, or client disconnects.
+    """
+    initial_record = await db_service.get_request(request_id)
+    if not initial_record:
+        raise HTTPException(404, "Request not found")
+
+    async def event_generator():
+        last_state = None
+        while True:
+            if await request.is_disconnected():
+                break
+
+            record = await db_service.get_request(request_id)
+            if not record:
+                break
+
+            current_state = (
+                record.get("status"),
+                record.get("progress"),
+                record.get("updated_at"),
+            )
+
+            if last_state is None or current_state != last_state:
+                last_state = current_state
+                data_json = json.dumps(_to_status(record))
+                yield f"data: {data_json}\n\n"
+
+            if record.get("status") in ("completed", "failed"):
+                break
+
+            try:
+                await asyncio.sleep(STREAM_POLL_INTERVAL)
+            except asyncio.CancelledError:
+                break
+
+    headers = {
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers=headers,
+    )
 
 
 async def _run_generation(
     request_id: str,
     prompt: str,
-    dialogue: str = None,
-    language: str = None,
+    dialogue: Optional[str] = None,
+    language: Optional[str] = None,
     aspect_ratio: str = "16:9",
     duration_seconds: int = 10,
-    character_image_bytes: bytes = None,
-    character_image_mime: str = None,
-    audio_bytes: bytes = None,
-    audio_mime: str = None,
-    source_video_bytes: bytes = None,
-    source_video_mime: str = None,
-    character_image_local: str = None,
-    audio_local: str = None,
-    source_video_local: str = None,
+    character_image_bytes: Optional[bytes] = None,
+    character_image_mime: Optional[str] = None,
+    audio_bytes: Optional[bytes] = None,
+    audio_mime: Optional[str] = None,
+    source_video_bytes: Optional[bytes] = None,
+    source_video_mime: Optional[str] = None,
+    character_image_local: Optional[str] = None,
+    audio_local: Optional[str] = None,
+    source_video_local: Optional[str] = None,
+    character_image_uri: Optional[str] = None,
+    audio_uri: Optional[str] = None,
+    source_video_uri: Optional[str] = None,
+    client: Optional[httpx.AsyncClient] = None,
 ):
     try:
         await db_service.update_request(request_id, {"status": "processing", "progress": 10})
@@ -199,32 +283,58 @@ async def _run_generation(
 
         await db_service.update_request(request_id, {"progress": 20})
 
-        # Read stored asset bytes for Omni media inputs (fallback to reading from path if bytes not pre-loaded)
-        if character_image_bytes is None and character_image_local:
-            character_bytes, char_mime = await _read_asset(
-                character_image_local, character_image_mime
-            )
+        # Resolve GCS URIs vs local storage assets.
+        # For GCS (gs://...), pass the URI directly without reading bytes into memory.
+        # For local storage, read bytes or use pre-loaded bytes.
+        char_uri = character_image_uri or (
+            character_image_local
+            if character_image_local and character_image_local.startswith("gs://")
+            else None
+        )
+        if char_uri:
+            character_bytes = None
+            char_mime = character_image_mime or "image/png"
         else:
-            character_bytes, char_mime = character_image_bytes, character_image_mime
+            if character_image_bytes is None and character_image_local:
+                character_bytes, char_mime = await _read_asset(
+                    character_image_local, character_image_mime
+                )
+            else:
+                character_bytes, char_mime = character_image_bytes, character_image_mime
 
-        if audio_bytes is None and audio_local:
-            audio_bytes_data, aud_mime = await _read_asset(audio_local, audio_mime)
+        aud_uri = audio_uri or (
+            audio_local if audio_local and audio_local.startswith("gs://") else None
+        )
+        if aud_uri:
+            audio_bytes_data = None
+            aud_mime = audio_mime or "audio/wav"
         else:
-            audio_bytes_data, aud_mime = audio_bytes, audio_mime
+            if audio_bytes is None and audio_local:
+                audio_bytes_data, aud_mime = await _read_asset(audio_local, audio_mime)
+            else:
+                audio_bytes_data, aud_mime = audio_bytes, audio_mime
 
-        if source_video_bytes is None and source_video_local:
-            source_video_bytes_data, src_mime = await _read_asset(
-                source_video_local, source_video_mime
-            )
+        src_uri = source_video_uri or (
+            source_video_local
+            if source_video_local and source_video_local.startswith("gs://")
+            else None
+        )
+        if src_uri:
+            source_video_bytes_data = None
+            src_mime = source_video_mime or "video/mp4"
         else:
-            source_video_bytes_data, src_mime = source_video_bytes, source_video_mime
+            if source_video_bytes is None and source_video_local:
+                source_video_bytes_data, src_mime = await _read_asset(
+                    source_video_local, source_video_mime
+                )
+            else:
+                source_video_bytes_data, src_mime = source_video_bytes, source_video_mime
 
         await db_service.update_request(request_id, {"progress": 30})
 
-        # Map Omni's 0..1 generation fraction onto the 30..85% band so the bar
-        # advances during the multi-minute model call instead of freezing at 30%.
+        # Map Omni's calibrated generation fraction smoothly into the 30% to 90% band
         async def _omni_progress(fraction: float):
-            pct = 30 + int(55 * fraction)
+            pct = map_progress_to_band(fraction, start=30, end=90)
             await db_service.update_request(request_id, {"progress": pct})
 
         try:
@@ -237,15 +347,19 @@ async def _run_generation(
                 duration_seconds=duration_seconds,
                 character_image_bytes=character_bytes,
                 character_image_mime=char_mime,
+                character_image_uri=char_uri,
                 audio_bytes=audio_bytes_data,
                 audio_mime=aud_mime,
+                audio_uri=aud_uri,
                 source_video_bytes=source_video_bytes_data,
                 source_video_mime=src_mime,
+                source_video_uri=src_uri,
                 progress_callback=_omni_progress,
+                client=client,
             )
         except Exception as primary_exc:
             # If audio was provided and it failed, retry without audio as a silent fallback
-            if audio_bytes_data is not None:
+            if audio_bytes_data is not None or aud_uri is not None:
                 try:
                     # Enrich the prompt with 90s style subtitle overlay instructions
                     fallback_prompt = (
@@ -268,11 +382,15 @@ async def _run_generation(
                         duration_seconds=duration_seconds,
                         character_image_bytes=character_bytes,
                         character_image_mime=char_mime,
+                        character_image_uri=char_uri,
                         audio_bytes=None,  # Strip audio track
                         audio_mime=None,
+                        audio_uri=None,  # Strip audio URI
                         source_video_bytes=source_video_bytes_data,
                         source_video_mime=src_mime,
+                        source_video_uri=src_uri,
                         progress_callback=_omni_progress,
+                        client=client,
                     )
                 except Exception as fallback_exc:
                     raise RuntimeError(

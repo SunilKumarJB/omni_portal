@@ -7,11 +7,11 @@
 [![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-**The Omni Portal** is an executive-ready, fixed-viewport control deck built for **Gemini Omni** (`gemini-omni-flash-preview`) video generation on the **Gemini Enterprise Agent Platform** (formerly Vertex AI).
+**The Omni Portal** is an executive-ready, fixed-viewport control deck built for **Gemini Omni** (`gemini-omni-1.1-flash-preview`) video generation on the **Gemini Enterprise Agent Platform** (formerly Vertex AI).
 
 The platform provides a 6-step interactive wizard designed for live presentations, executive demonstrations, and multi-modal video creation workflows: name your character, pick a hero product, specify multilingual dialogue with lip-sync, capture or upload a presenter portrait, choose a cinematic scenario, then review and generate a high-definition shareable video.
 
-> **Model:** `gemini-omni-flash-preview` is a public preview model on the Gemini Enterprise Agent Platform. Enable the platform's API on your GCP project and you're ready to go. No GCP access? Toggle **Test Mode** in the sidebar (or set `TEST_MODE=true` in `backend/.env`) to run the full wizard end-to-end with a mocked video.
+> **Model:** `gemini-omni-1.1-flash-preview` is the active video generation model on the Gemini Enterprise Agent Platform. Enable the platform's API on your GCP project and you're ready to go. No GCP access? Toggle **Test Mode** in the sidebar (or set `TEST_MODE=true` in `backend/.env`) to run the full wizard end-to-end with a mocked video.
 
 ---
 

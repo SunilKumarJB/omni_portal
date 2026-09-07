@@ -2,10 +2,12 @@ import os
 
 os.environ["GOOGLE_API_USE_CLIENT_CERTIFICATE"] = "false"
 
+from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path
+import httpx
 
 try:
     import urllib3.contrib.pyopenssl
@@ -17,12 +19,36 @@ except Exception:
 
 from app.config import settings
 from app.api.routes import generate, videos
+from app.services import omni_service
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    limits = httpx.Limits(
+        max_keepalive_connections=settings.HTTP_MAX_KEEPALIVE_CONNECTIONS,
+        max_connections=settings.HTTP_MAX_CONNECTIONS,
+    )
+    client = httpx.AsyncClient(
+        limits=limits,
+        timeout=settings.HTTP_TIMEOUT_SECONDS,
+    )
+    app.state.http_client = client
+    omni_service.set_http_client(client)
+    try:
+        yield
+    finally:
+        await client.aclose()
+        app.state.http_client = None
+        omni_service.set_http_client(None)
+
 
 app = FastAPI(
     title="The Omni Portal",
     description="AI-powered video generation on Google Cloud Gemini Enterprise Agent Platform",
     version="1.0.0",
+    lifespan=lifespan,
 )
+app.state.http_client = None
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,6 +1,7 @@
 import axios from 'axios';
-import { FlaskConical } from 'lucide-react';
+import { FlaskConical, Images } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PortalMark } from '@/components/AppHeader';
 import CharacterSelector from '@/components/CharacterSelector';
@@ -216,6 +217,7 @@ export default function Home() {
         language: selectedLanguage,
         characterPresetId: selectedCharacter?.id,
         characterImage: resolvedCharacterImage,
+        productId: selectedProduct?.id,
       });
 
       setRequestData(result);
@@ -279,6 +281,17 @@ export default function Home() {
                 aria-label="Toggle test mode"
               />
             </div>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Open gallery"
+              asChild
+              className="h-9 w-9 rounded-full"
+            >
+              <Link to="/gallery">
+                <Images className="h-4 w-4" strokeWidth={1.75} />
+              </Link>
+            </Button>
             <ThemeToggle />
           </div>
         </div>

@@ -79,10 +79,11 @@ app.state.http_client = None
 
 
 class DemoKeyMiddleware:
-    """Pure-ASGI gate on POST /api/generate*, so it never touches the GET routes
-    the SSE EventSource and QR-scanning phones rely on (neither can send custom
-    headers). No-op when DEMO_API_KEY is unset. Added before CORSMiddleware so
-    CORS stays the outermost layer and a 401 still carries CORS headers."""
+    """Pure-ASGI gate on POST /api/generate* and PATCH /api/videos/*, so it never
+    touches the GET routes the SSE EventSource and QR-scanning phones rely on
+    (neither can send custom headers). No-op when DEMO_API_KEY is unset. Added
+    before CORSMiddleware so CORS stays the outermost layer and a 401 still
+    carries CORS headers."""
 
     def __init__(self, app):
         self.app = app
@@ -91,8 +92,10 @@ class DemoKeyMiddleware:
         if (
             scope["type"] == "http"
             and settings.DEMO_API_KEY
-            and scope["method"] == "POST"
-            and scope["path"].startswith("/api/generate")
+            and (
+                (scope["method"] == "POST" and scope["path"].startswith("/api/generate"))
+                or (scope["method"] == "PATCH" and scope["path"].startswith("/api/videos/"))
+            )
         ):
             provided = Headers(scope=scope).get("x-demo-key", "")
             if not hmac.compare_digest(provided.encode(), settings.DEMO_API_KEY.encode()):

@@ -1,10 +1,10 @@
 import axios from 'axios';
-import type { GenerateVideoInput, VideoRequestData } from './types';
+import type { GenerateVideoInput, VideoListResponse, VideoRequestData } from './types';
 
 /** Single source of truth for the backend prefix — axios and the SSE URL must not drift. */
 const API_BASE = '/api';
 
-/** Optional shared secret; only sent on the generate call, never on reads. */
+/** Optional shared secret; only sent on the writing calls, never on reads. */
 const DEMO_API_KEY = import.meta.env.VITE_DEMO_API_KEY;
 
 /** No SSE message for this long while non-terminal means the stream is stalled. */
@@ -24,6 +24,7 @@ export async function generateVideo({
   language,
   characterPresetId,
   characterImage,
+  productId,
 }: GenerateVideoInput): Promise<VideoRequestData> {
   const form = new FormData();
   form.append('prompt', prompt);
@@ -32,11 +33,45 @@ export async function generateVideo({
   if (language) form.append('language', language);
   if (characterPresetId) form.append('character_preset_id', characterPresetId);
   if (characterImage) form.append('character_image', characterImage);
+  if (productId) form.append('product_id', productId);
 
   const { data } = await api.post('/generate/video', form, {
     timeout: 60000,
     headers: DEMO_API_KEY ? { 'X-Demo-Key': DEMO_API_KEY } : undefined,
   });
+  return data;
+}
+
+export interface ListVideosOptions {
+  includeHidden?: boolean;
+  includeFailed?: boolean;
+  limit?: number;
+}
+
+export async function listVideos({
+  includeHidden = false,
+  includeFailed = false,
+  limit = 50,
+}: ListVideosOptions = {}): Promise<VideoRequestData[]> {
+  const { data } = await api.get<VideoListResponse>('/videos', {
+    params: {
+      include_hidden: includeHidden,
+      include_failed: includeFailed,
+      limit,
+    },
+  });
+  return data.items ?? [];
+}
+
+export async function setVideoHidden(
+  requestId: string,
+  hidden: boolean,
+): Promise<VideoRequestData> {
+  const { data } = await api.patch<VideoRequestData>(
+    `/videos/${requestId}`,
+    { hidden },
+    { headers: DEMO_API_KEY ? { 'X-Demo-Key': DEMO_API_KEY } : undefined },
+  );
   return data;
 }
 

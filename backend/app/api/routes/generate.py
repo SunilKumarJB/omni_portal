@@ -48,6 +48,7 @@ async def generate_video(
     character_preset_id: str = Form(None),
     aspect_ratio: str = Form(None),  # "16:9" | "9:16" — defaults to config
     duration_seconds: int = Form(None),  # 1-10  — defaults to config
+    product_id: str = Form(None),
     character_image: UploadFile = File(None),
     source_video: UploadFile = File(None),  # V2V editing: existing video as input
 ):
@@ -69,6 +70,7 @@ async def generate_video(
         "dialogue": dialogue,
         "language": language,
         "character_preset_id": character_preset_id,
+        "product_id": product_id,
         "stage": "queued",
     }
 
@@ -359,12 +361,14 @@ async def _run_generation(
 
         await tracker.enter("finalizing", progress=95, final_prompt=result.final_prompt)
 
+        video_storage_path = None
         if result.uri:
             # Omni delivered straight to Cloud Storage — no download / re-upload needed.
             video_url = await storage_service.get_public_url(result.uri)
+            video_storage_path = result.uri
         elif result.video_bytes:
             ext = "webm" if "webm" in result.mime_type else "mp4"
-            video_url, _ = await storage_service.upload_bytes(
+            video_url, video_storage_path = await storage_service.upload_bytes(
                 result.video_bytes,
                 f"{request_id}/generated_video.{ext}",
                 result.mime_type,
@@ -377,6 +381,7 @@ async def _run_generation(
             status="completed",
             progress=100,
             video_url=video_url,
+            video_storage_path=video_storage_path,
             generation_seconds=round(time.monotonic() - submit_started, 3),
         )
 
@@ -425,4 +430,7 @@ def _to_status(record: dict) -> dict:
         "timings": record.get("timings"),
         "generation_seconds": record.get("generation_seconds"),
         "final_prompt": record.get("final_prompt"),
+        "hidden": bool(record.get("hidden", False)),
+        "product_id": record.get("product_id"),
+        "character_preset_id": record.get("character_preset_id"),
     }

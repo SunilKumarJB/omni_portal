@@ -118,6 +118,7 @@ async def create_request(request_id: str, data: Dict[str, Any]) -> None:
         "progress": 0,
         "created_at": _now_iso(),
         "updated_at": _now_iso(),
+        "hidden": False,
         **data,
     }
     if settings.DB_BACKEND == "firestore" and not settings.TEST_MODE:
@@ -164,3 +165,36 @@ async def update_request(request_id: str, updates: Dict[str, Any]) -> None:
             record.update(updates)
             async with aiofiles.open(path, "w") as f:
                 await f.write(json.dumps(record, indent=2))
+
+
+async def list_requests(limit: int) -> list[Dict[str, Any]]:
+    """
+    Return up to `limit` records ordered newest-first by created_at, for the gallery.
+    Does not run the timeout watchdog — listing performs no writes.
+    """
+    if settings.DB_BACKEND == "firestore" and not settings.TEST_MODE:
+        from google.cloud import firestore
+
+        db = _get_firestore()
+        query = (
+            db.collection("video_requests")
+            .order_by("created_at", direction=firestore.Query.DESCENDING)
+            .limit(limit)
+        )
+        records = []
+        async for doc in query.stream():
+            data = doc.to_dict()
+            if data is not None:
+                records.append(data)
+        return records
+
+    records = []
+    for path in _local_db_path().glob("*.json"):
+        try:
+            async with aiofiles.open(path, "r") as f:
+                content = await f.read()
+            records.append(json.loads(content))
+        except (OSError, json.JSONDecodeError):
+            continue
+    records.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+    return records[:limit]

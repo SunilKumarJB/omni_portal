@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Check,
   Download,
+  Images,
   Loader2,
   QrCode,
   Share2,
@@ -194,11 +195,18 @@ export default function VideoView() {
 
       <AppHeader
         actions={
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/">
-              <ArrowLeft className="h-3.5 w-3.5" /> Create new
-            </Link>
-          </Button>
+          <>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/gallery">
+                <Images className="h-3.5 w-3.5" /> Gallery
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/">
+                <ArrowLeft className="h-3.5 w-3.5" /> Create new
+              </Link>
+            </Button>
+          </>
         }
       />
 

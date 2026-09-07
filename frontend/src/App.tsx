@@ -8,6 +8,9 @@ import Home from './pages/Home';
 // Standalone share/QR target — code-split so it stays out of the landing bundle.
 const VideoView = lazy(() => import('./pages/VideoView'));
 
+// Presenter-facing archive of past runs — also kept out of the landing bundle.
+const Gallery = lazy(() => import('./pages/Gallery'));
+
 function RouteFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -25,6 +28,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/video/:requestId" element={<VideoView />} />
+              <Route path="/gallery" element={<Gallery />} />
             </Routes>
           </Suspense>
         </ErrorBoundary>

@@ -4,6 +4,7 @@ import {
   Copy,
   Download,
   ExternalLink,
+  Images,
   Loader2,
   MapPin,
   Quote,
@@ -319,6 +320,11 @@ export default function ResultPanel({
                 </Link>
               </Button>
             )}
+            <Button variant="outline" asChild>
+              <Link to="/gallery">
+                <Images className="h-4 w-4" /> Gallery
+              </Link>
+            </Button>
             <Button variant="secondary" onClick={onReset}>
               <RotateCcw className="h-4 w-4 mr-1.5" /> Start over
             </Button>

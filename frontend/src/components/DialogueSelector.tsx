@@ -29,7 +29,7 @@ interface Props {
 
 /* Language list */
 
-const LANGUAGES: Language[] = [
+export const LANGUAGES: Language[] = [
   { code: 'en', name: 'English', native: 'English', script: 'Latin' },
   { code: 'hi', name: 'Hindi', native: 'हिन्दी', script: 'Devanagari' },
   { code: 'ta', name: 'Tamil', native: 'தமிழ்', script: 'Tamil' },

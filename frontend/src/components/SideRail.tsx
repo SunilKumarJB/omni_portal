@@ -1,7 +1,9 @@
-import { Check, FlaskConical } from 'lucide-react';
+import { Check, FlaskConical, Images } from 'lucide-react';
 import type * as React from 'react';
+import { Link } from 'react-router-dom';
 import { PortalMark } from '@/components/AppHeader';
 import ThemeToggle from '@/components/ThemeToggle';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
@@ -185,7 +187,20 @@ export default function SideRail({
               aria-label="Toggle test mode"
             />
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Open gallery"
+              asChild
+              className="h-9 w-9 rounded-full"
+            >
+              <Link to="/gallery">
+                <Images className="h-4 w-4" strokeWidth={1.75} />
+              </Link>
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </aside>

@@ -75,7 +75,7 @@ async function optimizeImageFile(file: File): Promise<File | null> {
 // Heavy dependency - only loaded when the user opens the camera tab.
 const Webcam = lazy(() => import('react-webcam'));
 
-const PRESET_CHARS: CharacterPreset[] = [
+export const PRESET_CHARS: CharacterPreset[] = [
   {
     id: 'char_01',
     name: 'Hari',

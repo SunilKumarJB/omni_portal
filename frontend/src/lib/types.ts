@@ -53,6 +53,7 @@ export interface GenerateVideoInput {
   language?: string;
   characterPresetId?: string;
   characterImage?: File | null;
+  productId?: string;
 }
 
 export interface VideoRequestData {
@@ -69,10 +70,20 @@ export interface VideoRequestData {
   dialogue?: string;
   language?: string;
   style_id?: string;
+  product_id?: string;
+  character_preset_id?: string;
+  character_image_url?: string | null;
+  /** Hidden records are excluded from the gallery unless it is asked for them. */
+  hidden?: boolean;
   video_url?: string | null;
   video_page_url?: string | null;
   qr_code_url?: string | null;
   thumbnail_url?: string | null;
   created_at?: string;
   error?: string;
+}
+
+/** Gallery listing. Items are a subset of VideoRequestData, not a separate shape. */
+export interface VideoListResponse {
+  items: VideoRequestData[];
 }

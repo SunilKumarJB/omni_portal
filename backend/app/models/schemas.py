@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import Dict, Optional, Literal
 
 
 class VideoRequestStatus(BaseModel):
@@ -17,4 +17,7 @@ class VideoRequestStatus(BaseModel):
     dialogue: Optional[str] = None
     language: Optional[str] = None
     character_image_url: Optional[str] = None
-    audio_url: Optional[str] = None
+    stage: Optional[str] = None
+    timings: Optional[Dict[str, float]] = None
+    generation_seconds: Optional[float] = None
+    final_prompt: Optional[str] = None

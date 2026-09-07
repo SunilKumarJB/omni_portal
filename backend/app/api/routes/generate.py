@@ -6,6 +6,8 @@ Video generation uses the Omni Interactions API (gemini-omni-1.1-flash-preview).
 import uuid
 import asyncio
 import json
+import logging
+import time
 from typing import Optional
 import httpx
 from fastapi import (
@@ -29,7 +31,11 @@ from app.config import settings
 
 router = APIRouter(prefix="/generate", tags=["generate"])
 
+logger = logging.getLogger(__name__)
+
 STREAM_POLL_INTERVAL: float = 1.5
+
+SAMPLE_VIDEO_URL = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
 
 @router.post("/video", response_model=VideoRequestStatus)
@@ -40,11 +46,9 @@ async def generate_video(
     dialogue: str = Form(None),  # spoken line for the character
     language: str = Form(None),  # language code for the dialogue (en, hi, ta, ...)
     character_preset_id: str = Form(None),
-    audio_preset_id: str = Form(None),
     aspect_ratio: str = Form(None),  # "16:9" | "9:16" — defaults to config
     duration_seconds: int = Form(None),  # 1-10  — defaults to config
     character_image: UploadFile = File(None),
-    audio_file: UploadFile = File(None),
     source_video: UploadFile = File(None),  # V2V editing: existing video as input
 ):
     """
@@ -53,7 +57,6 @@ async def generate_video(
 
     - character_image: passed as a reference input to Omni and bound to [REF_Character]
     - dialogue / language: the line the character speaks, and the language to speak it in
-    - audio_file: passed to Omni for audio-driven / lip-sync generation
     - source_video: passed to Omni for V2V editing (style transfer, character swap, etc.)
     """
     request_id = str(uuid.uuid4())
@@ -66,22 +69,18 @@ async def generate_video(
         "dialogue": dialogue,
         "language": language,
         "character_preset_id": character_preset_id,
-        "audio_preset_id": audio_preset_id,
+        "stage": "queued",
     }
 
     # Upload any provided files and retain their storage paths for the background task
     character_image_local = None
     character_image_mime = None
     character_image_uri = None
-    audio_local = None
-    audio_mime = None
-    audio_uri = None
     source_video_local = None
     source_video_mime = None
     source_video_uri = None
 
     character_bytes = None
-    audio_bytes = None
     source_video_bytes = None
 
     # Define upload coroutines to run concurrently in parallel
@@ -101,22 +100,6 @@ async def generate_video(
                 character_bytes = None
             record["character_image_url"] = url
 
-    async def upload_audio():
-        nonlocal audio_local, audio_mime, audio_uri, audio_bytes
-        if audio_file and audio_file.filename:
-            audio_bytes = await audio_file.read()
-            url, storage_path = await storage_service.upload_bytes(
-                audio_bytes,
-                f"{request_id}/audio{_ext(audio_file.filename)}",
-                audio_file.content_type,
-            )
-            audio_local = storage_path
-            audio_mime = audio_file.content_type
-            if storage_path.startswith("gs://"):
-                audio_uri = storage_path
-                audio_bytes = None
-            record["audio_url"] = url
-
     async def upload_video():
         nonlocal source_video_local, source_video_mime, source_video_uri, source_video_bytes
         if source_video and source_video.filename:
@@ -134,15 +117,13 @@ async def generate_video(
             record["source_video_url"] = url
 
     # Run independent file uploads in parallel
-    await asyncio.gather(upload_character(), upload_audio(), upload_video())
+    await asyncio.gather(upload_character(), upload_video())
 
     record["video_page_url"] = qr_service.video_page_url(request_id)
     record["qr_code_url"] = f"/api/videos/{request_id}/qr.png"
 
     if settings.TEST_MODE:
-        record["video_url"] = (
-            "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        )
+        record["video_url"] = SAMPLE_VIDEO_URL
         record["status"] = "processing"
         record["progress"] = 5
 
@@ -158,15 +139,11 @@ async def generate_video(
         duration_seconds=resolved_duration,
         character_image_bytes=character_bytes,
         character_image_mime=character_image_mime,
-        audio_bytes=audio_bytes,
-        audio_mime=audio_mime,
         source_video_bytes=source_video_bytes,
         source_video_mime=source_video_mime,
         character_image_local=character_image_local,
-        audio_local=audio_local,
         source_video_local=source_video_local,
         character_image_uri=character_image_uri,
-        audio_uri=audio_uri,
         source_video_uri=source_video_uri,
     )
 
@@ -174,7 +151,7 @@ async def generate_video(
     return VideoRequestStatus(**_to_status(current))
 
 
-def map_progress_to_band(fraction: float, start: int = 30, end: int = 90) -> int:
+def map_progress_to_band(fraction: float, start: int = 30, end: int = 95) -> int:
     """
     Map a calibrated progress fraction in [0.0, 1.0] smoothly into the [start, end] progress band.
     """
@@ -214,6 +191,7 @@ async def stream_status(request_id: str, request: Request):
 
             current_state = (
                 record.get("status"),
+                record.get("stage"),
                 record.get("progress"),
                 record.get("updated_at"),
             )
@@ -243,6 +221,38 @@ async def stream_status(request_id: str, request: Request):
     )
 
 
+class _StageTracker:
+    """Records stage transitions, per-stage durations and total elapsed time on the record."""
+
+    def __init__(self, request_id: str):
+        self.request_id = request_id
+        self.started = time.monotonic()
+        self.stage: Optional[str] = None
+        self.stage_started = self.started
+        self.timings: dict = {}
+
+    @property
+    def elapsed(self) -> float:
+        return time.monotonic() - self.started
+
+    async def enter(self, stage: str, **updates) -> None:
+        now = time.monotonic()
+        if self.stage is not None:
+            self.timings[self.stage] = round(now - self.stage_started, 3)
+        self.stage = stage
+        self.stage_started = now
+        logger.info(
+            "generation stage=%s request_id=%s elapsed=%.1fs",
+            stage,
+            self.request_id,
+            now - self.started,
+        )
+        await db_service.update_request(
+            self.request_id,
+            {"stage": stage, "timings": dict(self.timings), **updates},
+        )
+
+
 async def _run_generation(
     request_id: str,
     prompt: str,
@@ -252,36 +262,31 @@ async def _run_generation(
     duration_seconds: int = 10,
     character_image_bytes: Optional[bytes] = None,
     character_image_mime: Optional[str] = None,
-    audio_bytes: Optional[bytes] = None,
-    audio_mime: Optional[str] = None,
     source_video_bytes: Optional[bytes] = None,
     source_video_mime: Optional[str] = None,
     character_image_local: Optional[str] = None,
-    audio_local: Optional[str] = None,
     source_video_local: Optional[str] = None,
     character_image_uri: Optional[str] = None,
-    audio_uri: Optional[str] = None,
     source_video_uri: Optional[str] = None,
     client: Optional[httpx.AsyncClient] = None,
 ):
+    tracker = _StageTracker(request_id)
     try:
-        await db_service.update_request(request_id, {"status": "processing", "progress": 10})
-
         if settings.TEST_MODE:
+            await tracker.enter("submitting", status="processing", progress=10)
+            await tracker.enter("generating")
             for pct in [25, 50, 75, 90]:
                 await asyncio.sleep(2)
                 await db_service.update_request(request_id, {"progress": pct})
-            await db_service.update_request(
-                request_id,
-                {
-                    "status": "completed",
-                    "progress": 100,
-                    "video_url": "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-                },
+            await tracker.enter("finalizing")
+            await tracker.enter(
+                "completed",
+                status="completed",
+                progress=100,
+                video_url=SAMPLE_VIDEO_URL,
+                generation_seconds=round(tracker.elapsed, 3),
             )
             return
-
-        await db_service.update_request(request_id, {"progress": 20})
 
         # Resolve GCS URIs vs local storage assets.
         # For GCS (gs://...), pass the URI directly without reading bytes into memory.
@@ -291,144 +296,98 @@ async def _run_generation(
             if character_image_local and character_image_local.startswith("gs://")
             else None
         )
-        if char_uri:
-            character_bytes = None
-            char_mime = character_image_mime or "image/png"
-        else:
-            if character_image_bytes is None and character_image_local:
-                character_bytes, char_mime = await _read_asset(
-                    character_image_local, character_image_mime
-                )
-            else:
-                character_bytes, char_mime = character_image_bytes, character_image_mime
-
-        aud_uri = audio_uri or (
-            audio_local if audio_local and audio_local.startswith("gs://") else None
-        )
-        if aud_uri:
-            audio_bytes_data = None
-            aud_mime = audio_mime or "audio/wav"
-        else:
-            if audio_bytes is None and audio_local:
-                audio_bytes_data, aud_mime = await _read_asset(audio_local, audio_mime)
-            else:
-                audio_bytes_data, aud_mime = audio_bytes, audio_mime
-
         src_uri = source_video_uri or (
             source_video_local
             if source_video_local and source_video_local.startswith("gs://")
             else None
         )
+
+        # Only the inline (non-URI) inputs get uploaded with the request body.
+        needs_inline_upload = bool(
+            (not char_uri and (character_image_bytes or character_image_local))
+            or (not src_uri and (source_video_bytes or source_video_local))
+        )
+        if needs_inline_upload:
+            await tracker.enter("uploading", status="processing", progress=15)
+
+        if char_uri:
+            character_bytes = None
+            char_mime = character_image_mime or "image/png"
+        elif character_image_bytes is None and character_image_local:
+            character_bytes, char_mime = await _read_asset(
+                character_image_local, character_image_mime
+            )
+        else:
+            character_bytes, char_mime = character_image_bytes, character_image_mime
+
         if src_uri:
             source_video_bytes_data = None
             src_mime = source_video_mime or "video/mp4"
+        elif source_video_bytes is None and source_video_local:
+            source_video_bytes_data, src_mime = await _read_asset(
+                source_video_local, source_video_mime
+            )
         else:
-            if source_video_bytes is None and source_video_local:
-                source_video_bytes_data, src_mime = await _read_asset(
-                    source_video_local, source_video_mime
-                )
-            else:
-                source_video_bytes_data, src_mime = source_video_bytes, source_video_mime
+            source_video_bytes_data, src_mime = source_video_bytes, source_video_mime
 
-        await db_service.update_request(request_id, {"progress": 30})
-
-        # Map Omni's calibrated generation fraction smoothly into the 30% to 90% band
+        # Map Omni's calibrated generation fraction smoothly into the 30% to 95% band.
+        # The first tick means the interaction was accepted and is running.
         async def _omni_progress(fraction: float):
-            pct = map_progress_to_band(fraction, start=30, end=90)
+            if tracker.stage != "generating":
+                await tracker.enter("generating")
+            pct = map_progress_to_band(fraction, start=30, end=95)
             await db_service.update_request(request_id, {"progress": pct})
 
-        try:
-            # Primary generation attempt
-            video_bytes, mime_type = await omni_service.generate_video(
-                prompt=prompt,
-                dialogue=dialogue,
-                language=language,
-                aspect_ratio=aspect_ratio,
-                duration_seconds=duration_seconds,
-                character_image_bytes=character_bytes,
-                character_image_mime=char_mime,
-                character_image_uri=char_uri,
-                audio_bytes=audio_bytes_data,
-                audio_mime=aud_mime,
-                audio_uri=aud_uri,
-                source_video_bytes=source_video_bytes_data,
-                source_video_mime=src_mime,
-                source_video_uri=src_uri,
-                progress_callback=_omni_progress,
-                client=client,
-            )
-        except Exception as primary_exc:
-            # If audio was provided and it failed, retry without audio as a silent fallback
-            if audio_bytes_data is not None or aud_uri is not None:
-                try:
-                    # Enrich the prompt with 90s style subtitle overlay instructions
-                    fallback_prompt = (
-                        f"{prompt}. [SILENT INFOMERCIAL FALLBACK] "
-                        "Since this is a silent broadcast, overlay bold, colorful 90s-style "
-                        "infomercial subtitles pitching the product at the bottom of the screen."
-                    )
-                    await db_service.update_request(
-                        request_id,
-                        {
-                            "progress": 35,
-                            "error": f"Audio generation failed ({str(primary_exc)}). Falling back gracefully to silent infomercial loop with subtitles...",
-                        },
-                    )
-                    video_bytes, mime_type = await omni_service.generate_video(
-                        prompt=fallback_prompt,
-                        dialogue=dialogue,
-                        language=language,
-                        aspect_ratio=aspect_ratio,
-                        duration_seconds=duration_seconds,
-                        character_image_bytes=character_bytes,
-                        character_image_mime=char_mime,
-                        character_image_uri=char_uri,
-                        audio_bytes=None,  # Strip audio track
-                        audio_mime=None,
-                        audio_uri=None,  # Strip audio URI
-                        source_video_bytes=source_video_bytes_data,
-                        source_video_mime=src_mime,
-                        source_video_uri=src_uri,
-                        progress_callback=_omni_progress,
-                        client=client,
-                    )
-                except Exception as fallback_exc:
-                    raise RuntimeError(
-                        f"Omni generation failed on primary with audio ({str(primary_exc)}) "
-                        f"and fallback without audio ({str(fallback_exc)})"
-                    )
-            else:
-                raise primary_exc
+        await tracker.enter("submitting", status="processing", progress=30)
+        submit_started = time.monotonic()
+        result = await omni_service.generate_video(
+            prompt=prompt,
+            dialogue=dialogue,
+            language=language,
+            aspect_ratio=aspect_ratio,
+            duration_seconds=duration_seconds,
+            character_image_bytes=character_bytes,
+            character_image_mime=char_mime,
+            character_image_uri=char_uri,
+            source_video_bytes=source_video_bytes_data,
+            source_video_mime=src_mime,
+            source_video_uri=src_uri,
+            request_id=request_id,
+            progress_callback=_omni_progress,
+            client=client,
+        )
 
-        await db_service.update_request(request_id, {"progress": 90})
+        await tracker.enter("finalizing", progress=95, final_prompt=result.final_prompt)
 
-        if video_bytes:
-            ext = "webm" if "webm" in mime_type else "mp4"
+        if result.uri:
+            # Omni delivered straight to Cloud Storage — no download / re-upload needed.
+            video_url = await storage_service.get_public_url(result.uri)
+        elif result.video_bytes:
+            ext = "webm" if "webm" in result.mime_type else "mp4"
             video_url, _ = await storage_service.upload_bytes(
-                video_bytes,
+                result.video_bytes,
                 f"{request_id}/generated_video.{ext}",
-                mime_type,
+                result.mime_type,
             )
         else:
-            video_url = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+            video_url = SAMPLE_VIDEO_URL
 
-        await db_service.update_request(
-            request_id,
-            {
-                "status": "completed",
-                "progress": 100,
-                "video_url": video_url,
-            },
+        await tracker.enter(
+            "completed",
+            status="completed",
+            progress=100,
+            video_url=video_url,
+            generation_seconds=round(time.monotonic() - submit_started, 3),
         )
 
     except Exception as e:
-        await db_service.update_request(
+        logger.exception(
+            "generation failed request_id=%s stage=%s elapsed=%.1fs",
             request_id,
-            {
-                "status": "failed",
-                "error": str(e),
-            },
+            tracker.stage,
+            tracker.elapsed,
         )
+        await tracker.enter("failed", status="failed", error=str(e))
 
 
 async def _read_asset(path: str, override_mime: str = None):
@@ -462,5 +421,8 @@ def _to_status(record: dict) -> dict:
         "dialogue": record.get("dialogue"),
         "language": record.get("language"),
         "character_image_url": record.get("character_image_url"),
-        "audio_url": record.get("audio_url"),
+        "stage": record.get("stage"),
+        "timings": record.get("timings"),
+        "generation_seconds": record.get("generation_seconds"),
+        "final_prompt": record.get("final_prompt"),
     }

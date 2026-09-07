@@ -38,46 +38,75 @@ def _local_path(request_id: str) -> Path:
     return _local_db_path() / f"{request_id}.json"
 
 
-def is_timed_out(record: Dict[str, Any], timeout_seconds: Optional[float] = None) -> bool:
+TIMEOUT_ERROR = "Generation job timed out"
+STALLED_ERROR = "Generation stalled; the backend task stopped reporting progress"
+
+
+def _parse_ts(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return None
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
+
+
+def timeout_error(record: Dict[str, Any], timeout_seconds: Optional[float] = None) -> Optional[str]:
     """
-    Check if a record in 'pending' or 'processing' status has exceeded the timeout threshold.
+    Error message for a pending/processing record that should be failed, else None.
+
+    Two limits apply: the hard OMNI_MAX_WAIT_SECONDS since the job was created, and
+    OMNI_STALE_SECONDS since the last update — a healthy job refreshes updated_at on
+    every progress tick, so an idle updated_at means the background task is gone.
+    An explicit timeout_seconds overrides both and applies to updated_at.
     """
     if record.get("status") not in ("pending", "processing"):
-        return False
+        return None
 
-    updated_at_str = record.get("updated_at") or record.get("created_at")
-    if not updated_at_str:
-        return False
-
-    try:
-        updated_at = datetime.fromisoformat(updated_at_str)
-        if updated_at.tzinfo is None:
-            updated_at = updated_at.replace(tzinfo=timezone.utc)
-    except (ValueError, TypeError):
-        return False
+    updated_at = _parse_ts(record.get("updated_at")) or _parse_ts(record.get("created_at"))
+    if updated_at is None:
+        return None
+    created_at = _parse_ts(record.get("created_at")) or updated_at
 
     now = datetime.now(timezone.utc)
-    limit = timeout_seconds if timeout_seconds is not None else settings.OMNI_MAX_WAIT_SECONDS
-    return (now - updated_at).total_seconds() >= limit
+    if timeout_seconds is not None:
+        return TIMEOUT_ERROR if (now - updated_at).total_seconds() >= timeout_seconds else None
+
+    if (now - created_at).total_seconds() >= settings.OMNI_MAX_WAIT_SECONDS:
+        return TIMEOUT_ERROR
+    if (now - updated_at).total_seconds() >= settings.OMNI_STALE_SECONDS:
+        return STALLED_ERROR
+    return None
+
+
+def is_timed_out(record: Dict[str, Any], timeout_seconds: Optional[float] = None) -> bool:
+    """
+    Check if a record in 'pending' or 'processing' status has timed out or stalled.
+    """
+    return timeout_error(record, timeout_seconds=timeout_seconds) is not None
 
 
 async def apply_timeout_watchdog(
     record: Dict[str, Any], timeout_seconds: Optional[float] = None
 ) -> Dict[str, Any]:
     """
-    If the record is pending or processing and timed out, update database record to
-    failed status with error 'Generation job timed out' and return the updated record.
+    If the record is pending or processing and has timed out or stalled, update the
+    database record to failed status and return the updated record.
     """
-    if is_timed_out(record, timeout_seconds=timeout_seconds):
+    error = timeout_error(record, timeout_seconds=timeout_seconds)
+    if error:
         request_id = record.get("request_id")
         if request_id:
             updates = {
                 "status": "failed",
-                "error": "Generation job timed out",
+                "stage": "failed",
+                "error": error,
             }
             await update_request(request_id, updates)
             record["status"] = "failed"
-            record["error"] = "Generation job timed out"
+            record["stage"] = "failed"
+            record["error"] = error
             record["updated_at"] = updates["updated_at"]
     return record
 

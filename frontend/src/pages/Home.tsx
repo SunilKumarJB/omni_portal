@@ -1,7 +1,15 @@
+import axios from 'axios';
 import { FlaskConical } from 'lucide-react';
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { PortalMark } from '@/components/AppHeader';
+import CharacterSelector from '@/components/CharacterSelector';
+import DialogueSelector from '@/components/DialogueSelector';
+import NameStep from '@/components/NameStep';
+import ProductSelector from '@/components/ProductSelector';
+import PromptSelector from '@/components/PromptSelector';
+import ResultPanel from '@/components/ResultPanel';
+import ReviewGenerate from '@/components/ReviewGenerate';
 import SideRail from '@/components/SideRail';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
@@ -25,29 +33,46 @@ const STEPS: { id: 1 | 2 | 3 | 4 | 5 | 6; label: string }[] = [
   { id: 6, label: 'Review' },
 ];
 
-const NameStep = lazy(() => import('../components/NameStep'));
-const ProductSelector = lazy(() => import('../components/ProductSelector'));
-const DialogueSelector = lazy(() => import('../components/DialogueSelector'));
-const CharacterSelector = lazy(() => import('../components/CharacterSelector'));
-const PromptSelector = lazy(() => import('../components/PromptSelector'));
-const ReviewGenerate = lazy(() => import('../components/ReviewGenerate'));
-const ResultPanel = lazy(() => import('../components/ResultPanel'));
+const PRESET_IMAGE_MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  svg: 'image/svg+xml',
+  webp: 'image/webp',
+};
 
-function StepFallback() {
-  return (
-    <div className="flex h-full w-full items-center justify-center">
-      <div className="h-9 w-9 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
-    </div>
-  );
+/** Extension and content type for a preset image path, defaulting to png. */
+function presetImageType(path: string): { ext: string; mime: string } {
+  const ext = (path.split('?')[0].split('.').pop() ?? '').toLowerCase();
+  return { ext: ext || 'png', mime: PRESET_IMAGE_MIME[ext] ?? 'image/png' };
+}
+
+/** Pulls the FastAPI `detail` field out of an error body without asserting its shape. */
+function errorDetail(body: unknown): string | undefined {
+  if (typeof body !== 'object' || body === null || !('detail' in body)) return undefined;
+  const { detail } = body;
+  return typeof detail === 'string' && detail.trim() ? detail : undefined;
+}
+
+function describeGenerateError(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    const status = err.response?.status;
+    if (status === undefined) return `Could not reach the server — ${err.message}`;
+    const detail = errorDetail(err.response?.data);
+    return detail
+      ? `Generation failed (HTTP ${status}): ${detail}`
+      : `Generation failed (HTTP ${status})`;
+  }
+  return 'Something went wrong starting your video. Please try again.';
 }
 
 export default function Home() {
-  const [testMode, setTestMode] = useState(() => localStorage.getItem('omni-test-mode') === 'true');
+  // Deliberately not persisted: every demo run starts against the real backend.
+  const [testMode, setTestMode] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [generationState, setGenerationState] = useState<'submitting' | 'done' | 'error' | null>(
-    null,
-  );
   const [requestData, setRequestData] = useState<VideoRequestData | null>(null);
+  // Bumped per generation attempt so the result panel remounts (and its elapsed timer restarts).
+  const [runKey, setRunKey] = useState(0);
 
   // Step 1: Director Name
   const [userName, setUserName] = useState('');
@@ -56,6 +81,9 @@ export default function Home() {
   // Step 3: Dialogue & Language
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>('en');
   const [dialogueText, setDialogueText] = useState('');
+  // True once the director has typed in the dialogue box; keeps their text (or a
+  // deliberately blank line) from being overwritten when they revisit step 3.
+  const [dialogueTouched, setDialogueTouched] = useState(false);
   // Step 4: Character/Presenter
   const [selectedCharacter, setSelectedCharacter] = useState<CharacterPreset | null>(null);
   const [characterImageFile, setCharacterImageFile] = useState<File | null>(null);
@@ -63,26 +91,31 @@ export default function Home() {
   const [selectedTemplate, setSelectedTemplate] = useState<VideoTemplate | null>(null);
   const [videoPrompt, setVideoPrompt] = useState('');
 
-  useEffect(() => {
-    localStorage.setItem('omni-test-mode', String(testMode));
-  }, [testMode]);
+  const isStepComplete = useCallback(
+    (step: number) => {
+      if (step === 1) return userName.trim().length >= 2;
+      if (step === 2) return !!selectedProduct;
+      if (step === 3) return true; // Dialogue is optional
+      if (step === 4) return !!selectedCharacter || !!characterImageFile;
+      if (step === 5) return !!selectedTemplate && videoPrompt.trim().length >= 10;
+      return true;
+    },
+    [
+      userName,
+      selectedProduct,
+      selectedCharacter,
+      characterImageFile,
+      selectedTemplate,
+      videoPrompt,
+    ],
+  );
 
-  const canGoNext = useCallback(() => {
-    if (currentStep === 1) return userName.trim().length >= 2;
-    if (currentStep === 2) return !!selectedProduct;
-    if (currentStep === 3) return true; // Dialogue is optional
-    if (currentStep === 4) return !!selectedCharacter || !!characterImageFile;
-    if (currentStep === 5) return !!selectedTemplate && videoPrompt.trim().length >= 10;
-    return true;
-  }, [
-    currentStep,
-    userName,
-    selectedProduct,
-    selectedCharacter,
-    characterImageFile,
-    selectedTemplate,
-    videoPrompt,
-  ]);
+  const canGoNext = isStepComplete(currentStep);
+
+  // Steps already satisfied can be revisited; the first unsatisfied step is as far
+  // forward as the rail may jump.
+  const firstIncompleteStep = STEPS.find((s) => !isStepComplete(s.id))?.id ?? 6;
+  const maxNavigableStep = requestData ? 0 : Math.max(currentStep, firstIncompleteStep);
 
   const nextRequirement = (() => {
     if (currentStep === 1 && userName.trim().length < 2) {
@@ -102,6 +135,9 @@ export default function Home() {
     }
     if (currentStep === 5 && videoPrompt.trim().length < 10) {
       return 'Add a short prompt so Omni has enough direction.';
+    }
+    if (currentStep === 6) {
+      return 'Go back to change anything, or launch the campaign.';
     }
     return 'Ready for the next step.';
   })();
@@ -126,7 +162,19 @@ export default function Home() {
   }
 
   const handleGenerate = async () => {
-    setGenerationState('submitting');
+    // Show the result panel straight away — the wizard shell stays put and the panel
+    // is patched with the real record once the POST resolves.
+    setRunKey((k) => k + 1);
+    setRequestData({
+      request_id: '',
+      status: 'pending',
+      stage: 'queued',
+      progress: 0,
+      prompt: videoPrompt,
+      dialogue: dialogueText.trim() || undefined,
+      language: selectedLanguage,
+      created_at: new Date().toISOString(),
+    });
     try {
       if (testMode) {
         const requestId =
@@ -136,7 +184,10 @@ export default function Home() {
         setRequestData({
           request_id: requestId,
           status: 'completed' as GenerationStatus,
+          stage: 'completed',
           progress: 100,
+          generation_seconds: 4,
+          final_prompt: videoPrompt,
           prompt: videoPrompt,
           dialogue: dialogueText.trim() || undefined,
           language: selectedLanguage,
@@ -145,15 +196,13 @@ export default function Home() {
           qr_code_url: null,
           created_at: new Date().toISOString(),
         });
-        setGenerationState('done');
         return;
       }
 
       // Resolve preset character image
       const resolvedCharacterImage = await (async () => {
         if (!characterImageFile && selectedCharacter?.img) {
-          const ext = selectedCharacter.img.split('.').pop();
-          const mime = ext === 'svg' ? 'image/svg+xml' : 'image/png';
+          const { ext, mime } = presetImageType(selectedCharacter.img);
           return fetchAsFile(selectedCharacter.img, `${selectedCharacter.id}.${ext}`, mime);
         }
         return characterImageFile;
@@ -170,16 +219,16 @@ export default function Home() {
       });
 
       setRequestData(result);
-      setGenerationState('done');
-    } catch {
-      setGenerationState('error');
-      toast.error('Something went wrong starting your video. Please try again.');
+    } catch (err) {
+      // Back to review with every input intact so the director can retry immediately.
+      setRequestData(null);
+      setCurrentStep(6);
+      toast.error(describeGenerateError(err));
     }
   };
 
   const handleReset = () => {
     setCurrentStep(1);
-    setGenerationState(null);
     setRequestData(null);
     setUserName('');
     setSelectedProduct(null);
@@ -187,39 +236,10 @@ export default function Home() {
     setVideoPrompt('');
     setSelectedLanguage('en');
     setDialogueText('');
+    setDialogueTouched(false);
     setSelectedCharacter(null);
     setCharacterImageFile(null);
   };
-
-  if (generationState === 'submitting') {
-    return (
-      <div className="flex h-dvh items-center justify-center bg-background">
-        <div className="space-y-5 text-center">
-          <div className="orb-container mx-auto scale-75">
-            <div className="orb-blob orb-blob-blue" />
-            <div className="orb-blob orb-blob-red" />
-            <div className="orb-blob orb-blob-yellow" />
-            <div className="orb-blob orb-blob-green" />
-            <div className="orb-core" />
-            <div className="absolute z-10 flex h-14 w-14 flex-col items-center justify-center rounded-full border border-white/10 bg-black/45 shadow-lg backdrop-blur-md">
-              <span className="mb-0.5 text-[7px] font-extrabold uppercase leading-none tracking-[0.22em] text-white/50">
-                omni
-              </span>
-              <span className="text-xs font-bold leading-none tracking-tight text-white/90">
-                live
-              </span>
-            </div>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">Preparing Omni request</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Building the cinematic scene package…
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="relative flex h-dvh overflow-hidden bg-background">
@@ -228,10 +248,12 @@ export default function Home() {
 
       <SideRail
         steps={STEPS}
-        currentStep={generationState === 'done' ? 7 : currentStep}
+        currentStep={requestData ? 7 : currentStep}
         testMode={testMode}
         setTestMode={setTestMode}
         onBrandClick={handleReset}
+        maxNavigableStep={maxNavigableStep}
+        onStepSelect={setCurrentStep}
       />
 
       <main className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
@@ -278,84 +300,85 @@ export default function Home() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-5 lg:px-10 lg:py-6 xl:px-12">
           {/* Keyed wrapper replays the entrance animation on each step/result transition */}
           <div
-            key={generationState === 'done' ? 'result' : currentStep}
+            key={requestData ? `result-${runKey}` : currentStep}
             className="animate-step-in flex h-full min-h-0 w-full items-center"
           >
-            <Suspense fallback={<StepFallback />}>
-              {generationState === 'done' && requestData ? (
-                <ResultPanel
-                  requestData={requestData}
-                  selectedTemplate={selectedTemplate}
-                  dialogueText={dialogueText}
-                  selectedLanguage={selectedLanguage}
-                  onReset={handleReset}
-                />
-              ) : (
-                <>
-                  {currentStep === 1 && (
-                    <NameStep
-                      userName={userName}
-                      setUserName={setUserName}
-                      onNext={() => setCurrentStep(2)}
-                    />
-                  )}
-                  {currentStep === 2 && (
-                    <ProductSelector
-                      selectedProduct={selectedProduct}
-                      setSelectedProduct={setSelectedProduct}
-                    />
-                  )}
-                  {currentStep === 3 && (
-                    <DialogueSelector
-                      userName={userName}
-                      selectedProduct={selectedProduct}
-                      selectedLanguage={selectedLanguage}
-                      setSelectedLanguage={setSelectedLanguage}
-                      dialogueText={dialogueText}
-                      setDialogueText={setDialogueText}
-                    />
-                  )}
-                  {currentStep === 4 && (
-                    <CharacterSelector
-                      selectedCharacter={selectedCharacter}
-                      setSelectedCharacter={setSelectedCharacter}
-                      characterImageFile={characterImageFile}
-                      setCharacterImageFile={setCharacterImageFile}
-                    />
-                  )}
-                  {currentStep === 5 && (
-                    <PromptSelector
-                      userName={userName}
-                      selectedProduct={selectedProduct}
-                      selectedTemplate={selectedTemplate}
-                      setSelectedTemplate={setSelectedTemplate}
-                      videoPrompt={videoPrompt}
-                      setVideoPrompt={setVideoPrompt}
-                      dialogueText={dialogueText}
-                    />
-                  )}
-                  {currentStep === 6 && (
-                    <ReviewGenerate
-                      testMode={testMode}
-                      userName={userName}
-                      selectedProduct={selectedProduct}
-                      selectedTemplate={selectedTemplate}
-                      videoPrompt={videoPrompt}
-                      dialogueText={dialogueText}
-                      selectedLanguage={selectedLanguage}
-                      selectedCharacter={selectedCharacter}
-                      characterImageFile={characterImageFile}
-                      onGenerate={handleGenerate}
-                    />
-                  )}
-                </>
-              )}
-            </Suspense>
+            {requestData ? (
+              <ResultPanel
+                requestData={requestData}
+                selectedTemplate={selectedTemplate}
+                dialogueText={dialogueText}
+                selectedLanguage={selectedLanguage}
+                onReset={handleReset}
+                onRetry={handleGenerate}
+              />
+            ) : (
+              <>
+                {currentStep === 1 && (
+                  <NameStep
+                    userName={userName}
+                    setUserName={setUserName}
+                    onNext={() => setCurrentStep(2)}
+                  />
+                )}
+                {currentStep === 2 && (
+                  <ProductSelector
+                    selectedProduct={selectedProduct}
+                    setSelectedProduct={setSelectedProduct}
+                  />
+                )}
+                {currentStep === 3 && (
+                  <DialogueSelector
+                    userName={userName}
+                    selectedProduct={selectedProduct}
+                    selectedLanguage={selectedLanguage}
+                    setSelectedLanguage={setSelectedLanguage}
+                    dialogueText={dialogueText}
+                    setDialogueText={setDialogueText}
+                    dialogueTouched={dialogueTouched}
+                    setDialogueTouched={setDialogueTouched}
+                  />
+                )}
+                {currentStep === 4 && (
+                  <CharacterSelector
+                    selectedCharacter={selectedCharacter}
+                    setSelectedCharacter={setSelectedCharacter}
+                    characterImageFile={characterImageFile}
+                    setCharacterImageFile={setCharacterImageFile}
+                  />
+                )}
+                {currentStep === 5 && (
+                  <PromptSelector
+                    userName={userName}
+                    selectedProduct={selectedProduct}
+                    selectedTemplate={selectedTemplate}
+                    setSelectedTemplate={setSelectedTemplate}
+                    videoPrompt={videoPrompt}
+                    setVideoPrompt={setVideoPrompt}
+                    dialogueText={dialogueText}
+                  />
+                )}
+                {currentStep === 6 && (
+                  <ReviewGenerate
+                    testMode={testMode}
+                    userName={userName}
+                    selectedProduct={selectedProduct}
+                    selectedTemplate={selectedTemplate}
+                    videoPrompt={videoPrompt}
+                    dialogueText={dialogueText}
+                    selectedLanguage={selectedLanguage}
+                    selectedCharacter={selectedCharacter}
+                    characterImageFile={characterImageFile}
+                    onGenerate={handleGenerate}
+                  />
+                )}
+              </>
+            )}
           </div>
         </div>
 
         {/* Pinned action bar */}
-        {currentStep < 6 && (
+        {!requestData && (
           <div className="flex shrink-0 items-center justify-between gap-4 border-t border-border/60 bg-background/88 px-6 py-3.5 backdrop-blur-md lg:px-10">
             <Button
               variant="outline"
@@ -376,13 +399,15 @@ export default function Home() {
                   Skip
                 </Button>
               )}
-              <Button
-                onClick={() => setCurrentStep((s) => Math.min(6, s + 1))}
-                disabled={!canGoNext()}
-                className="px-8"
-              >
-                Continue
-              </Button>
+              {currentStep < 6 && (
+                <Button
+                  onClick={() => setCurrentStep((s) => Math.min(6, s + 1))}
+                  disabled={!canGoNext}
+                  className="px-8"
+                >
+                  Continue
+                </Button>
+              )}
             </div>
           </div>
         )}

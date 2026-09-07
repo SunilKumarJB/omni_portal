@@ -36,6 +36,16 @@ export interface CharacterPreset {
 
 export type GenerationStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
+/** Fine-grained pipeline stage reported by the backend. Optional: older backends omit it. */
+export type GenerationStage =
+  | 'queued'
+  | 'uploading'
+  | 'submitting'
+  | 'generating'
+  | 'finalizing'
+  | 'completed'
+  | 'failed';
+
 export interface GenerateVideoInput {
   prompt: string;
   styleId?: string;
@@ -48,6 +58,12 @@ export interface GenerateVideoInput {
 export interface VideoRequestData {
   request_id: string;
   status: GenerationStatus;
+  stage?: GenerationStage;
+  /** Per-stage durations in seconds, keyed by stage name. */
+  timings?: Record<string, number>;
+  generation_seconds?: number;
+  /** The fully expanded prompt the backend sent to the model. */
+  final_prompt?: string;
   progress?: number;
   prompt?: string;
   dialogue?: string;

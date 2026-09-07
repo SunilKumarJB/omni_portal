@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import Home from './pages/Home';
@@ -19,12 +20,14 @@ export default function App() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="min-h-screen bg-background text-foreground">
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/video/:requestId" element={<VideoView />} />
-          </Routes>
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/video/:requestId" element={<VideoView />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </div>
       <Toaster />
     </TooltipProvider>

@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Check,
   Copy,
   Download,
@@ -6,10 +7,13 @@ import {
   Loader2,
   MapPin,
   Quote,
+  RefreshCw,
   RotateCcw,
   Share2,
+  Volume2,
+  XCircle,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -18,7 +22,13 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { formatPromptForDisplay } from '@/lib/prompt';
-import type { GenerationStatus, LanguageCode, VideoRequestData, VideoTemplate } from '@/lib/types';
+import type {
+  GenerationStage,
+  GenerationStatus,
+  LanguageCode,
+  VideoRequestData,
+  VideoTemplate,
+} from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { subscribeToStatus } from '../lib/api';
 import { FieldLabel } from './StepHeading';
@@ -36,12 +46,125 @@ const LANG_NAMES: Record<LanguageCode, string> = {
   pa: 'Punjabi',
 };
 
+const STAGE_LABELS: Record<GenerationStage, string> = {
+  queued: 'Queued',
+  uploading: 'Uploading your presenter',
+  submitting: 'Sending to Gemini Omni',
+  generating: 'Gemini Omni is rendering your scene',
+  finalizing: 'Finalizing your video',
+  completed: 'Done',
+  failed: 'Failed',
+};
+
+/** Named stage when the backend reports one, percentage otherwise (older backends). */
+function progressLabel(data: VideoRequestData) {
+  if (data.stage) return STAGE_LABELS[data.stage];
+  return `${data.progress ?? 0}% complete`;
+}
+
+function formatElapsed(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
+}
+
+function isLocalHost(hostname: string) {
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+}
+
+/**
+ * The backend builds video_page_url from FRONTEND_URL, which is localhost until it is
+ * configured. A QR or link pointing at localhost is dead on a phone, so prefer the
+ * origin this page is actually served from.
+ */
+function resolveVideoPageUrl(backendUrl: string | null | undefined, requestId: string) {
+  const local = requestId ? `${window.location.origin}/video/${requestId}` : window.location.origin;
+  if (!backendUrl) return { url: local, backendIsLocalhost: false };
+  try {
+    const parsed = new URL(backendUrl);
+    if (isLocalHost(parsed.hostname) && !isLocalHost(window.location.hostname)) {
+      return { url: local, backendIsLocalhost: true };
+    }
+    return { url: backendUrl, backendIsLocalhost: false };
+  } catch {
+    return { url: local, backendIsLocalhost: false };
+  }
+}
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Blocked or unavailable (insecure origin, permission) — fall through.
+  }
+  try {
+    const input = document.createElement('input');
+    input.value = text;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.top = '0';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(input);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Phones refuse unmuted autoplay and iOS goes fullscreen without playsInline, so the
+ * video starts muted and inline with an explicit gesture to bring the sound in.
+ */
+function VideoPlayer({ src, className }: { src: string; className?: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
+
+  function enableSound() {
+    const el = videoRef.current;
+    setMuted(false);
+    if (!el) return;
+    el.muted = false;
+    void el.play().catch(() => undefined);
+  }
+
+  return (
+    <div className={cn('relative h-full w-full', className)}>
+      <video
+        ref={videoRef}
+        src={src}
+        autoPlay
+        muted={muted}
+        playsInline
+        loop
+        controls
+        className="h-full w-full object-contain"
+      />
+      {muted && (
+        <button
+          type="button"
+          onClick={enableSound}
+          className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2.5 rounded-full border border-white/20 bg-black/70 px-6 py-3.5 text-base font-semibold text-white shadow-xl backdrop-blur-md transition-transform hover:scale-[1.03]"
+        >
+          <Volume2 className="h-5 w-5" /> Tap for sound
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface ResultPanelProps {
   requestData: VideoRequestData;
   selectedTemplate: VideoTemplate | null;
   dialogueText: string;
   selectedLanguage: LanguageCode;
   onReset: () => void;
+  onRetry: () => void | Promise<void>;
 }
 
 export default function ResultPanel({
@@ -50,25 +173,48 @@ export default function ResultPanel({
   dialogueText,
   selectedLanguage,
   onReset,
+  onRetry,
 }: ResultPanelProps) {
-  const [data, setData] = useState<VideoRequestData>(initial);
+  // Live updates only apply to the record they belong to: the parent patches `initial`
+  // from the optimistic placeholder to the real response once the POST resolves.
+  const [live, setLive] = useState<VideoRequestData | null>(null);
+  const data = live && live.request_id === initial.request_id ? live : initial;
+
   const [copied, setCopied] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const startedAtRef = useRef(Date.now());
 
   const isDone = data.status === 'completed' || data.status === 'failed';
   const videoUrl = data.video_url;
   const qrUrl = data.qr_code_url;
-  const videoPageUrl = data.video_page_url || `${window.location.origin}/video/${data.request_id}`;
+  const { url: videoPageUrl, backendIsLocalhost } = resolveVideoPageUrl(
+    data.video_page_url,
+    data.request_id,
+  );
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   useEffect(() => {
     if (isDone || !data.request_id) return;
     const unsubscribe = subscribeToStatus(data.request_id, (updated) => {
-      setData(updated);
+      setLive(updated);
     });
     return () => unsubscribe();
   }, [data.request_id, isDone]);
 
-  function copyLink() {
-    navigator.clipboard.writeText(videoPageUrl);
+  useEffect(() => {
+    if (isDone) return;
+    const id = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isDone]);
+
+  async function copyLink() {
+    const ok = await copyToClipboard(videoPageUrl);
+    if (!ok) {
+      toast.error('Could not copy the link — select it and copy manually.');
+      return;
+    }
     setCopied(true);
     toast.success('Link copied to clipboard');
     setTimeout(() => setCopied(false), 2500);
@@ -76,30 +222,24 @@ export default function ResultPanel({
 
   return (
     <div className="mx-auto flex h-full w-full max-w-[1360px] flex-col gap-3">
-      <StatusBanner status={data.status} progress={data.progress} requestId={data.request_id} />
+      <StatusBanner data={data} elapsed={elapsed} requestId={data.request_id} />
 
       <div className="grid min-h-0 flex-1 items-stretch gap-4 lg:grid-cols-12">
         <div className="flex min-h-0 flex-col gap-3 lg:col-span-7">
           <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-black">
             {videoUrl ? (
               <>
-                <video
-                  src={videoUrl}
-                  controls
-                  autoPlay
-                  loop
-                  className="h-full w-full object-contain"
-                />
+                <VideoPlayer src={videoUrl} />
                 {!isDone && (
                   <div className="absolute inset-x-3 bottom-3">
                     <div className="rounded-md border border-border bg-background/90 px-3 py-2.5 backdrop-blur-sm">
                       <div className="mb-1.5 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
                           <Loader2 className="inline h-3 w-3 animate-spin" />
-                          Generating your video with Omni…
+                          {progressLabel(data)}
                         </span>
                         <span className="tabular-nums text-xs text-muted-foreground">
-                          {data.progress ?? 0}%
+                          {formatElapsed(elapsed)}
                         </span>
                       </div>
                       <Progress value={data.progress ?? 5} />
@@ -107,6 +247,14 @@ export default function ResultPanel({
                   </div>
                 )}
               </>
+            ) : data.status === 'failed' ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+                <XCircle className="h-12 w-12 text-destructive" strokeWidth={1.5} />
+                <p className="text-sm font-semibold text-white">Generation failed</p>
+                <p className="max-w-md text-xs leading-relaxed text-white/70">
+                  {data.error || 'The backend did not return a reason.'}
+                </p>
+              </div>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
                 <div className="orb-container scale-75">
@@ -125,11 +273,9 @@ export default function ResultPanel({
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-foreground">
-                    Omni is generating your video
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {data.progress ?? 0}% · Takes 3–8 minutes
+                  <p className="text-sm font-semibold text-white">{progressLabel(data)}</p>
+                  <p className="mt-1 text-xs text-white/60 tabular-nums">
+                    {formatElapsed(elapsed)} elapsed · Takes 3–8 minutes
                   </p>
                 </div>
                 {(data.progress ?? 0) > 0 && (
@@ -144,22 +290,35 @@ export default function ResultPanel({
           <div className="flex shrink-0 flex-wrap gap-3">
             {videoUrl && isDone && (
               <Button asChild>
-                <a href={videoUrl} download>
+                <a href={videoUrl} download target="_blank" rel="noopener">
                   <Download className="h-4 w-4" /> Download video
                 </a>
               </Button>
             )}
-            <Button
-              variant="outline"
-              onClick={() => navigator.share?.({ url: videoPageUrl, title: 'My Omni Video' })}
-            >
-              <Share2 className="h-4 w-4" /> Share
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to={`/video/${data.request_id}`}>
-                <ExternalLink className="h-4 w-4" /> Full page
-              </Link>
-            </Button>
+            {data.status === 'failed' && (
+              <Button onClick={() => void onRetry()}>
+                <RefreshCw className="h-4 w-4 mr-1.5" /> Retry
+              </Button>
+            )}
+            {canShare && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void navigator
+                    .share?.({ url: videoPageUrl, title: 'My Omni Video' })
+                    .catch(() => undefined);
+                }}
+              >
+                <Share2 className="h-4 w-4" /> Share
+              </Button>
+            )}
+            {data.request_id && (
+              <Button variant="outline" asChild>
+                <Link to={`/video/${data.request_id}`}>
+                  <ExternalLink className="h-4 w-4" /> Full page
+                </Link>
+              </Button>
+            )}
             <Button variant="secondary" onClick={onReset}>
               <RotateCcw className="h-4 w-4 mr-1.5" /> Start over
             </Button>
@@ -177,6 +336,7 @@ export default function ResultPanel({
           isDone={isDone}
           qrUrl={qrUrl}
           videoPageUrl={videoPageUrl}
+          backendIsLocalhost={backendIsLocalhost}
           copied={copied}
           onCopy={copyLink}
         />
@@ -251,11 +411,20 @@ interface DeliveryPanelProps {
   isDone: boolean;
   qrUrl?: string | null;
   videoPageUrl: string;
+  backendIsLocalhost: boolean;
   copied: boolean;
   onCopy: () => void;
 }
 
-function DeliveryPanel({ data, isDone, qrUrl, videoPageUrl, copied, onCopy }: DeliveryPanelProps) {
+function DeliveryPanel({
+  data,
+  isDone,
+  qrUrl,
+  videoPageUrl,
+  backendIsLocalhost,
+  copied,
+  onCopy,
+}: DeliveryPanelProps) {
   return (
     <Card className="grid min-h-0 grid-rows-[auto_auto_auto_minmax(0,1fr)] gap-4 p-5 lg:col-span-5">
       <div className="flex items-start justify-between gap-4">
@@ -315,6 +484,12 @@ function DeliveryPanel({ data, isDone, qrUrl, videoPageUrl, copied, onCopy }: De
                 ? 'The QR code points to the full-screen video page.'
                 : 'Generation progress updates automatically.'}
             </p>
+            {backendIsLocalhost && (
+              <p className="mt-1.5 flex items-start gap-1.5 text-[11px] font-medium leading-snug text-warning">
+                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                QR points to localhost; set FRONTEND_URL on the backend.
+              </p>
+            )}
           </div>
 
           {data.status === 'completed' && (
@@ -345,17 +520,34 @@ function DeliveryPanel({ data, isDone, qrUrl, videoPageUrl, copied, onCopy }: De
         <div className="col-span-2">
           <FieldLabel>Render details</FieldLabel>
         </div>
-        <Row label="Request" value={data.request_id?.slice(0, 12) + '…'} mono />
+        <Row
+          label="Request"
+          value={data.request_id ? `${data.request_id.slice(0, 12)}…` : '—'}
+          mono
+        />
         <Row label="Status" value={data.status} status={data.status} />
-        <Row label="Progress" value={`${data.progress ?? 0}%`} />
+        <Row
+          label="Stage"
+          value={data.stage ? STAGE_LABELS[data.stage] : `${data.progress ?? 0}%`}
+        />
         <Row label="Created" value={formatDate(data.created_at)} />
       </div>
 
-      <div className="flex min-h-0 flex-col rounded-xl border border-border/70 bg-muted/10 p-4">
-        <FieldLabel>Prompt summary</FieldLabel>
+      <div className="flex min-h-0 flex-col gap-2 rounded-xl border border-border/70 bg-muted/10 p-4">
+        <FieldLabel className="mb-0">Prompt summary</FieldLabel>
         <p className="min-h-0 flex-1 overflow-hidden text-sm leading-relaxed text-muted-foreground">
           {formatPromptForDisplay(data.prompt) || 'Prompt unavailable for this render.'}
         </p>
+        {data.final_prompt && (
+          <details className="shrink-0 rounded-lg border border-border/70 bg-background/40">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-foreground/80">
+              Prompt sent to the model
+            </summary>
+            <p className="max-h-40 overflow-y-auto whitespace-pre-wrap px-3 pb-3 text-xs leading-relaxed text-muted-foreground">
+              {formatPromptForDisplay(data.final_prompt)}
+            </p>
+          </details>
+        )}
       </div>
     </Card>
   );
@@ -370,20 +562,26 @@ const STATUS_TONES: Record<GenerationStatus, 'warning' | 'foreground' | 'success
   };
 
 interface StatusBannerProps {
-  status: GenerationStatus;
-  progress?: number;
+  data: VideoRequestData;
+  elapsed: number;
   requestId: string;
 }
 
-function StatusBanner({ status, progress, requestId }: StatusBannerProps) {
+function StatusBanner({ data, elapsed, requestId }: StatusBannerProps) {
+  const { status } = data;
   const tone = STATUS_TONES[status] ?? 'foreground';
-  const msg =
-    {
-      pending: 'Request queued',
-      processing: 'Generating video with Omni…',
-      completed: 'Your video is ready',
-      failed: 'Generation failed',
-    }[status] ?? status;
+
+  const headline =
+    status === 'completed'
+      ? 'Your video is ready'
+      : status === 'failed'
+        ? data.error || 'Generation failed'
+        : progressLabel(data);
+
+  const subline =
+    status === 'completed' && data.generation_seconds
+      ? `Generated in ${Math.round(data.generation_seconds)} s by Gemini Omni`
+      : requestId || 'Submitting your request…';
 
   const toneClasses = {
     warning: 'border-warning/20 bg-warning/[0.06] text-warning',
@@ -397,14 +595,19 @@ function StatusBanner({ status, progress, requestId }: StatusBannerProps) {
       aria-live="polite"
       className={cn('flex items-center gap-3 rounded-lg border px-5 py-3.5', toneClasses)}
     >
-      {status === 'processing' && <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" />}
+      {(status === 'processing' || status === 'pending') && (
+        <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" />
+      )}
       {status === 'completed' && <Check className="h-4 w-4 flex-shrink-0" />}
-      <div className="flex-1">
-        <p className="text-sm font-semibold">{msg}</p>
-        <p className="mt-0.5 font-mono text-xs text-muted-foreground">{requestId}</p>
+      {status === 'failed' && <XCircle className="h-4 w-4 flex-shrink-0" />}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">{headline}</p>
+        <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">{subline}</p>
       </div>
-      {status === 'processing' && (
-        <span className="text-sm font-semibold tabular-nums">{progress ?? 0}%</span>
+      {status !== 'completed' && status !== 'failed' && (
+        <span className="shrink-0 text-sm font-semibold tabular-nums">
+          {formatElapsed(elapsed)}
+        </span>
       )}
     </div>
   );
@@ -428,10 +631,11 @@ function Row({ label, value, mono = false, status }: RowProps) {
     : undefined;
 
   return (
-    <div className="flex items-center justify-between text-sm">
+    <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-muted-foreground">{label}</span>
       <span
         className={cn(
+          'truncate',
           mono ? 'font-mono text-xs text-foreground/80' : 'text-foreground/90',
           statusTone,
         )}

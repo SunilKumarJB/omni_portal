@@ -40,6 +40,9 @@ interface SideRailProps {
   testMode: boolean;
   setTestMode: React.Dispatch<React.SetStateAction<boolean>>;
   onBrandClick: () => void;
+  /** Highest step the rail may jump to. Steps beyond it stay inert. */
+  maxNavigableStep?: number;
+  onStepSelect?: (step: StepItem['id']) => void;
 }
 
 export default function SideRail({
@@ -48,6 +51,8 @@ export default function SideRail({
   testMode,
   setTestMode,
   onBrandClick,
+  maxNavigableStep = 0,
+  onStepSelect,
 }: SideRailProps) {
   return (
     <aside className="relative z-10 hidden w-72 shrink-0 flex-col border-r border-border/60 px-7 py-5 lg:flex xl:w-80">
@@ -83,6 +88,27 @@ export default function SideRail({
               const accent = STEP_ACCENTS[step.id];
               const filled = active || done;
               const segmented = step.id === 6;
+              const navigable = !!onStepSelect && !active && step.id <= maxNavigableStep;
+
+              const label = (
+                <>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/60">
+                    Step {step.id}
+                  </div>
+                  <div
+                    className={cn(
+                      'mt-0.5 text-sm font-bold tracking-tight transition-colors duration-200 xl:text-base',
+                      active
+                        ? 'text-foreground'
+                        : done
+                          ? 'text-foreground/70'
+                          : 'text-muted-foreground',
+                    )}
+                  >
+                    {step.label}
+                  </div>
+                </>
+              );
 
               return (
                 <li key={step.id} className="flex gap-4">
@@ -129,23 +155,20 @@ export default function SideRail({
                       />
                     )}
                   </div>
-                  <div className={cn('pt-0', last ? 'pb-0' : 'pb-4')}>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/60">
-                      Step {step.id}
-                    </div>
-                    <div
+                  {navigable ? (
+                    <button
+                      type="button"
+                      onClick={() => onStepSelect?.(step.id)}
                       className={cn(
-                        'mt-0.5 text-sm font-bold tracking-tight transition-colors duration-200 xl:text-base',
-                        active
-                          ? 'text-foreground'
-                          : done
-                            ? 'text-foreground/70'
-                            : 'text-muted-foreground',
+                        'rounded-md pt-0 text-left transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                        last ? 'pb-0' : 'pb-4',
                       )}
                     >
-                      {step.label}
-                    </div>
-                  </div>
+                      {label}
+                    </button>
+                  ) : (
+                    <div className={cn('pt-0', last ? 'pb-0' : 'pb-4')}>{label}</div>
+                  )}
                 </li>
               );
             })}

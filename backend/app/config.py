@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     GCP_PROJECT_ID: str = ""
     GCP_LOCATION: str = "us-central1"
     GCS_BUCKET_NAME: str = "your-gcs-bucket-name"
+    # Service account used to sign v4 URLs through the IAM API when the running
+    # credentials have no email of their own (local user ADC). The caller needs
+    # roles/iam.serviceAccountTokenCreator on it; the account needs objectViewer.
+    GCS_SIGNING_SERVICE_ACCOUNT: str = ""
     FIRESTORE_DATABASE_ID: str = ""
 
     # Omni / Gemini (Gemini Enterprise Agent Platform / Interactions API) settings

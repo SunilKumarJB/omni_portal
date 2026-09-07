@@ -113,7 +113,9 @@ def _signed_url(blob) -> str:
     try:
         try:
             creds = _get_credentials()
-            sa_email = getattr(creds, "service_account_email", None)
+            sa_email = settings.GCS_SIGNING_SERVICE_ACCOUNT or getattr(
+                creds, "service_account_email", None
+            )
             if sa_email and sa_email != "default":
                 return blob.generate_signed_url(
                     version="v4",

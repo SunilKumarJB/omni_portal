@@ -323,3 +323,30 @@ def test_copy_gcs_to_local(tmp_path: Path):
         )
         assert local_url == "/storage/out.mp4"
         assert (tmp_path / "out.mp4").read_bytes() == b"downloaded bytes"
+
+
+def test_signed_url_uses_configured_signing_account_for_user_credentials():
+    """User ADC has no service_account_email; a configured account signs via IAM."""
+    mock_creds = MagicMock(spec=["valid", "token", "refresh"])
+    mock_creds.valid = True
+    mock_creds.token = "user-access-token"
+
+    mock_blob = MagicMock()
+    mock_blob.generate_signed_url.return_value = "https://storage.googleapis.com/b/1?sig=iam"
+
+    storage_service._creds = None
+    try:
+        with (
+            patch("google.auth.default", return_value=(mock_creds, "test-project")),
+            patch.object(
+                settings, "GCS_SIGNING_SERVICE_ACCOUNT", "signer@test.iam.gserviceaccount.com"
+            ),
+        ):
+            url = storage_service._signed_url(mock_blob)
+    finally:
+        storage_service._creds = None
+
+    assert url == "https://storage.googleapis.com/b/1?sig=iam"
+    kwargs = mock_blob.generate_signed_url.call_args.kwargs
+    assert kwargs["service_account_email"] == "signer@test.iam.gserviceaccount.com"
+    assert kwargs["access_token"] == "user-access-token"

@@ -1,0 +1,70 @@
+# Rendered via the official nginx image's envsubst templating
+# (/etc/nginx/templates/*.template -> /etc/nginx/conf.d/*.conf at container start).
+#
+# Required variables (see Dockerfile ENV defaults for local/compose values):
+#   PORT          - port nginx listens on. Cloud Run injects this (8080); default 80 for compose.
+#   BACKEND_URL   - full origin of the backend, e.g. http://backend:8000 (compose) or the
+#                   backend Cloud Run service's https URL.
+#   BACKEND_HOST  - host (no scheme/port) of BACKEND_URL. Cloud Run routes by the Host header,
+#                   so proxying with $host (nginx's own Host) would send the frontend's own
+#                   host and get rejected; BACKEND_HOST must be set explicitly to match the
+#                   backend service. Compose default: "backend".
+server {
+    listen ${PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    client_max_body_size 25m;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+
+    # Un-hashed preset media under public/assets: cache for a day, not forever,
+    # so a re-encoded preview or presenter image shows up after a normal reload.
+    location ~ ^/assets/(videos|characters)/ {
+        add_header Cache-Control "public, max-age=86400";
+        try_files $uri =404;
+    }
+
+    # Vite-hashed filenames: safe to cache forever.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+        try_files $uri =404;
+    }
+
+    location /api/ {
+        proxy_pass ${BACKEND_URL}/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host ${BACKEND_HOST};
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_ssl_server_name on;
+        # SSE (generation progress) must not be buffered by nginx.
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+    }
+
+    # Local storage mode only (STORAGE_BACKEND=local); unused when serving from GCS.
+    location /storage/ {
+        proxy_pass ${BACKEND_URL}/storage/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host ${BACKEND_HOST};
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_ssl_server_name on;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

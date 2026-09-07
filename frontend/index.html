@@ -1,12 +1,18 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#0A0A0A" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
     <title>The Omni Portal · Step Inside Your Imagination</title>
     <meta name="description" content="Type a prompt. Transport yourself anywhere. Powered by Google Cloud Gemini Enterprise Agent Platform." />
+    <style>
+      /* Paint the dark surface immediately so first paint doesn't flash white
+         before React/next-themes mounts and the .dark tokens from index.css apply. */
+      html, body { background-color: #0A0A0A; }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,6 +22,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

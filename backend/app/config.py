@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""  # Optional API key override (if not using ADC)
     OMNI_ENDPOINT_URL: str = ""  # Optional custom endpoint URL template
     OMNI_MAX_WAIT_SECONDS: int = 600
+    OMNI_POLL_INTERVAL_SECONDS: float = 3.0
+    # A pending/processing record whose updated_at is older than this is considered
+    # stalled: progress ticks refresh updated_at on every poll.
+    OMNI_STALE_SECONDS: int = 90
     OMNI_DEFAULT_DURATION: int = 10
     OMNI_DEFAULT_ASPECT_RATIO: str = "16:9"
 
@@ -45,6 +49,10 @@ class Settings(BaseSettings):
     LOCAL_STORAGE_PATH: str = str(Path(__file__).resolve().parent.parent / "storage")
 
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+
+    LOG_LEVEL: str = "INFO"
+    # When set, gates POST /api/generate* behind header X-Demo-Key. Empty disables gating.
+    DEMO_API_KEY: str = ""
 
     @property
     def cors_origins(self) -> List[str]:

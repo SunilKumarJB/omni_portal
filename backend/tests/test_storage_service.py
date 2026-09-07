@@ -171,6 +171,49 @@ def test_signed_url_fallback_to_public_url():
     assert url == "https://storage.googleapis.com/test-bucket/test.mp4"
 
 
+def test_signed_url_caches_credentials_across_calls():
+    """Verify _signed_url calls google.auth.default() once for two consecutive calls."""
+    mock_creds = MagicMock()
+    mock_creds.valid = True
+    mock_creds.token = "cached-access-token"
+    mock_creds.service_account_email = "sa@test-project.iam.gserviceaccount.com"
+
+    mock_blob1 = MagicMock()
+    mock_blob1.generate_signed_url.return_value = "https://storage.googleapis.com/b/1?sig=1"
+    mock_blob2 = MagicMock()
+    mock_blob2.generate_signed_url.return_value = "https://storage.googleapis.com/b/2?sig=2"
+
+    storage_service._creds = None
+    try:
+        with patch(
+            "google.auth.default", return_value=(mock_creds, "test-project")
+        ) as mock_default:
+            url1 = storage_service._signed_url(mock_blob1)
+            url2 = storage_service._signed_url(mock_blob2)
+
+        mock_default.assert_called_once()
+        assert url1 == "https://storage.googleapis.com/b/1?sig=1"
+        assert url2 == "https://storage.googleapis.com/b/2?sig=2"
+        mock_creds.refresh.assert_not_called()
+    finally:
+        storage_service._creds = None
+
+
+def test_generate_qr_bytes_memoized_per_url():
+    """Verify generate_qr_bytes caches results per URL and skips re-rendering."""
+    from app.services import qr_service
+    import qrcode
+
+    qr_service.generate_qr_bytes.cache_clear()
+    with patch.object(qrcode, "QRCode", wraps=qrcode.QRCode) as mock_qrcode_cls:
+        first = qr_service.generate_qr_bytes("https://example.com/video/req-cache-test")
+        second = qr_service.generate_qr_bytes("https://example.com/video/req-cache-test")
+
+        assert second is first
+        assert mock_qrcode_cls.call_count == 1
+    qr_service.generate_qr_bytes.cache_clear()
+
+
 def test_get_public_url_for_gs_paths():
     """Verify get_public_url generates signed URL for gs:// paths."""
     mock_blob = MagicMock()

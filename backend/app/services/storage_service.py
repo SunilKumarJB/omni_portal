@@ -5,6 +5,7 @@ Unified storage service: GCS or local filesystem.
 import asyncio
 from datetime import timedelta
 import logging
+import threading
 from pathlib import Path
 from typing import Tuple
 
@@ -18,6 +19,26 @@ _bucket = None
 
 # How long generated-video / asset links stay valid. Event-scale TTL; v4 caps at 7 days.
 _SIGNED_URL_TTL = timedelta(days=7)
+
+# Cached ADC credentials for signing, shared across all _signed_url calls. _signed_url
+# runs in a worker thread via asyncio.to_thread, so guard the cache with a lock.
+_creds = None
+_creds_lock = threading.Lock()
+
+
+def _get_credentials():
+    """Return cached ADC credentials, calling google.auth.default() only once
+    and refreshing only when the cached credentials are no longer valid."""
+    global _creds
+    import google.auth
+    import google.auth.transport.requests
+
+    with _creds_lock:
+        if _creds is None:
+            _creds, _ = google.auth.default()
+        if not _creds.valid:
+            _creds.refresh(google.auth.transport.requests.Request())
+        return _creds
 
 
 def _get_client():
@@ -89,13 +110,9 @@ def _signed_url(blob) -> str:
     back to the public URL if signing isn't possible, so generation never hard-fails
     on the link step.
     """
-    import google.auth
-    import google.auth.transport.requests
-
     try:
         try:
-            creds, _ = google.auth.default()
-            creds.refresh(google.auth.transport.requests.Request())
+            creds = _get_credentials()
             sa_email = getattr(creds, "service_account_email", None)
             if sa_email and sa_email != "default":
                 return blob.generate_signed_url(

@@ -1,5 +1,5 @@
 """
-Omni video generation via Gemini Enterprise Interactions API (gemini-omni-flash-preview).
+Omni video generation via Gemini Enterprise Interactions API (gemini-omni-1.1-flash-preview).
 Supports T2V with reference images, audio-driven generation, and V2V editing.
 """
 
@@ -38,8 +38,7 @@ _LANGUAGE_NAMES = {
 
 def _api_endpoint() -> str:
     # Endpoint per the Gemini Enterprise Agent Platform docs for
-    # gemini-omni-flash-preview (Preview, released 2026-06-30):
-    # https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/omni-flash-preview
+    # gemini-omni-1.1-flash:
     # The model is global-only. Override via OMNI_ENDPOINT_URL when the API surface changes.
     project = settings.OMNI_PROJECT_ID or settings.GCP_PROJECT_ID
     if settings.OMNI_ENDPOINT_URL:
@@ -87,7 +86,7 @@ async def _get_cached_token() -> str:
 
 
 async def _auth_headers() -> dict:
-    if settings.GEMINI_API_KEY:
+    if settings.GEMINI_API_KEY and not settings.GEMINI_API_KEY.startswith("local-proxy"):
         return {"X-Goog-Api-Key": settings.GEMINI_API_KEY, "Content-Type": "application/json"}
     token = await _get_cached_token()
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}

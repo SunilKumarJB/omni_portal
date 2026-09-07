@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     FIRESTORE_DATABASE_ID: str = ""
 
     # Omni / Gemini (Gemini Enterprise Agent Platform / Interactions API) settings
-    GEMINI_MODEL: str = "gemini-omni-flash-preview"
+    GEMINI_MODEL: str = "gemini-omni-1.1-flash-preview"
     REGION: str = "global"  # global (default)
     OMNI_PROJECT_ID: str = ""  # defaults to GCP_PROJECT_ID when empty
     GEMINI_API_KEY: str = ""  # Optional API key override (if not using ADC)

@@ -1,6 +1,6 @@
 """
 Core generation endpoints: prompt suggestion and video generation.
-Video generation uses the Omni Interactions API (gemini-omni-flash-preview).
+Video generation uses the Omni Interactions API (gemini-omni-1.1-flash-preview).
 """
 
 import uuid

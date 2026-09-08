@@ -1,4 +1,7 @@
+import { lazy, Suspense } from 'react';
 import type { GenerationStage } from '@/lib/types';
+
+const LiquidOrb = lazy(() => import('./orb/LiquidOrb'));
 
 export const STAGE_LABELS: Record<GenerationStage, string> = {
   queued: 'Your video is in the queue',
@@ -29,13 +32,14 @@ export default function GenerationOrb({
   return (
     <div className={`generation-wait ${compact ? 'generation-wait-compact' : ''}`}>
       <div className="generation-orb" aria-hidden="true">
-        <div className="generation-orb-aura" />
-        <div className="generation-orb-halo" />
-        <div className="generation-orb-sphere">
-          <div className="generation-orb-light" />
-          <span className="generation-orb-mark">omni</span>
+        <div className="liquid-orb-fallback" />
+        <Suspense fallback={null}>
+          <LiquidOrb />
+        </Suspense>
+        <div className="liquid-orb-wordmark">
+          <span>omni</span>
+          <span>CREATING</span>
         </div>
-        <div className="generation-orb-satellite" />
       </div>
       <div className="relative space-y-2 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-white/50">

@@ -319,9 +319,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 30px;
+  gap: 8px;
   overflow: hidden;
-  padding: 36px 20px;
+  padding: 14px 20px 32px;
   background: radial-gradient(ellipse at 50% 42%, #121a2a 0%, #07090f 52%, #030407 100%);
 }
 
@@ -332,124 +332,28 @@
 
 .generation-orb {
   position: relative;
-  width: 220px;
-  height: 220px;
+  width: min(340px, 100%);
+  aspect-ratio: 1;
   flex: none;
   isolation: isolate;
 }
-
-.generation-wait-compact .generation-orb {
-  width: 150px;
-  height: 150px;
+.generation-wait-compact .generation-orb { width: min(270px, 100%); }
+.liquid-orb-canvas { position: absolute; inset: 0; opacity: 0; transition: opacity 600ms ease; }
+.liquid-orb-canvas.is-ready { opacity: 1; }
+.liquid-orb-canvas canvas { display: block; width: 100%; height: 100%; }
+.liquid-orb-fallback {
+  position: absolute; inset: 15%; border-radius: 50%;
+  background: radial-gradient(ellipse at 40% 35%, #376d8233, #10172a 55%, #776af6 74%, #88eced 77%, transparent 81%);
+  box-shadow: 0 0 48px #6569d520, inset 0 0 42px #9a64e72b;
 }
-
-.generation-orb-aura {
-  position: absolute;
-  inset: -12%;
-  border-radius: 50%;
-  background: conic-gradient(from 45deg, #4285f430, #ab47bc24, #ea433518, #34a85320, #4285f430);
-  filter: blur(24px);
-  animation: orb-breathe 7s ease-in-out infinite;
-}
-
-.generation-orb-halo {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1px solid #b6caff25;
-  box-shadow: 0 0 25px #4285f410, inset 0 0 18px #4285f410;
-}
-
-.generation-orb-halo::after {
-  content: '';
-  position: absolute;
-  inset: 8%;
-  border-radius: 50%;
-  border: 1px solid #ffffff0a;
-}
-
-.generation-orb-sphere {
-  position: absolute;
-  inset: 16%;
-  overflow: hidden;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 24%, #d6f5ff 0%, #8ab4f8 11%, #527db9 25%, #494985 43%, #1b283e 66%, #070c17 88%);
-  box-shadow: inset -10px -14px 24px #000b, inset 2px 2px 6px #d9f2ff90, 0 0 35px #4285f425, 0 18px 35px #0008;
-  animation: orb-float 7s ease-in-out infinite;
-}
-
-.generation-orb-light {
-  position: absolute;
-  inset: -35%;
-  border-radius: 45%;
-  background: conic-gradient(from 0deg, transparent, #86e7cc60, transparent, #e993ac60, transparent, #8cbaff60, transparent);
-  mix-blend-mode: screen;
-  filter: blur(13px);
-  animation: orb-turn 18s linear infinite;
-}
-
-.generation-orb-mark {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: #fff9;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: .22em;
-  text-indent: .22em;
-}
-
-.generation-orb-satellite {
-  position: absolute;
-  inset: 0;
-  animation: orb-turn 12s linear infinite;
-}
-
-.generation-orb-satellite::after {
-  content: '';
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  top: -2px;
-  left: calc(50% - 3px);
-  border-radius: 50%;
-  background: #c4deff;
-  box-shadow: 0 0 12px 3px #4285f490;
-}
-
-@keyframes orb-turn {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes orb-float {
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes orb-breathe {
-  50% {
-    opacity: .55;
-    transform: scale(.93);
-  }
-}
-
+.generation-orb:has(.is-ready) .liquid-orb-fallback { opacity: 0; }
+.liquid-orb-wordmark { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; pointer-events: none; }
+.liquid-orb-wordmark span:first-child { font-size: 27px; font-weight: 500; letter-spacing: -.06em; color: #fff; text-shadow: 0 0 24px #a4c7ff55; }
+.liquid-orb-wordmark span:last-child { font-size: 8px; letter-spacing: .32em; color: #d2dafa80; margin-left: .32em; }
 @media (max-width: 640px) {
-  .generation-wait {
-    min-height: 360px;
-    gap: 20px;
-  }
-  .generation-orb {
-    width: 180px;
-    height: 180px;
-  }
+  .generation-orb { width: min(280px, 100%); }
+  .generation-wait { min-height: 360px; }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .generation-orb *, .generation-orb *::after {
-    animation: none !important;
-  }
+  .liquid-orb-canvas { transition: none; }
 }

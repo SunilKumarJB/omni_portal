@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PRESET_CHARS } from '@/data/characters';
 import type { CharacterPreset } from '@/lib/types';
+import { useImagePreview } from '@/lib/useImagePreview';
 import { cn } from '@/lib/utils';
 import StepHeading from './StepHeading';
 
@@ -141,9 +142,9 @@ function PresenterPreview({
       </div>
 
       <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-3">
-        <div className="relative min-h-0 overflow-hidden rounded-xl border border-border bg-background/55">
+        <div className="relative min-h-[320px] overflow-hidden rounded-xl border border-border bg-background/55">
           {hasSelection ? (
-            <img src={image} alt={title} className="h-full w-full object-cover" />
+            <img src={image} alt={title} className="h-full max-h-[420px] w-full object-contain" />
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-6 text-center">
               <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-border bg-muted/60">
@@ -167,7 +168,7 @@ function PresenterPreview({
         <div className="rounded-xl border border-border bg-background/40 p-3">
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-foreground">
             <Sparkles className="h-3.5 w-3.5 text-[#8ab4f8]" />
-            Readiness check
+            Photo tips
           </div>
           <div className="grid grid-cols-3 gap-2">
             {READY_POINTS.map((point) => (
@@ -175,12 +176,7 @@ function PresenterPreview({
                 key={point}
                 className="flex min-h-[42px] items-center gap-2 rounded-lg border border-border/70 bg-card/60 px-2.5 py-2 text-xs text-muted-foreground"
               >
-                <Check
-                  className={cn(
-                    'h-3.5 w-3.5 shrink-0',
-                    hasSelection ? 'text-success' : 'text-muted-foreground',
-                  )}
-                />
+                <ImagePlus className={cn('h-3.5 w-3.5 shrink-0', 'text-muted-foreground')} />
                 <span className="leading-snug">{point}</span>
               </div>
             ))}
@@ -212,10 +208,11 @@ export default function CharacterSelector({
 }: CharacterSelectorProps) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const webcamRef = useRef<WebcamClass | null>(null);
-  const [tab, setTab] = useState('preset');
+  const [tab, setTab] = useState(characterImageFile ? 'upload' : 'preset');
   const [cameraActive, setCameraActive] = useState(false);
   const [captured, setCaptured] = useState<string | null>(null);
-  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const uploadPreview = useImagePreview(characterImageFile);
+  const [processingImage, setProcessingImage] = useState(false);
 
   const capture = useCallback(() => {
     const src = webcamRef.current?.getScreenshot();
@@ -240,9 +237,11 @@ export default function CharacterSelector({
 
   async function handleUpload(file: File | undefined) {
     if (!file?.type.startsWith('image/')) return;
+    setProcessingImage(true);
     const optimized = await optimizeImageFile(file);
+    setProcessingImage(false);
     if (!optimized) return;
-    setUploadPreview(URL.createObjectURL(optimized));
+
     setCharacterImageFile(optimized);
     setSelectedCharacter(null);
     setCaptured(null);
@@ -250,7 +249,7 @@ export default function CharacterSelector({
 
   function resetCustom() {
     setCaptured(null);
-    setUploadPreview(null);
+
     setCharacterImageFile(null);
     setCameraActive(false);
   }
@@ -262,8 +261,7 @@ export default function CharacterSelector({
 
   function switchTab(id: string) {
     setTab(id);
-    resetCustom();
-    setSelectedCharacter(null);
+    setCameraActive(false);
   }
 
   return (
@@ -285,18 +283,19 @@ export default function CharacterSelector({
             </TabsList>
 
             <TabsContent value="preset" className="mt-0 min-h-0 flex-1 focus-visible:outline-none">
-              <div className="grid h-full min-h-0 grid-cols-3 grid-rows-2 gap-3">
+              <div className="grid min-h-0 grid-cols-2 sm:grid-cols-3 gap-3">
                 {PRESET_CHARS.map((c) => {
                   const selected = selectedCharacter?.id === c.id;
                   return (
                     <button
                       key={c.id}
+                      aria-pressed={selected}
                       onClick={() => {
                         setSelectedCharacter(c);
                         resetCustom();
                       }}
                       className={cn(
-                        'group grid min-h-0 grid-rows-[minmax(78px,1fr)_auto] overflow-hidden rounded-xl border bg-card/75 text-left transition-all duration-200',
+                        'group grid min-h-[230px] grid-rows-[160px_auto] overflow-hidden rounded-xl border bg-card/75 text-left transition-all duration-200',
                         selected
                           ? 'border-foreground ring-1 ring-foreground'
                           : 'border-border hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-accent/40 hover:shadow-lg hover:shadow-black/10',
@@ -394,7 +393,7 @@ export default function CharacterSelector({
                           ref={webcamRef}
                           screenshotFormat="image/jpeg"
                           screenshotQuality={0.92}
-                          className="h-full w-full object-cover"
+                          className="h-full max-h-[420px] w-full object-contain"
                           mirrored
                           videoConstraints={{
                             facingMode: 'user',
@@ -417,9 +416,13 @@ export default function CharacterSelector({
                 )}
 
                 {captured && (
-                  <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_220px] gap-4">
+                  <div className="grid min-h-0 flex-1 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_180px] gap-4">
                     <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background/60">
-                      <img src={captured} alt="Captured" className="h-full w-full object-cover" />
+                      <img
+                        src={captured}
+                        alt="Captured"
+                        className="h-full max-h-[420px] w-full object-contain"
+                      />
                     </div>
                     <div className="flex flex-col justify-center rounded-xl border border-border bg-background/40 p-4">
                       <div className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-success">
@@ -447,11 +450,19 @@ export default function CharacterSelector({
             </TabsContent>
 
             <TabsContent value="upload" className="mt-0 min-h-0 flex-1 focus-visible:outline-none">
-              <button
-                type="button"
-                className="flex h-full min-h-0 w-full cursor-pointer flex-col rounded-xl border border-dashed border-border bg-card/70 p-4 text-left transition-all duration-200 hover:border-foreground/30 hover:bg-accent/30"
-                onClick={() => fileRef.current?.click()}
-              >
+              <section className="flex min-h-[420px] w-full flex-col rounded-xl border border-dashed border-border bg-card/70 p-4">
+                <Button
+                  variant="outline"
+                  className="mb-4 self-start"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={processingImage}
+                >
+                  {processingImage
+                    ? 'Preparing image…'
+                    : characterImageFile
+                      ? 'Replace image'
+                      : 'Choose image'}
+                </Button>
                 {!uploadPreview ? (
                   <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-xl bg-background/35 px-8 text-center">
                     <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-border bg-muted/50">
@@ -464,16 +475,16 @@ export default function CharacterSelector({
                     </p>
                     <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-2 text-xs font-semibold text-foreground">
                       <Upload className="h-3.5 w-3.5" />
-                      Choose image
+                      JPEG, PNG, or WebP
                     </span>
                   </div>
                 ) : (
-                  <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_220px] gap-4">
+                  <div className="grid min-h-0 flex-1 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_180px] gap-4">
                     <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background/60">
                       <img
                         src={uploadPreview}
                         alt="Character"
-                        className="h-full w-full object-cover"
+                        className="h-full max-h-[420px] w-full object-contain"
                       />
                     </div>
                     <div className="flex flex-col justify-center rounded-xl border border-border bg-background/40 p-4">
@@ -492,7 +503,7 @@ export default function CharacterSelector({
                           resetCustom();
                         }}
                       >
-                        Change image
+                        Remove image
                       </Button>
                     </div>
                   </div>
@@ -500,11 +511,14 @@ export default function CharacterSelector({
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   className="hidden"
-                  onChange={(e) => handleUpload(e.target.files?.[0])}
+                  onChange={(e) => {
+                    void handleUpload(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
                 />
-              </button>
+              </section>
             </TabsContent>
           </Tabs>
         </div>

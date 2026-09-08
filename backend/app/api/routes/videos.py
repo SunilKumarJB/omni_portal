@@ -45,6 +45,7 @@ async def list_videos(
 
         items.append(
             VideoListItem(
+                is_sample=bool(record.get("is_sample", False)),
                 request_id=record.get("request_id", ""),
                 status=status,
                 hidden=bool(record.get("hidden", False)),

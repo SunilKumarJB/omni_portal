@@ -17,11 +17,11 @@ export default function ProductSelector({
 }: ProductSelectorProps) {
   return (
     <div className="mx-auto flex h-full w-full max-w-[1360px] flex-col gap-4">
-      <StepHeading eyebrow="Step 2 of 6" title="Select your hero product" className="mb-0">
-        Choose a premium, futuristic product to anchor your campaign.
+      <StepHeading eyebrow="Step 2 of 6" title="Choose your product" className="mb-0">
+        Choose the product your presenter will feature.
       </StepHeading>
 
-      <div className="grid min-h-0 flex-1 grid-cols-3 gap-3 items-stretch max-h-[480px] overflow-y-auto pt-2 pb-2 px-1 pr-2">
+      <div className="grid min-h-0 flex-1 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch  pt-2 pb-2 px-1 pr-2">
         {products.map((prod) => {
           const selected = selectedProduct?.id === prod.id;
           return (
@@ -48,7 +48,7 @@ export default function ProductSelector({
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="text-2xl">{prod.emoji}</span>
                   <div className="min-w-0">
-                    <h3 className="text-sm font-bold tracking-tight text-foreground truncate">
+                    <h3 className="text-sm font-bold tracking-tight text-foreground">
                       {prod.name}
                     </h3>
                     <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider truncate">

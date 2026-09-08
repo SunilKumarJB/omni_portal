@@ -25,9 +25,13 @@ export async function generateVideo({
   characterPresetId,
   characterImage,
   productId,
+  durationSeconds,
+  aspectRatio,
 }: GenerateVideoInput): Promise<VideoRequestData> {
   const form = new FormData();
   form.append('prompt', prompt);
+  if (durationSeconds) form.append('duration_seconds', String(durationSeconds));
+  if (aspectRatio) form.append('aspect_ratio', aspectRatio);
   if (styleId) form.append('style_id', styleId);
   if (dialogue) form.append('dialogue', dialogue);
   if (language) form.append('language', language);

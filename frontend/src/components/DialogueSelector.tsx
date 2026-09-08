@@ -1,6 +1,6 @@
 import { Pencil, Quote, RotateCcw, Volume2 } from 'lucide-react';
 import type React from 'react';
-import { useEffect } from 'react';
+
 import { Textarea } from '@/components/ui/textarea';
 import { LANGUAGES } from '@/data/languages';
 import type { LanguageCode, ProductPreset } from '@/lib/types';
@@ -13,7 +13,7 @@ interface Props {
   selectedLanguage: LanguageCode;
   setSelectedLanguage: React.Dispatch<React.SetStateAction<LanguageCode>>;
   dialogueText: string;
-  setDialogueText: React.Dispatch<React.SetStateAction<string>>;
+  setDialogueText: (value: string) => void;
   /** Set once the director has typed here; lives in the parent so it survives unmount. */
   dialogueTouched: boolean;
   setDialogueTouched: React.Dispatch<React.SetStateAction<boolean>>;
@@ -55,13 +55,6 @@ export default function DialogueSelector({
 
   const currentLang = LANGUAGES.find((l) => l.code === selectedLanguage)!;
 
-  // The dialogue lives in the parent, so entering the step seeds it with the default
-  // translation for the current product/name. Once the director has typed here —
-  // including clearing the line on purpose — their text is never overwritten again.
-  useEffect(() => {
-    if (!dialogueTouched) setDialogueText(translated);
-  }, []);
-
   function handleLanguageSelect(code: LanguageCode) {
     setSelectedLanguage(code);
     if (dialogueTouched) return; // keep the director's own line
@@ -95,6 +88,7 @@ export default function DialogueSelector({
                 <button
                   key={lang.code}
                   onClick={() => handleLanguageSelect(lang.code)}
+                  aria-pressed={active}
                   className={cn(
                     'flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-lg border px-3 py-2 text-center transition-all duration-200',
                     'hover:scale-[1.02] active:scale-98',
@@ -123,7 +117,7 @@ export default function DialogueSelector({
         <div className="flex min-h-0 flex-col gap-3 lg:col-span-7">
           <div className="w-full min-w-0 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
             <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
-              Spoken Preview
+              Dialogue text
             </div>
 
             <div className="flex w-full min-w-0 items-center gap-4 pt-2">
@@ -144,7 +138,7 @@ export default function DialogueSelector({
 
                 <p
                   className={cn(
-                    'line-clamp-2 w-full text-base leading-relaxed transition-all duration-200',
+                    'w-full text-base leading-relaxed transition-all duration-200',
                     dialogueText.trim()
                       ? 'text-foreground font-medium italic font-display'
                       : 'text-muted-foreground/60 italic text-xs xl:text-sm',
@@ -179,6 +173,7 @@ export default function DialogueSelector({
             </div>
 
             <Textarea
+              aria-label={`Spoken dialogue in ${currentLang.name}`}
               value={dialogueText}
               onChange={(e) => {
                 setDialogueText(e.target.value);
@@ -192,7 +187,7 @@ export default function DialogueSelector({
               rows={3}
               maxLength={500}
               lang={selectedLanguage}
-              className="resize-none overflow-hidden bg-background text-sm leading-relaxed"
+              className="resize-y overflow-y-auto bg-background text-sm leading-relaxed"
             />
 
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -207,6 +202,12 @@ export default function DialogueSelector({
             </div>
           </div>
 
+          {dialogueTouched && dialogueText.trim() && (
+            <p className="text-sm text-muted-foreground">
+              Your custom words are kept when you change language. They are not translated
+              automatically. Write them in {currentLang.name}, or use Reset for the suggested line.
+            </p>
+          )}
           {selectedProduct && selectedProduct.id !== 'custom' && (
             <div className="overflow-hidden rounded-xl border border-border bg-card/70 shadow-sm">
               <div className="h-0.5 bg-border" />
@@ -217,7 +218,7 @@ export default function DialogueSelector({
                     Original Product Script Reference · English
                   </FieldLabel>
                   <p className="line-clamp-2 text-sm italic leading-relaxed text-foreground/75">
-                    "{original}"
+                    "{original.replace(/\[Character_Name\]/g, cName)}"
                   </p>
                 </div>
               </div>
@@ -229,7 +230,7 @@ export default function DialogueSelector({
               <div className="mb-2 flex items-center gap-2">
                 <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
                 <FieldLabel className="mb-0 block text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
-                  Official translation reference · {currentLang.name}
+                  Suggested translation · {currentLang.name}
                 </FieldLabel>
               </div>
               <p

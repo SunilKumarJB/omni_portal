@@ -3,6 +3,7 @@ from typing import Dict, Optional, Literal
 
 
 class VideoRequestStatus(BaseModel):
+    is_sample: bool = False
     request_id: str
     status: Literal["pending", "processing", "completed", "failed"]
     progress: int = 0
@@ -27,6 +28,7 @@ class VideoRequestStatus(BaseModel):
 
 
 class VideoListItem(BaseModel):
+    is_sample: bool = False
     request_id: str
     status: Literal["pending", "processing", "completed", "failed"]
     hidden: bool = False

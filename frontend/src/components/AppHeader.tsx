@@ -48,15 +48,19 @@ interface AppHeaderProps {
 export default function AppHeader({ actions = null, showGcpBadge = true }: AppHeaderProps) {
   return (
     <header className="relative z-10 shrink-0">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-6 lg:px-10">
-        <Link to="/" className="flex items-center gap-3 rounded-full focus-visible:outline-none">
+      <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 lg:px-10">
+        <Link
+          to="/"
+          aria-label="The Omni Portal"
+          className="flex shrink-0 items-center gap-3 rounded-full focus-visible:outline-none"
+        >
           <PortalMark />
-          <span className="text-[15px] font-semibold tracking-tight text-foreground">
+          <span className="hidden sm:inline text-[15px] font-semibold tracking-tight text-foreground">
             The Omni Portal
           </span>
         </Link>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {actions}
           {showGcpBadge && <GcpBadge />}
           <ThemeToggle />

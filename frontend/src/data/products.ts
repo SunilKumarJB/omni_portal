@@ -153,7 +153,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'A magnetic-levitation hammock with no ropes or stands that floats you gently at any height and rocks in sync with your breathing.',
     visualDescription:
-      'floating weightlessly in the Zero-G Hammock, a sleek levitating white hammock hovering a metre above a sunlit balcony with a soft blue anti-gravity glow beneath it',
+      'floating weightlessly in the Zero-G Hammock, a sleek levitating white hammock hovering a metre above the ground with a soft blue anti-gravity glow beneath it',
     emoji: '🪐',
     category: 'home',
     posture: 'relaxed',
@@ -177,7 +177,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'Smart curtains that paint a slow, personalised sunrise across your bedroom wall so you wake gently at exactly the right moment.',
     visualDescription:
-      'stretching contentedly in bed as the Sunrise Curtains, floor-length smart fabric panels, glow with a slow amber-to-gold dawn gradient across a calm bedroom',
+      'watching as the Sunrise Curtains, floor-length smart fabric panels, glow with a slow amber-to-gold dawn gradient across their fabric',
     emoji: '🌅',
     category: 'home',
     posture: 'relaxed',
@@ -201,7 +201,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'A compact reclining pod that dims the world, plays a personal soundscape and wakes you feeling like you slept all night.',
     visualDescription:
-      'reclining serenely inside the Power Nap Pod, a sleek egg-shaped white pod with a soft teal interior glow and its translucent lid half closed in a quiet office corner',
+      'reclining serenely inside the Power Nap Pod, a sleek egg-shaped white pod with a soft teal interior glow and its translucent lid half closed',
     emoji: '🛌',
     category: 'home',
     posture: 'relaxed',
@@ -251,7 +251,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       "Elegant earrings with a built-in neural translator that whisper any language into your ear in real time, in the speaker's own voice.",
     visualDescription:
-      'leaning in to listen at a bustling market while wearing the Babel Earrings, elegant teardrop earrings glowing with a faint cyan pulse as they translate the conversation in real time',
+      'leaning in to listen while wearing the Babel Earrings, elegant teardrop earrings glowing with a faint cyan pulse as they translate the conversation in real time',
     emoji: '💎',
     category: 'wearables',
     posture: 'active',
@@ -275,7 +275,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'A lightweight jacket with a personal micro-climate that keeps you at a perfect 22 degrees, whether it is a Delhi summer or a Shimla winter.',
     visualDescription:
-      'striding confidently through a heatwave in the Climate Jacket, a sleek matte-graphite jacket with thin glowing cooling channels along the seams and a faint shimmer of cool air around the collar',
+      'striding confidently in the Climate Jacket, a sleek matte-graphite jacket with thin glowing cooling channels along the seams and a faint shimmer of cool air around the collar',
     emoji: '🧥',
     category: 'wearables',
     posture: 'active',
@@ -299,7 +299,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'Stylish smart glasses that quietly remember everything you see and whisper names, places and where you left your keys the moment you need them.',
     visualDescription:
-      'greeting a crowd at a rooftop party wearing the Recall Glasses, slim titanium smart glasses with a faint golden holographic name tag floating beside each face they look at',
+      'greeting a crowd wearing the Recall Glasses, slim titanium smart glasses with a faint golden holographic name tag floating beside each face they look at',
     emoji: '👓',
     category: 'wearables',
     posture: 'active',
@@ -325,7 +325,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'An electric family SUV with retractable wings and clean-fusion jet engines, designed for high-altitude luxury cruising.',
     visualDescription:
-      'standing beside the AeroCruiser SUV as its sleek carbon-fiber wings slowly unfold and its blue fusion jet engines glow intensely, preparing for takeoff on an elevated sky terrace',
+      'standing beside the AeroCruiser SUV as its sleek carbon-fiber wings slowly unfold and its blue fusion jet engines glow intensely, preparing for takeoff in the selected scene',
     emoji: '🚙',
     category: 'mobility',
     posture: 'vehicle',
@@ -349,7 +349,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'The classic auto-rickshaw reborn as a three-seat electric hover taxi that lifts straight over the jam and lands at your doorstep.',
     visualDescription:
-      'stepping out of the SkyRick, a gleaming green-and-yellow hover auto-rickshaw hovering a few feet above a crowded street with soft blue thrusters humming under its chassis',
+      'stepping out of the SkyRick, a gleaming green-and-yellow hover auto-rickshaw hovering a few feet above the ground with soft blue thrusters humming under its chassis',
     emoji: '🛺',
     category: 'mobility',
     posture: 'vehicle',
@@ -373,7 +373,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'A full-size electric bicycle made of shape-memory alloy that folds into a slim briefcase in three seconds and unfolds with a tap.',
     visualDescription:
-      'standing beside the PocketCycle as it unfolds itself from a slim silver briefcase into a full-size electric bicycle with glowing white spokes on a busy metro platform',
+      'standing beside the PocketCycle as it unfolds itself from a slim silver briefcase into a full-size electric bicycle with glowing white spokes',
     emoji: '🚲',
     category: 'mobility',
     posture: 'vehicle',
@@ -397,7 +397,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       "A personal hover scooter that glides a hand's width above any surface, from cobbled lanes to monsoon puddles, with zero wheels and zero noise.",
     visualDescription:
-      "gliding silently down a rain-slicked lane on the GlideBoard, a sleek matte-black hover scooter floating a hand's width above the ground on a shimmering cushion of blue light",
+      "gliding silently on the GlideBoard, a sleek matte-black hover scooter floating a hand's width above the ground on a shimmering cushion of blue light",
     emoji: '🛹',
     category: 'mobility',
     posture: 'vehicle',
@@ -423,7 +423,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'A water bottle that senses your stress from your grip and hums a calming tone tuned to your heartbeat as you drink.',
     visualDescription:
-      'sitting cross-legged on a quiet terrace at dawn holding the Zen Bottle, a frosted-glass smart bottle glowing with a slow, calming lavender pulse in time with their breathing',
+      'sitting cross-legged holding the Zen Bottle, a frosted-glass smart bottle glowing with a slow, calming lavender pulse in time with their breathing',
     emoji: '🧘',
     category: 'wellness',
     posture: 'relaxed',
@@ -471,7 +471,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'A slim headband that mists a cool, mineral-rich cloud around you whenever your body needs water, so you stay hydrated without thinking.',
     visualDescription:
-      'jogging along a sunlit promenade wearing the Hydration Halo, a slim silver headband releasing a fine sparkling cloud of cool mist that shimmers around their head',
+      'jogging wearing the Hydration Halo, a slim silver headband releasing a fine sparkling cloud of cool mist that shimmers around their head',
     emoji: '💧',
     category: 'wellness',
     posture: 'active',
@@ -521,7 +521,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'A personal drone that hovers above your head with a wide invisible shield, following you through any monsoon with both hands free.',
     visualDescription:
-      'walking hands-free through a heavy monsoon downpour beneath the Umbrella Drone, a compact white quadcopter hovering overhead and projecting a shimmering transparent shield that scatters the rain',
+      'walking hands-free beneath the Umbrella Drone, a compact white quadcopter hovering overhead and projecting a shimmering transparent shield that scatters the rain',
     emoji: '☂️',
     category: 'gadgets',
     posture: 'active',
@@ -545,7 +545,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'A classic steel tiffin with a built-in micro-oven and freshness sensor that warms each layer to the perfect temperature exactly when you open it.',
     visualDescription:
-      'opening the Smart Tiffin at a sunny office desk, a gleaming stainless-steel stacked tiffin with a thin glowing orange ring on each tier as fragrant steam rises from the freshly warmed food',
+      'opening the Smart Tiffin, a gleaming stainless-steel stacked tiffin with a thin glowing orange ring on each tier as fragrant steam rises from the freshly warmed food',
     emoji: '🍱',
     category: 'gadgets',
     posture: 'active',
@@ -569,7 +569,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'A coin-sized projector that throws a crisp, wall-sized cinema screen onto any surface, with surround sound beamed straight to your ears.',
     visualDescription:
-      'lounging on a rooftop at night as the Pocket Cinema, a small glowing brass disc resting on the parapet, projects a huge, vivid cinema screen onto the wall of the building opposite',
+      'watching as the Pocket Cinema, a small glowing brass disc resting on a nearby surface, projects a huge, vivid cinema screen onto a nearby surface',
     emoji: '🎥',
     category: 'gadgets',
     posture: 'relaxed',
@@ -593,7 +593,7 @@ export const PRODUCT_CATALOG: ProductPreset[] = [
     description:
       'A palm-sized camera drone that orbits you silently all day, catching every candid moment from the perfect angle without you touching a thing.',
     visualDescription:
-      'laughing mid-stride on a colourful festival street as the Selfie Satellite, a tiny chrome sphere with a glowing lens, orbits smoothly around their head capturing the moment',
+      'laughing mid-stride as the Selfie Satellite, a tiny chrome sphere with a glowing lens, orbits smoothly around their head capturing the moment',
     emoji: '🛰️',
     category: 'gadgets',
     posture: 'active',

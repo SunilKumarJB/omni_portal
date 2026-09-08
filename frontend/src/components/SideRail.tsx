@@ -76,7 +76,7 @@ export default function SideRail({
             Step inside your imagination
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground xl:text-sm">
-            A cinematic Omni demo deck for live executive showcases.
+            Create a product video, one choice at a time.
           </p>
         </div>
 
@@ -113,7 +113,7 @@ export default function SideRail({
               );
 
               return (
-                <li key={step.id} className="flex gap-4">
+                <li aria-current={active ? 'step' : undefined} key={step.id} className="flex gap-4">
                   <div className="flex flex-col items-center">
                     <span
                       className={cn(

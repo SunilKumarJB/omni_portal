@@ -1,31 +1,14 @@
-import { CheckCircle2, FlaskConical, Quote, Sparkles } from 'lucide-react';
-import React from 'react';
+import { Pencil, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { LANGUAGES } from '@/data/languages';
 import { formatPromptForDisplay } from '@/lib/prompt';
 import type { CharacterPreset, LanguageCode, ProductPreset, VideoTemplate } from '@/lib/types';
-import StepHeading, { FieldLabel } from './StepHeading';
+import { useImagePreview } from '@/lib/useImagePreview';
+import { speechMayBeTooLong } from '@/lib/videoBrief';
+import StepHeading from './StepHeading';
 
-const LANG_NAMES: Record<LanguageCode, string> = {
-  en: 'English',
-  hi: 'Hindi',
-  ta: 'Tamil',
-  te: 'Telugu',
-  kn: 'Kannada',
-  ml: 'Malayalam',
-  bn: 'Bengali',
-  mr: 'Marathi',
-  gu: 'Gujarati',
-  pa: 'Punjabi',
-};
-
-const GCP_SERVICES = [
-  { name: 'Gemini Omni', color: '#2986FF' },
-  { name: 'Cloud Storage', color: '#EA4335' },
-  { name: 'Firestore', color: '#FFC30E' },
-];
-
-interface ReviewGenerateProps {
+interface Props {
   testMode: boolean;
   userName: string;
   selectedProduct: ProductPreset | null;
@@ -35,189 +18,184 @@ interface ReviewGenerateProps {
   selectedLanguage: LanguageCode;
   selectedCharacter: CharacterPreset | null;
   characterImageFile: File | null;
+  duration: number;
+  setDuration: (value: number) => void;
+  aspectRatio: '16:9' | '9:16';
+  setAspectRatio: (value: '16:9' | '9:16') => void;
+  onEdit: (step: number) => void;
   onGenerate: () => void | Promise<void>;
+  needsReview: boolean;
+  onAcknowledge: () => void;
+  canGenerate: boolean;
 }
 
-export default function ReviewGenerate({
-  testMode,
-  userName,
-  selectedProduct,
-  selectedTemplate,
-  videoPrompt,
-  dialogueText,
-  selectedLanguage,
-  selectedCharacter,
-  characterImageFile,
-  onGenerate,
-}: ReviewGenerateProps) {
-  const presenterLabel = selectedCharacter
-    ? `${selectedCharacter.name}${selectedCharacter.gender ? ` · ${selectedCharacter.gender === 'M' ? 'Male' : 'Female'}` : ''}`
-    : characterImageFile
-      ? 'Custom image selected'
-      : 'Missing presenter';
-
-  const checklist = [
+export default function ReviewGenerate(props: Props) {
+  const {
+    userName,
+    selectedProduct,
+    selectedCharacter,
+    characterImageFile,
+    selectedTemplate,
+    selectedLanguage,
+    dialogueText,
+    videoPrompt,
+    onEdit,
+    duration,
+    aspectRatio,
+    testMode,
+  } = props;
+  const photo = useImagePreview(characterImageFile);
+  const rows = [
+    { step: 1, label: 'Name in the video', value: userName },
+    { step: 2, label: 'Product', value: selectedProduct?.name ?? 'Choose a product' },
     {
-      label: 'Character',
-      value: userName || 'Unnamed character',
-      ready: userName.trim().length >= 2,
+      step: 3,
+      label: `Dialogue · ${LANGUAGES.find((l) => l.code === selectedLanguage)?.name}`,
+      value: dialogueText.trim() || 'No spoken dialogue',
     },
-    {
-      label: 'Product',
-      value: selectedProduct?.name ?? 'Not selected',
-      meta: selectedProduct?.tagline,
-      ready: !!selectedProduct,
-    },
-    {
-      label: 'Dialogue',
-      value: dialogueText?.trim() || 'Skipped - visual-only scene',
-      meta: LANG_NAMES[selectedLanguage] ?? selectedLanguage,
-      ready: true,
-    },
-    {
-      label: 'Presenter',
-      value: presenterLabel,
-      ready: !!selectedCharacter || !!characterImageFile,
-    },
-    {
-      label: 'Scenario',
-      value: selectedTemplate?.title ?? 'Not selected',
-      meta: selectedTemplate?.location,
-      ready: !!selectedTemplate,
-      accent: selectedTemplate?.accent,
-    },
+    { step: 5, label: 'Scene', value: selectedTemplate?.title ?? 'Choose a scene' },
   ];
-
   return (
-    <div className="mx-auto flex h-full w-full max-w-[1360px] flex-col gap-4">
-      <StepHeading eyebrow="Step 6 of 6" title="Review & launch campaign" className="mb-0">
-        Confirm your campaign details before Gemini Omni compiles and generates the advertisement.
+    <div className="mx-auto w-full max-w-[1360px] space-y-6">
+      <StepHeading eyebrow="Step 6 of 6" title="Review your video" className="mb-0">
+        Check the person, words, and scene. You can edit each choice before you create.
       </StepHeading>
-
-      <div className="grid min-h-0 flex-1 items-stretch gap-4 lg:grid-cols-12">
-        <div className="flex min-h-0 flex-col gap-2.5 lg:col-span-7">
-          {testMode && (
-            <div className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/[0.08] px-4 py-2">
-              <FlaskConical className="h-4 w-4 flex-shrink-0 text-warning" />
-              <span className="text-xs text-foreground/80 font-medium">
-                <span className="font-semibold text-warning">Test mode active</span> — uses
-                placeholder assets, bypasses GCP billing.
-              </span>
+      {testMode && (
+        <p className="rounded-xl border border-border bg-muted p-4 text-sm">
+          Test mode: shows a style sample. It does not generate or save a new video.
+        </p>
+      )}
+      <div className="grid items-start gap-5 lg:grid-cols-[1.3fr_1fr]">
+        <Card className="overflow-hidden">
+          <div className="flex items-center gap-4 border-b border-border p-5">
+            {(photo || selectedCharacter?.img) && (
+              <img
+                src={photo || selectedCharacter?.img}
+                alt="Selected presenter"
+                className="h-24 w-20 shrink-0 rounded-lg object-cover object-top"
+              />
+            )}
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">Presenter photo</p>
+              <p className="mt-1 font-semibold">
+                {characterImageFile
+                  ? 'Uploaded photo'
+                  : (selectedCharacter?.name ?? 'Choose a presenter')}
+              </p>
             </div>
-          )}
-
-          <Card className="flex min-h-0 flex-1 flex-col overflow-hidden shadow-sm">
-            <div className="ai-gradient-line h-0.5 w-full" />
-            <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] gap-2 p-3">
-              <div>
-                <FieldLabel className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Campaign Board
-                </FieldLabel>
-                <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                  Final parameters for the Gemini Omni generation flow.
+            <Button variant="ghost" size="sm" onClick={() => onEdit(4)} aria-label="Edit presenter">
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </Button>
+          </div>
+          {rows.map((row) => (
+            <div
+              key={row.step}
+              className="flex items-start gap-3 border-b border-border p-5 last:border-0"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-muted-foreground">{row.label}</p>
+                <p
+                  className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed"
+                  lang={row.step === 3 ? selectedLanguage : undefined}
+                >
+                  {row.value}
                 </p>
               </div>
-              <div className="grid min-h-0 grid-rows-5 gap-1.5">
-                {checklist.map((item) => (
-                  <div
-                    key={item.label}
-                    className="grid min-h-0 grid-cols-[auto_1fr] items-center gap-3 rounded-lg border border-border/70 bg-muted/15 px-3 py-1.5"
-                  >
-                    <CheckCircle2
-                      className={
-                        item.ready ? 'h-4 w-4 text-success' : 'h-4 w-4 text-muted-foreground'
-                      }
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                          {item.label}
-                        </span>
-                        {item.meta && (
-                          <span className="truncate text-xs font-medium text-muted-foreground">
-                            {item.meta}
-                          </span>
-                        )}
-                      </div>
-                      <p
-                        className="mt-0.5 line-clamp-1 text-[13px] font-semibold text-foreground"
-                        style={{ color: item.ready ? undefined : 'hsl(var(--muted-foreground))' }}
-                      >
-                        {item.value}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEdit(row.step)}
+                aria-label={`Edit ${row.label}`}
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </Button>
             </div>
+          ))}
+        </Card>
+        <div className="space-y-4">
+          <Card className="space-y-5 p-5">
+            <h3 className="font-semibold">Video settings</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="space-y-2 text-sm">
+                Duration
+                <select
+                  aria-label="Video duration"
+                  value={duration}
+                  onChange={(e) => props.setDuration(Number(e.target.value))}
+                  className="block h-11 w-full rounded-lg border border-input bg-background px-3"
+                >
+                  {[5, 8, 10].map((s) => (
+                    <option key={s} value={s}>
+                      {s} seconds
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-2 text-sm">
+                Shape
+                <select
+                  aria-label="Video shape"
+                  value={aspectRatio}
+                  onChange={(e) => props.setAspectRatio(e.target.value as '16:9' | '9:16')}
+                  className="block h-11 w-full rounded-lg border border-input bg-background px-3"
+                >
+                  <option value="16:9">16:9 · Wide</option>
+                  <option value="9:16">9:16 · Tall</option>
+                </select>
+              </label>
+            </div>
+            {speechMayBeTooLong(dialogueText, duration) && (
+              <p className="rounded-lg bg-muted p-3 text-sm" role="status">
+                This line may be too long for {duration} seconds. Shorten it or choose a longer
+                video. Speech speed varies by language.
+              </p>
+            )}
+            {props.needsReview && (
+              <div
+                role="alert"
+                className="space-y-3 rounded-lg border border-amber-500/50 p-4 text-sm"
+              >
+                <p>
+                  Your name or product changed. Your custom text was kept. Check the dialogue and
+                  scene instructions for old details.
+                </p>
+                <Button variant="outline" onClick={props.onAcknowledge}>
+                  I checked my custom text
+                </Button>
+              </div>
+            )}
+            <Button
+              size="lg"
+              className="generate-google-border w-full"
+              disabled={!props.canGenerate || props.needsReview}
+              onClick={props.onGenerate}
+            >
+              <Sparkles className="h-4 w-4" />
+              {testMode ? 'View sample video' : 'Create video'}
+            </Button>
+            {!props.canGenerate && (
+              <p role="alert" className="text-sm text-destructive">
+                Complete the missing choices before creating your video.
+              </p>
+            )}
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {testMode
+                ? 'The sample will not use your choices. Sharing is unavailable.'
+                : 'Generation can take several minutes. You can open a progress link and return when it is ready.'}
+            </p>
           </Card>
-
-          <Card className="flex min-h-0 flex-[1.1] flex-col p-4 shadow-sm">
-            <FieldLabel className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Synthesized Creative Brief (Prompt)
-            </FieldLabel>
-            <p className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/40 bg-muted/10 p-4 text-sm font-medium leading-relaxed text-foreground/85 xl:text-[15px]">
+          <details
+            className="rounded-xl border border-border bg-card p-5"
+            open={props.needsReview || undefined}
+          >
+            <summary className="cursor-pointer text-sm font-semibold">Scene instructions</summary>
+            <p className="my-4 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">
               {formatPromptForDisplay(videoPrompt)}
             </p>
-          </Card>
-        </div>
-
-        <div className="flex min-h-0 flex-col gap-3 lg:col-span-5">
-          <Card className="p-4 shadow-sm space-y-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-              <FieldLabel className="mb-0 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Google Cloud Platform Path
-              </FieldLabel>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {GCP_SERVICES.map(({ name, color }) => (
-                <div
-                  key={name}
-                  className="flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/20 px-2.5 py-1"
-                >
-                  <div className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-                  <span className="text-xs font-semibold text-muted-foreground">{name}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="flex flex-1 flex-col justify-between border-foreground/20 bg-foreground/[0.02] p-5 shadow-sm">
-            <div className="space-y-3">
-              <div className="rounded-xl border border-border bg-background/70 p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-foreground">
-                  <Sparkles className="h-4 w-4" />
-                  Gemini Omni Multimodal Synthesis
-                </div>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  The model will synthesize a high-fidelity video showcasing the product, matching
-                  the visual style, maintaining presenter likeness, and performing native lip-sync
-                  in the selected language.
-                </p>
-              </div>
-              {dialogueText?.trim() && (
-                <div className="flex gap-2 rounded-lg bg-muted/25 p-3">
-                  <Quote className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                  <p className="line-clamp-2 text-sm italic leading-relaxed text-foreground/85">
-                    "{dialogueText}"
-                  </p>
-                </div>
-              )}
-            </div>
-            <Button
-              onClick={onGenerate}
-              size="lg"
-              className="generate-google-border mt-4 w-full rounded-lg py-6 text-base font-bold shadow-lg transition-all duration-200"
-            >
-              {testMode ? 'Launch Campaign (Test Mode)' : 'Launch Campaign with Omni →'}
+            <Button variant="outline" size="sm" onClick={() => onEdit(5)}>
+              Edit scene instructions
             </Button>
-            <p className="mt-3 text-center text-xs leading-normal text-muted-foreground font-medium">
-              {testMode
-                ? 'Creates a mock campaign video instantaneously.'
-                : 'Renders in 3–8 minutes. A QR code will be provided so you can check back anytime.'}
-            </p>
-          </Card>
+          </details>
         </div>
       </div>
     </div>

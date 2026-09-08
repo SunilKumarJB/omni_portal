@@ -1,27 +1,18 @@
 import axios from 'axios';
-import {
-  ArrowLeft,
-  Check,
-  Download,
-  Images,
-  Loader2,
-  QrCode,
-  Share2,
-  Volume2,
-  XCircle,
-} from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, Check, Download, Images, Loader2, QrCode, Share2, XCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import QRCode from 'react-qr-code';
 import { Link, useParams } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
+import GenerationOrb from '@/components/GenerationOrb';
 import { FieldLabel } from '@/components/StepHeading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import VideoPlayer from '@/components/VideoPlayer';
 import { formatPromptForDisplay } from '@/lib/prompt';
 import { getVideo, subscribeToStatus } from '../lib/api';
-import type { GenerationStage, GenerationStatus, VideoRequestData } from '../lib/types';
+import type { GenerationStatus, VideoRequestData } from '../lib/types';
 
 const STATUS_CFG: Record<
   GenerationStatus,
@@ -33,65 +24,17 @@ const STATUS_CFG: Record<
   failed: { label: 'Failed', variant: 'destructive' },
 };
 
-const STAGE_LABELS: Record<GenerationStage, string> = {
-  queued: 'Queued',
-  uploading: 'Uploading your presenter',
-  submitting: 'Sending to Gemini Omni',
-  generating: 'Gemini Omni is rendering your scene',
-  finalizing: 'Finalizing your video',
-  completed: 'Done',
-  failed: 'Failed',
-};
-
 const LOAD_ATTEMPTS = 3;
 const LOAD_RETRY_MS = 1000;
-
-/**
- * Phones refuse unmuted autoplay and iOS goes fullscreen without playsInline, so the
- * video starts muted and inline with an explicit gesture to bring the sound in.
- */
-function VideoPlayer({ src }: { src: string }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
-
-  function enableSound() {
-    const el = videoRef.current;
-    setMuted(false);
-    if (!el) return;
-    el.muted = false;
-    void el.play().catch(() => undefined);
-  }
-
-  return (
-    <div className="relative h-full w-full">
-      <video
-        ref={videoRef}
-        src={src}
-        autoPlay
-        muted={muted}
-        playsInline
-        loop
-        controls
-        className="h-full w-full object-contain"
-      />
-      {muted && (
-        <button
-          type="button"
-          onClick={enableSound}
-          className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2.5 rounded-full border border-white/20 bg-black/70 px-6 py-3.5 text-base font-semibold text-white shadow-xl backdrop-blur-md transition-transform hover:scale-[1.03]"
-        >
-          <Volume2 className="h-5 w-5" /> Tap for sound
-        </button>
-      )}
-    </div>
-  );
-}
 
 export default function VideoView() {
   const { requestId } = useParams();
   const [video, setVideo] = useState<VideoRequestData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [disconnected, setDisconnected] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
 
   // Phones opening the QR often land on a flaky first request; retry the transport
   // failures, but surface a real 404 immediately.
@@ -132,11 +75,12 @@ export default function VideoView() {
     };
 
     setLoading(true);
+    setVideo(null);
     void load();
     return () => {
       cancelled = true;
     };
-  }, [requestId]);
+  }, [requestId, reloadKey]);
 
   const loaded = video !== null;
   const isTerminal = video?.status === 'completed' || video?.status === 'failed';
@@ -145,12 +89,26 @@ export default function VideoView() {
   // each flip once, so the stream is opened once and torn down when it finishes.
   useEffect(() => {
     if (!requestId || !loaded || isTerminal) return;
-    const unsubscribe = subscribeToStatus(requestId, (updated) => {
-      setVideo(updated);
-    });
+    const unsubscribe = subscribeToStatus(
+      requestId,
+      (updated) => {
+        setVideo(updated);
+        setDisconnected(false);
+      },
+      () => setDisconnected(true),
+    );
     return () => unsubscribe();
   }, [requestId, loaded, isTerminal]);
 
+  useEffect(() => {
+    if (!loaded || isTerminal) return;
+    const started = Date.parse(video?.created_at ?? '') || Date.now();
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - started) / 1000)));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [loaded, isTerminal, video?.created_at]);
+  const localOnly = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
   const pageUrl = window.location.href;
   const s = video ? STATUS_CFG[video.status] : STATUS_CFG.pending;
   const displayRequestId = requestId ?? video?.request_id ?? '';
@@ -179,7 +137,10 @@ export default function VideoView() {
               ? 'This link does not match any generated video.'
               : 'The backend did not respond. Check your connection and try again.'}
           </p>
-          <Button asChild>
+          <Button className="mr-2" onClick={() => setReloadKey((k) => k + 1)}>
+            Retry
+          </Button>
+          <Button variant="outline" asChild>
             <Link to="/">
               <ArrowLeft className="h-4 w-4" /> Create a new video
             </Link>
@@ -203,7 +164,7 @@ export default function VideoView() {
             </Button>
             <Button variant="outline" size="sm" asChild>
               <Link to="/">
-                <ArrowLeft className="h-3.5 w-3.5" /> Create new
+                <ArrowLeft className="h-3.5 w-3.5" /> My draft
               </Link>
             </Button>
           </>
@@ -212,7 +173,9 @@ export default function VideoView() {
 
       <div className="relative z-10 mx-auto max-w-5xl px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="font-display text-2xl font-bold text-foreground">Generated video</h1>
+          <h1 className="font-display text-2xl font-bold text-foreground">
+            {video.is_sample ? 'Sample video · Test mode' : 'Generated video'}
+          </h1>
           <Badge variant={s.variant}>
             {video.status === 'processing' && <Loader2 className="h-3 w-3 animate-spin" />}
             {video.status === 'completed' && <Check className="h-3 w-3" />}
@@ -220,26 +183,25 @@ export default function VideoView() {
           </Badge>
         </div>
 
+        {disconnected && (
+          <p role="status" className="mb-4 rounded-lg border border-border p-4 text-sm">
+            Connection interrupted. We are checking your video again.{' '}
+            <button className="underline" onClick={() => setReloadKey((k) => k + 1)}>
+              Check now
+            </button>
+          </p>
+        )}
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Video */}
           <div className="space-y-4 lg:col-span-2">
-            <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40">
+            <div className="flex min-h-[240px] items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40">
               {video.status === 'completed' && video.video_url ? (
-                <VideoPlayer src={video.video_url} />
+                <div className="aspect-video w-full">
+                  <VideoPlayer src={video.video_url} />
+                </div>
               ) : video.status === 'processing' || video.status === 'pending' ? (
-                <div className="space-y-3 px-6 text-center">
-                  <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
-                  <p className="text-sm text-muted-foreground">
-                    {video.stage ? STAGE_LABELS[video.stage] : 'Omni is generating your video…'}
-                  </p>
-                  {(video.progress ?? 0) > 0 && (
-                    <div className="mx-auto w-40">
-                      <Progress value={video.progress ?? 0} />
-                      <p className="mt-1.5 text-center text-xs text-muted-foreground tabular-nums">
-                        {video.progress ?? 0}%
-                      </p>
-                    </div>
-                  )}
+                <div className="w-full">
+                  <GenerationOrb stage={video.stage} elapsed={elapsed} compact />
                 </div>
               ) : (
                 <div className="text-center">
@@ -255,7 +217,7 @@ export default function VideoView() {
             {video.status === 'completed' && video.video_url && (
               <div className="flex gap-3">
                 <Button asChild>
-                  <a href={video.video_url} download target="_blank" rel="noopener">
+                  <a href={video.video_url} download>
                     <Download className="h-4 w-4" /> Download
                   </a>
                 </Button>
@@ -293,19 +255,29 @@ export default function VideoView() {
             <Card className="space-y-3 p-5 text-center">
               <div className="flex items-center justify-center gap-2">
                 <QrCode className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground">Share via QR</span>
+                <span className="text-sm font-medium text-foreground">
+                  {localOnly ? 'Local video page' : 'Video link'}
+                </span>
               </div>
-              <div className="inline-block rounded-lg bg-white p-3">
-                <QRCode value={pageUrl} size={148} />
-              </div>
-              <p className="text-xs text-muted-foreground">Scan to open on any device</p>
+              {!localOnly && video.status !== 'failed' && (
+                <div className="inline-block rounded-lg bg-white p-3">
+                  <QRCode value={pageUrl} size={148} />
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {localOnly
+                  ? 'This link works on this computer. Phone sharing needs a publicly reachable app address.'
+                  : video.status === 'failed'
+                    ? 'The request is saved, but no video is available.'
+                    : 'Scan to open this video or check its progress.'}
+              </p>
             </Card>
 
             <Card className="space-y-2.5 p-5">
               <FieldLabel>Details</FieldLabel>
               <Row label="Request ID" value={displayRequestId.slice(0, 8) + '…'} mono />
               <Row label="Status" value={s.label} />
-              {video.generation_seconds ? (
+              {video.generation_seconds && !video.is_sample ? (
                 <Row
                   label="Generated in"
                   value={`${Math.round(video.generation_seconds)} s by Gemini Omni`}

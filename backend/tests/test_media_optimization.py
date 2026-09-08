@@ -129,7 +129,10 @@ class TestEnrichPrompt:
 
     def test_enrich_prompt_has_no_resolution_boilerplate(self):
         prompt = omni_service._enrich_prompt(prompt="A quiet street at dawn")
-        assert prompt == "A quiet street at dawn"
+        assert prompt == (
+            "A quiet street at dawn No spoken dialogue or voice-over. "
+            "Use only ambient sound or music."
+        )
 
     def test_enrich_prompt_video_v2v_uri(self):
         prompt = omni_service._enrich_prompt(

@@ -3,7 +3,7 @@ import type * as React from 'react';
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { TAILORED_PROMPTS, VIDEO_TEMPLATES } from '@/data/scenarios';
+import { VIDEO_TEMPLATES } from '@/data/scenarios';
 import type { ProductPreset, VideoTemplate } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import StepHeading from './StepHeading';
@@ -32,7 +32,8 @@ function TemplateThumbnail({ tpl, autoPlay = false, videoRef }: TemplateThumbnai
           src={tpl.videoSrc}
           poster={tpl.poster || undefined}
           muted
-          autoPlay={autoPlay}
+          autoPlay={false}
+          controls={autoPlay}
           loop
           playsInline
           preload="metadata"
@@ -70,46 +71,27 @@ interface PromptSelectorProps {
   selectedTemplate: VideoTemplate | null;
   setSelectedTemplate: React.Dispatch<React.SetStateAction<VideoTemplate | null>>;
   videoPrompt: string;
-  setVideoPrompt: React.Dispatch<React.SetStateAction<string>>;
+  setVideoPrompt: (value: string) => void;
+  onResetPrompt: () => void;
   dialogueText: string;
 }
 
 export default function PromptSelector({
-  userName,
-  selectedProduct,
   selectedTemplate,
   setSelectedTemplate,
   videoPrompt,
   setVideoPrompt,
+  onResetPrompt,
   dialogueText,
 }: PromptSelectorProps) {
   const videoElsRef = useRef<Map<string, HTMLVideoElement>>(new Map());
 
-  function buildPromptForTemplate(tpl: VideoTemplate): string {
-    if (tpl.id === 'custom') return '';
-
-    const pName = selectedProduct?.name || 'our product';
-    const pVisual = selectedProduct?.visualDescription || 'interacting with the product';
-    const cName = userName || 'our character';
-    const posture = selectedProduct?.posture ?? 'active';
-    let basePrompt = TAILORED_PROMPTS[tpl.id]?.[posture] || tpl.prompt;
-
-    // Dynamically inject the product name into the scenario prompt for maximum customization
-    basePrompt = basePrompt
-      .replace(/the product/g, pName)
-      .replace(/the vehicle/g, pName)
-      .replace(/product's/g, `${pName}'s`)
-      .replace(/vehicle's/g, `${pName}'s`);
-
-    return `A premium high-fidelity commercial for ${pName}, starring the character ${cName} (represented by [REF_Character]). In the scene, [REF_Character] is ${pVisual}. ${basePrompt}`;
-  }
-
   function selectTemplate(tpl: VideoTemplate) {
     setSelectedTemplate(tpl);
-    setVideoPrompt(buildPromptForTemplate(tpl));
   }
 
   function playCardVideo(id: string) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const el = videoElsRef.current.get(id);
     if (!el) return;
     el.currentTime = 0;
@@ -130,17 +112,14 @@ export default function PromptSelector({
   return (
     <div className="mx-auto flex h-full w-full max-w-[1360px] flex-col gap-4">
       <StepHeading eyebrow="Step 5 of 6" title="Choose your scenario" className="mb-0">
-        Pick a cinematic world or write your own.{' '}
-        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs xl:text-sm not-italic text-foreground">
-          [REF_Character]
-        </code>{' '}
-        will be replaced by your character image.
+        Choose a style example or write your own scene. Your video will use your selected presenter
+        and product.{' '}
       </StepHeading>
 
       <div className="grid min-h-0 flex-1 items-stretch gap-4 lg:grid-cols-12">
         {/* Left Column: Dense grid of scenarios (3 columns on xl screens to fit 6 cards in 2 rows) */}
         <div className="min-h-0 lg:col-span-7">
-          <div className="grid h-full min-h-0 grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="grid h-full min-h-0 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {VIDEO_TEMPLATES.map((tpl) => {
               const selected = selectedTemplate?.id === tpl.id;
 
@@ -152,7 +131,7 @@ export default function PromptSelector({
                   onFocus={() => playCardVideo(tpl.id)}
                   onBlur={() => pauseCardVideo(tpl.id)}
                   className={cn(
-                    'group relative min-h-0 min-w-0 overflow-hidden rounded-xl border bg-card transition-all duration-200',
+                    'group relative min-h-[270px] min-w-0 overflow-hidden rounded-xl border bg-card transition-all duration-200',
                     'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background',
                     selected
                       ? 'border-foreground ring-1 ring-foreground'
@@ -221,8 +200,11 @@ export default function PromptSelector({
         {/* Right Column: Active details + Editor */}
         <div className="min-h-0 space-y-3 lg:col-span-5">
           {selectedTemplate ? (
-            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            <div className="flex h-full min-h-[580px] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               <TemplateThumbnail tpl={selectedTemplate} autoPlay />
+              <p className="px-4 pt-3 text-xs text-muted-foreground">
+                Style example — your presenter and product will differ. Press play to preview.
+              </p>
               <div className="flex min-h-0 flex-1 flex-col space-y-3 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
@@ -272,7 +254,7 @@ export default function PromptSelector({
                     </div>
                     {!isCustom && (
                       <button
-                        onClick={() => setVideoPrompt(buildPromptForTemplate(selectedTemplate))}
+                        onClick={() => onResetPrompt()}
                         className="text-xs xl:text-sm text-muted-foreground transition-colors hover:text-foreground underline underline-offset-2"
                       >
                         Reset to original
@@ -281,6 +263,7 @@ export default function PromptSelector({
                   </div>
 
                   <Textarea
+                    aria-label="Scene instructions"
                     value={videoPrompt}
                     onChange={(e) => setVideoPrompt(e.target.value)}
                     placeholder={
@@ -290,7 +273,7 @@ export default function PromptSelector({
                     }
                     rows={4}
                     maxLength={1500}
-                    className="min-h-0 flex-1 resize-none overflow-hidden bg-background text-sm leading-relaxed"
+                    className="min-h-[240px] flex-1 resize-y overflow-y-auto bg-background text-sm leading-relaxed"
                   />
 
                   <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
@@ -316,7 +299,7 @@ export default function PromptSelector({
               </div>
               <p className="font-bold text-sm xl:text-base text-foreground">No scenario selected</p>
               <p className="text-xs xl:text-sm text-muted-foreground mt-1.5 max-w-[240px] xl:max-w-[280px] leading-relaxed">
-                Choose a cinematic scenario from the left to start editing your prompt.
+                Choose a cinematic scenario above or beside this panel to start editing your prompt.
               </p>
             </div>
           )}

@@ -64,10 +64,15 @@ export default function Gallery() {
   const [reloadKey, setReloadKey] = useState(0);
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
 
+  const [refreshError, setRefreshError] = useState(false);
+  const pendingRef = useRef(pendingIds);
+  pendingRef.current = pendingIds;
   useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     setLoading(true);
-    void (async () => {
+    async function load(quiet = false) {
+      let keepChecking = quiet;
       try {
         const data = await listVideos({
           includeHidden: showHidden,
@@ -75,17 +80,27 @@ export default function Gallery() {
           limit: LIST_LIMIT,
         });
         if (cancelled) return;
-        setItems(data);
+        if (pendingRef.current.size === 0) setItems(data);
         setError(null);
+        setRefreshError(false);
+        keepChecking = data.some(
+          (item) => item.status === 'pending' || item.status === 'processing',
+        );
       } catch {
         if (cancelled) return;
-        setError('Could not load previous generations.');
+        if (quiet) setRefreshError(true);
+        else setError('Could not load previous videos.');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          if (keepChecking) timer = setTimeout(() => void load(true), 5000);
+        }
       }
-    })();
+    }
+    void load();
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [showHidden, showFailed, reloadKey]);
 
@@ -129,7 +144,7 @@ export default function Gallery() {
         actions={
           <Button variant="outline" size="sm" asChild>
             <Link to="/">
-              <ArrowLeft className="h-3.5 w-3.5" /> New video
+              <ArrowLeft className="h-3.5 w-3.5" /> My draft
             </Link>
           </Button>
         }
@@ -140,7 +155,7 @@ export default function Gallery() {
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Gallery</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Every generation from this demo, newest first.
+              Recent videos, newest first. Active videos update automatically.
             </p>
           </div>
 
@@ -172,6 +187,16 @@ export default function Gallery() {
           </div>
         </div>
 
+        {refreshError && (
+          <p role="status" className="mb-4 text-sm text-muted-foreground">
+            Updates paused by a connection problem. We are trying again.
+          </p>
+        )}
+        {items.length >= LIST_LIMIT && (
+          <p className="mb-4 text-sm text-muted-foreground">
+            Showing the latest {LIST_LIMIT} matching videos.
+          </p>
+        )}
         {loading ? (
           <div className="flex min-h-[40vh] items-center justify-center">
             <div className="space-y-3 text-center">
@@ -238,6 +263,7 @@ function GalleryCard({ item, busy, onToggleHidden }: GalleryCardProps) {
   const hasVideo = !!item.video_url && !videoFailed;
 
   function play() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const el = videoRef.current;
     if (!el) return;
     el.currentTime = 0;
@@ -296,6 +322,7 @@ function GalleryCard({ item, busy, onToggleHidden }: GalleryCardProps) {
           <Badge variant={status.variant} className="bg-background/85 backdrop-blur-sm">
             {inProgress && <Loader2 className="h-3 w-3 animate-spin" />}
             {inProgress ? 'Generating' : status.label}
+            {item.is_sample && ' · Sample'}
           </Badge>
           {item.hidden && (
             <Badge variant="outline" className="bg-background/85 backdrop-blur-sm">
@@ -334,7 +361,7 @@ function GalleryCard({ item, busy, onToggleHidden }: GalleryCardProps) {
           </p>
         )}
 
-        {item.generation_seconds ? (
+        {item.generation_seconds && !item.is_sample ? (
           <p className="text-xs tabular-nums text-muted-foreground">
             Generated in {Math.round(item.generation_seconds)} s
           </p>
@@ -346,7 +373,7 @@ function GalleryCard({ item, busy, onToggleHidden }: GalleryCardProps) {
           </Button>
           <Button variant="ghost" size="sm" onClick={onToggleHidden} disabled={busy}>
             {item.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-            {item.hidden ? 'Unhide' : 'Hide'}
+            {item.hidden ? 'Show in gallery' : 'Hide from gallery'}
           </Button>
         </div>
       </div>

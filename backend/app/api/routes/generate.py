@@ -65,6 +65,7 @@ async def generate_video(
     resolved_duration = duration_seconds or settings.OMNI_DEFAULT_DURATION
 
     record: dict = {
+        "is_sample": settings.TEST_MODE,
         "prompt": prompt,
         "style_id": style_id,
         "dialogue": dialogue,
@@ -413,6 +414,7 @@ def _ext(filename: str) -> str:
 def _to_status(record: dict) -> dict:
     return {
         "request_id": record.get("request_id", ""),
+        "is_sample": bool(record.get("is_sample", False)),
         "status": record.get("status", "pending"),
         "progress": record.get("progress", 0),
         "video_url": record.get("video_url"),

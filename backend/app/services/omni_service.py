@@ -197,6 +197,9 @@ def _enrich_prompt(
             f'with natural, accurate lip-sync: "{dialogue.strip()}"'
         )
 
+    if not dialogue or not dialogue.strip():
+        parts.append("No spoken dialogue or voice-over. Use only ambient sound or music.")
+
     if v2v_present:
         parts.append(
             "Apply the described changes to the source video while keeping the core scene intact."

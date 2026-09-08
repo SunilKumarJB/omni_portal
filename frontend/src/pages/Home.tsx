@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { FlaskConical, Images } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PortalMark } from '@/components/AppHeader';
@@ -16,7 +16,14 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { HERO_MAX_PER_CATEGORY, HERO_PRODUCT_SLOTS, PRODUCT_CATALOG } from '@/data/products';
+import { loadDraft, saveDraft, type VideoDraft } from '@/lib/draft';
 import { pickHeroProducts } from '@/lib/productPicker';
+import {
+  briefContext,
+  buildVideoPrompt,
+  defaultDialogue,
+  type PromptDraft,
+} from '@/lib/videoBrief';
 import { generateVideo } from '../lib/api';
 import type {
   CharacterPreset,
@@ -66,7 +73,7 @@ function describeGenerateError(err: unknown): string {
       ? `Generation failed (HTTP ${status}): ${detail}`
       : `Generation failed (HTTP ${status})`;
   }
-  return 'Something went wrong starting your video. Please try again.';
+  return err instanceof Error ? err.message : 'Could not start your video. Please try again.';
 }
 
 function drawHeroProducts() {
@@ -74,35 +81,147 @@ function drawHeroProducts() {
 }
 
 export default function Home() {
-  // Deliberately not persisted: every demo run starts against the real backend.
-  const [testMode, setTestMode] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [requestData, setRequestData] = useState<VideoRequestData | null>(null);
-  // Bumped per generation attempt so the result panel remounts (and its elapsed timer restarts).
-  const [runKey, setRunKey] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [draft, setDraft] = useState<VideoDraft | null>(null);
+  useEffect(() => {
+    let active = true;
+    loadDraft()
+      .then((value) => {
+        if (active) setDraft(value);
+      })
+      .catch(() =>
+        toast.error('Draft storage is unavailable. Keep this tab open to retain your work.'),
+      )
+      .finally(() => {
+        if (active) setLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  return loaded ? (
+    <VideoWizard initial={draft} />
+  ) : (
+    <div className="p-8" role="status">
+      Opening your draft…
+    </div>
+  );
+}
 
-  // Step 1: Director Name
-  const [userName, setUserName] = useState('');
-  // Step 2: Hero Product. Six are drawn from the catalog once per run, so going back to
-  // the step shows the same six; "Start over" draws a fresh set.
-  const [heroProducts, setHeroProducts] = useState(drawHeroProducts);
-  const [selectedProduct, setSelectedProduct] = useState<ProductPreset | null>(null);
-  // Step 3: Dialogue & Language
-  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>('en');
-  const [dialogueText, setDialogueText] = useState('');
-  // True once the director has typed in the dialogue box; keeps their text (or a
-  // deliberately blank line) from being overwritten when they revisit step 3.
-  const [dialogueTouched, setDialogueTouched] = useState(false);
-  // Step 4: Character/Presenter
-  const [selectedCharacter, setSelectedCharacter] = useState<CharacterPreset | null>(null);
-  const [characterImageFile, setCharacterImageFile] = useState<File | null>(null);
-  // Step 5: Scenario & Dynamic Prompt
-  const [selectedTemplate, setSelectedTemplate] = useState<VideoTemplate | null>(null);
-  const [videoPrompt, setVideoPrompt] = useState('');
+function VideoWizard({ initial }: { initial: VideoDraft | null }) {
+  const [testMode, setTestMode] = useState(false);
+  const [currentStep, setCurrentStep] = useState(initial?.currentStep ?? 1);
+  const [requestData, setRequestData] = useState<VideoRequestData | null>(
+    initial?.requestData ?? null,
+  );
+  const [runKey, setRunKey] = useState(0);
+  const [userName, setUserName] = useState(initial?.userName ?? '');
+  const [heroProducts, setHeroProducts] = useState(initial?.heroProducts ?? drawHeroProducts);
+  const [selectedProduct, setSelectedProduct] = useState<ProductPreset | null>(
+    initial?.selectedProduct ?? null,
+  );
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(
+    initial?.selectedLanguage ?? 'en',
+  );
+  const [dialogueText, setDialogueText] = useState(initial?.dialogueText ?? '');
+  const [dialogueTouched, setDialogueTouched] = useState(initial?.dialogueTouched ?? false);
+  const [dialogueContext, setDialogueContext] = useState(initial?.dialogueContext ?? '');
+  const [selectedCharacter, setSelectedCharacter] = useState<CharacterPreset | null>(
+    initial?.selectedCharacter ?? null,
+  );
+  const [characterImageFile, setCharacterImageFile] = useState<File | null>(
+    initial?.characterImageFile ?? null,
+  );
+  const [selectedTemplate, setSelectedTemplate] = useState<VideoTemplate | null>(
+    initial?.selectedTemplate ?? null,
+  );
+  const [promptDrafts, setPromptDrafts] = useState<Record<string, PromptDraft>>(
+    initial?.promptDrafts ?? {},
+  );
+  const [duration, setDuration] = useState(initial?.duration ?? 10);
+  const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16'>(initial?.aspectRatio ?? '16:9');
+  const [saveError, setSaveError] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const context = briefContext(selectedProduct, userName);
+  const customPrompt = selectedTemplate ? promptDrafts[selectedTemplate.id] : undefined;
+  const videoPrompt = selectedTemplate
+    ? (customPrompt?.text ?? buildVideoPrompt(selectedTemplate, selectedProduct, userName))
+    : '';
+  const spokenLine = dialogueTouched
+    ? dialogueText
+    : defaultDialogue(selectedProduct, userName, selectedLanguage);
+  const needsReview =
+    (!!customPrompt && customPrompt.context !== context) ||
+    (dialogueTouched && !!dialogueText.trim() && dialogueContext !== context);
+  const setVideoPrompt = (text: string) => {
+    if (selectedTemplate)
+      setPromptDrafts((prev) => ({ ...prev, [selectedTemplate.id]: { text, context } }));
+  };
+  const resetPrompt = () => {
+    if (selectedTemplate)
+      setPromptDrafts((prev) => {
+        const next = { ...prev };
+        delete next[selectedTemplate.id];
+        return next;
+      });
+  };
+  const editDialogue = (text: string) => {
+    setDialogueText(text);
+    setDialogueContext(context);
+  };
+  const acknowledgeChanges = () => {
+    setDialogueContext(context);
+    if (selectedTemplate && customPrompt) setVideoPrompt(customPrompt.text);
+  };
+
+  useEffect(() => {
+    void saveDraft({
+      version: 1,
+      currentStep,
+      userName,
+      heroProducts,
+      selectedProduct,
+      selectedLanguage,
+      dialogueText,
+      dialogueTouched,
+      dialogueContext,
+      selectedCharacter,
+      characterImageFile,
+      selectedTemplate,
+      promptDrafts,
+      duration,
+      aspectRatio,
+      requestData: requestData?.request_id ? requestData : null,
+    })
+      .then(() => setSaveError(false))
+      .catch(() => setSaveError(true));
+  }, [
+    currentStep,
+    userName,
+    heroProducts,
+    selectedProduct,
+    selectedLanguage,
+    dialogueText,
+    dialogueTouched,
+    dialogueContext,
+    selectedCharacter,
+    characterImageFile,
+    selectedTemplate,
+    promptDrafts,
+    duration,
+    aspectRatio,
+    requestData,
+  ]);
+
+  useEffect(() => {
+    const region = contentRef.current;
+    region?.scrollTo({ top: 0 });
+    region?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+  }, [currentStep, !!requestData]);
 
   const isStepComplete = useCallback(
     (step: number) => {
-      if (step === 1) return userName.trim().length >= 2;
+      if (step === 1) return userName.trim().length >= 1;
       if (step === 2) return !!selectedProduct;
       if (step === 3) return true; // Dialogue is optional
       if (step === 4) return !!selectedCharacter || !!characterImageFile;
@@ -127,14 +246,14 @@ export default function Home() {
   const maxNavigableStep = requestData ? 0 : Math.max(currentStep, firstIncompleteStep);
 
   const nextRequirement = (() => {
-    if (currentStep === 1 && userName.trim().length < 2) {
-      return 'Enter a name for your character to personalize your campaign.';
+    if (currentStep === 1 && userName.trim().length < 1) {
+      return 'Enter a name for your character to name the person in your video.';
     }
     if (currentStep === 2 && !selectedProduct) {
       return 'Select a hero product to continue.';
     }
     if (currentStep === 3) {
-      return 'Dialogue is optional. Continue or skip this step.';
+      return 'Use this dialogue, or choose no spoken dialogue.';
     }
     if (currentStep === 4 && !selectedCharacter && !characterImageFile) {
       return 'Choose or upload a presenter to continue.';
@@ -146,7 +265,7 @@ export default function Home() {
       return 'Add a short prompt so Omni has enough direction.';
     }
     if (currentStep === 6) {
-      return 'Go back to change anything, or launch the campaign.';
+      return 'Check your choices before creating the video.';
     }
     return 'Ready for the next step.';
   })();
@@ -173,6 +292,10 @@ export default function Home() {
   const handleGenerate = async () => {
     // Show the result panel straight away — the wizard shell stays put and the panel
     // is patched with the real record once the POST resolves.
+    if (needsReview || ![1, 2, 4, 5].every(isStepComplete)) {
+      setCurrentStep(6);
+      return;
+    }
     setRunKey((k) => k + 1);
     setRequestData({
       request_id: '',
@@ -180,7 +303,7 @@ export default function Home() {
       stage: 'queued',
       progress: 0,
       prompt: videoPrompt,
-      dialogue: dialogueText.trim() || undefined,
+      dialogue: spokenLine.trim() || undefined,
       language: selectedLanguage,
       created_at: new Date().toISOString(),
     });
@@ -195,13 +318,13 @@ export default function Home() {
           status: 'completed' as GenerationStatus,
           stage: 'completed',
           progress: 100,
-          generation_seconds: 4,
+          is_sample: true,
           final_prompt: videoPrompt,
           prompt: videoPrompt,
-          dialogue: dialogueText.trim() || undefined,
+          dialogue: spokenLine.trim() || undefined,
           language: selectedLanguage,
-          video_url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-          video_page_url: `${window.location.origin}/video/${requestId}`,
+          video_url: selectedTemplate?.videoSrc ?? undefined,
+          video_page_url: null,
           qr_code_url: null,
           created_at: new Date().toISOString(),
         });
@@ -217,15 +340,20 @@ export default function Home() {
         return characterImageFile;
       })();
 
+      if (!resolvedCharacterImage)
+        throw new Error('The presenter photo could not be loaded. Select the photo again.');
+
       // Trigger video generation on the GCP Omni backend
       const result = await generateVideo({
         prompt: videoPrompt,
         styleId: selectedTemplate?.id ?? 'custom',
-        dialogue: dialogueText.trim() || undefined,
+        dialogue: spokenLine.trim() || undefined,
         language: selectedLanguage,
         characterPresetId: selectedCharacter?.id,
         characterImage: resolvedCharacterImage,
         productId: selectedProduct?.id,
+        durationSeconds: duration,
+        aspectRatio,
       });
 
       setRequestData(result);
@@ -238,13 +366,17 @@ export default function Home() {
   };
 
   const handleReset = () => {
+    if (!window.confirm('Discard this draft and start a new video?')) return;
     setCurrentStep(1);
     setRequestData(null);
     setUserName('');
     setHeroProducts(drawHeroProducts());
     setSelectedProduct(null);
     setSelectedTemplate(null);
-    setVideoPrompt('');
+    setPromptDrafts({});
+    setDialogueContext('');
+    setDuration(10);
+    setAspectRatio('16:9');
     setSelectedLanguage('en');
     setDialogueText('');
     setDialogueTouched(false);
@@ -262,7 +394,10 @@ export default function Home() {
         currentStep={requestData ? 7 : currentStep}
         testMode={testMode}
         setTestMode={setTestMode}
-        onBrandClick={handleReset}
+        onBrandClick={() => {
+          setRequestData(null);
+          setCurrentStep(1);
+        }}
         maxNavigableStep={maxNavigableStep}
         onStepSelect={setCurrentStep}
       />
@@ -272,12 +407,15 @@ export default function Home() {
         <div className="flex shrink-0 items-center justify-between px-6 py-4 lg:hidden">
           <button
             type="button"
-            onClick={handleReset}
+            onClick={() => {
+              setRequestData(null);
+              setCurrentStep(1);
+            }}
             className="flex items-center gap-3 rounded-full text-left transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label="Return to the first step"
           >
             <PortalMark />
-            <span className="text-[15px] font-semibold tracking-tight text-foreground">
+            <span className="hidden min-[440px]:inline text-[15px] font-semibold tracking-tight text-foreground">
               The Omni Portal
             </span>
           </button>
@@ -308,7 +446,7 @@ export default function Home() {
         {/* Mobile progress strip */}
         <div className="flex shrink-0 items-center gap-3 px-6 pb-3 lg:hidden">
           <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Step {currentStep} / {STEPS.length}
+            {requestData ? 'Video status' : `Step ${currentStep} / ${STEPS.length}`}
           </span>
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
             <div
@@ -318,21 +456,33 @@ export default function Home() {
           </div>
         </div>
 
+        {saveError && (
+          <p role="alert" className="px-6 py-2 text-sm text-destructive">
+            Draft could not be saved. Keep this tab open.
+          </p>
+        )}
         {/* Scrollable step content — the only scroll region; page size stays constant */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-5 lg:px-10 lg:py-6 xl:px-12">
+        <div
+          ref={contentRef}
+          className="wizard-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-5 lg:px-10 lg:py-6 xl:px-12"
+        >
           {/* Keyed wrapper replays the entrance animation on each step/result transition */}
           <div
             key={requestData ? `result-${runKey}` : currentStep}
-            className="animate-step-in flex h-full min-h-0 w-full items-center"
+            className="wizard-content animate-step-in w-full"
           >
             {requestData ? (
               <ResultPanel
                 requestData={requestData}
                 selectedTemplate={selectedTemplate}
-                dialogueText={dialogueText}
+                dialogueText={spokenLine}
                 selectedLanguage={selectedLanguage}
                 onReset={handleReset}
                 onRetry={handleGenerate}
+                onEdit={() => {
+                  setRequestData(null);
+                  setCurrentStep(6);
+                }}
               />
             ) : (
               <>
@@ -356,8 +506,8 @@ export default function Home() {
                     selectedProduct={selectedProduct}
                     selectedLanguage={selectedLanguage}
                     setSelectedLanguage={setSelectedLanguage}
-                    dialogueText={dialogueText}
-                    setDialogueText={setDialogueText}
+                    dialogueText={spokenLine}
+                    setDialogueText={editDialogue}
                     dialogueTouched={dialogueTouched}
                     setDialogueTouched={setDialogueTouched}
                   />
@@ -378,7 +528,8 @@ export default function Home() {
                     setSelectedTemplate={setSelectedTemplate}
                     videoPrompt={videoPrompt}
                     setVideoPrompt={setVideoPrompt}
-                    dialogueText={dialogueText}
+                    onResetPrompt={resetPrompt}
+                    dialogueText={spokenLine}
                   />
                 )}
                 {currentStep === 6 && (
@@ -388,11 +539,19 @@ export default function Home() {
                     selectedProduct={selectedProduct}
                     selectedTemplate={selectedTemplate}
                     videoPrompt={videoPrompt}
-                    dialogueText={dialogueText}
+                    dialogueText={spokenLine}
                     selectedLanguage={selectedLanguage}
                     selectedCharacter={selectedCharacter}
                     characterImageFile={characterImageFile}
                     onGenerate={handleGenerate}
+                    onEdit={setCurrentStep}
+                    duration={duration}
+                    setDuration={setDuration}
+                    aspectRatio={aspectRatio}
+                    setAspectRatio={setAspectRatio}
+                    needsReview={needsReview}
+                    onAcknowledge={acknowledgeChanges}
+                    canGenerate={[1, 2, 4, 5].every(isStepComplete)}
                   />
                 )}
               </>
@@ -418,8 +577,15 @@ export default function Home() {
             </p>
             <div className="flex items-center gap-3">
               {currentStep === 3 && (
-                <Button variant="ghost" onClick={() => setCurrentStep((s) => s + 1)}>
-                  Skip
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    editDialogue('');
+                    setDialogueTouched(true);
+                    setCurrentStep(4);
+                  }}
+                >
+                  No dialogue
                 </Button>
               )}
               {currentStep < 6 && (
@@ -428,7 +594,7 @@ export default function Home() {
                   disabled={!canGoNext}
                   className="px-8"
                 >
-                  Continue
+                  {currentStep === 3 ? 'Use this dialogue' : 'Continue'}
                 </Button>
               )}
             </div>

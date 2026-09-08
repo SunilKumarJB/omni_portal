@@ -63,6 +63,8 @@ export type GenerationStage =
   | 'failed';
 
 export interface GenerateVideoInput {
+  durationSeconds?: number;
+  aspectRatio?: '16:9' | '9:16';
   prompt: string;
   styleId?: string;
   dialogue?: string;
@@ -73,6 +75,7 @@ export interface GenerateVideoInput {
 }
 
 export interface VideoRequestData {
+  is_sample?: boolean;
   request_id: string;
   status: GenerationStatus;
   stage?: GenerationStage;

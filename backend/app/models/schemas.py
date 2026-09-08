@@ -51,6 +51,7 @@ class VideoListItem(BaseModel):
 
 class VideoListResponse(BaseModel):
     items: list[VideoListItem]
+    next_cursor: Optional[str] = None
 
 
 class VideoVisibilityUpdate(BaseModel):

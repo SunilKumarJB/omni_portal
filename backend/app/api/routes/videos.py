@@ -24,12 +24,31 @@ router = APIRouter(prefix="/videos", tags=["videos"])
 async def list_videos(
     include_hidden: bool = False,
     include_failed: bool = False,
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(24, ge=1, le=200),
+    cursor: str | None = Query(None, max_length=1024),
 ):
-    records = await db_service.list_requests(200)
+    if cursor:
+        try:
+            db_service.decode_cursor(cursor)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
 
+    # Filter while paging: hidden/failed rows must not impose a history cutoff.
+    records = []
+    async for record in db_service.iter_requests(limit + 1, cursor):
+        if record.get("hidden") and not include_hidden:
+            continue
+        if not include_failed and (
+            record.get("status") == "failed" or db_service.timeout_error(record)
+        ):
+            continue
+        records.append(record)
+        if len(records) > limit:
+            break
+
+    next_cursor = db_service.encode_cursor(records[limit - 1]) if len(records) > limit else None
     items = []
-    for record in records:
+    for record in records[:limit]:
         if record.get("hidden") and not include_hidden:
             continue
 
@@ -70,7 +89,7 @@ async def list_videos(
         if len(items) >= limit:
             break
 
-    return VideoListResponse(items=items)
+    return VideoListResponse(items=items, next_cursor=next_cursor)
 
 
 @router.patch("/{request_id}", response_model=VideoRequestStatus)

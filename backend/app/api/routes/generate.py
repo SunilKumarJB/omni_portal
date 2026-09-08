@@ -20,11 +20,13 @@ from fastapi import (
     Request,
 )
 from fastapi.responses import StreamingResponse
+from starlette.background import BackgroundTask
 from app.models.schemas import VideoRequestStatus
 from app.services import (
     omni_service,
     storage_service,
     db_service,
+    status_service,
     qr_service,
 )
 from app.config import settings
@@ -178,39 +180,41 @@ async def stream_status(request_id: str, request: Request):
     Polls db_service at tight intervals and emits data: <json>\n\n events.
     Cleanly terminates when completed, failed, or client disconnects.
     """
-    initial_record = await db_service.get_request(request_id)
-    if not initial_record:
-        raise HTTPException(404, "Request not found")
+    shared, release = status_service.acquire(request_id)
+    try:
+        initial_record = await shared.read(request_id, STREAM_POLL_INTERVAL)
+        if not initial_record:
+            raise HTTPException(404, "Request not found")
+    except BaseException:
+        release()
+        raise
 
     async def event_generator():
         last_state = None
-        while True:
-            if await request.is_disconnected():
-                break
-
-            record = await db_service.get_request(request_id)
-            if not record:
-                break
-
-            current_state = (
-                record.get("status"),
-                record.get("stage"),
-                record.get("progress"),
-                record.get("updated_at"),
-            )
-
-            if last_state is None or current_state != last_state:
-                last_state = current_state
-                data_json = json.dumps(_to_status(record))
-                yield f"data: {data_json}\n\n"
-
-            if record.get("status") in ("completed", "failed"):
-                break
-
-            try:
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                record = await shared.read(request_id, STREAM_POLL_INTERVAL)
+                if not record:
+                    break
+                current_state = (
+                    record.get("status"),
+                    record.get("stage"),
+                    record.get("progress"),
+                    record.get("updated_at"),
+                )
+                if last_state is None or current_state != last_state:
+                    last_state = current_state
+                    yield f"data: {json.dumps(_to_status(record))}\n\n"
+                if record.get("status") in ("completed", "failed"):
+                    break
                 await asyncio.sleep(STREAM_POLL_INTERVAL)
-            except asyncio.CancelledError:
-                break
+        finally:
+            release()
+
+    async def cleanup():
+        release()
 
     headers = {
         "Cache-Control": "no-cache, no-transform",
@@ -221,6 +225,7 @@ async def stream_status(request_id: str, request: Request):
         event_generator(),
         media_type="text/event-stream",
         headers=headers,
+        background=BackgroundTask(cleanup),
     )
 
 

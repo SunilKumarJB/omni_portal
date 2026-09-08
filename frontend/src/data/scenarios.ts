@@ -13,7 +13,7 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
     accent: '#EA4335',
     emoji: '🎬',
     videoSrc: '/assets/videos/template_bollywood_romance.mp4',
-    poster: null,
+    poster: '/assets/posters/template_bollywood_romance.webp',
   },
   {
     id: 'cyberpunk_bengaluru',
@@ -27,7 +27,7 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
     accent: '#FF9900',
     emoji: '🛺',
     videoSrc: '/assets/videos/template_cyberpunk_bengaluru.mp4',
-    poster: null,
+    poster: '/assets/posters/template_cyberpunk_bengaluru.webp',
   },
   {
     id: 'monsoon_drama',
@@ -41,7 +41,7 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
     accent: '#34A853',
     emoji: '🌧️',
     videoSrc: '/assets/videos/template_monsoon_drama.mp4',
-    poster: null,
+    poster: '/assets/posters/template_monsoon_drama.webp',
   },
   {
     id: 'mythology_fusion',
@@ -55,7 +55,7 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
     accent: '#4285F4',
     emoji: '🔱',
     videoSrc: '/assets/videos/template_mythology_fusion.mp4',
-    poster: null,
+    poster: '/assets/posters/template_mythology_fusion.webp',
   },
   {
     id: 'pixar_style',
@@ -69,7 +69,7 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
     accent: '#34A853',
     emoji: '🏡',
     videoSrc: '/assets/videos/template_pixar_style.mp4',
-    poster: null,
+    poster: '/assets/posters/template_pixar_style.webp',
   },
   {
     id: 'custom',

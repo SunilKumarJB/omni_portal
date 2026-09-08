@@ -50,21 +50,24 @@ export interface ListVideosOptions {
   includeHidden?: boolean;
   includeFailed?: boolean;
   limit?: number;
+  cursor?: string;
 }
 
 export async function listVideos({
   includeHidden = false,
   includeFailed = false,
-  limit = 50,
-}: ListVideosOptions = {}): Promise<VideoRequestData[]> {
+  limit = 24,
+  cursor,
+}: ListVideosOptions = {}): Promise<VideoListResponse> {
   const { data } = await api.get<VideoListResponse>('/videos', {
     params: {
       include_hidden: includeHidden,
       include_failed: includeFailed,
       limit,
+      cursor,
     },
   });
-  return data.items ?? [];
+  return { items: data.items ?? [], next_cursor: data.next_cursor ?? null };
 }
 
 export async function setVideoHidden(

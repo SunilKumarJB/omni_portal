@@ -1,7 +1,6 @@
 import { Check, MapPin, PenLine, Play, Sparkles } from 'lucide-react';
 import type * as React from 'react';
-import { useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { VIDEO_TEMPLATES } from '@/data/scenarios';
 import type { ProductPreset, VideoTemplate } from '@/lib/types';
@@ -10,57 +9,75 @@ import StepHeading from './StepHeading';
 
 interface TemplateThumbnailProps {
   tpl: VideoTemplate;
-  /** Detail panel keeps the classic autoplay/loop preview; cards default to hover-to-play. */
-  autoPlay?: boolean;
-  /** Card grid only: lets the parent drive play/pause on hover and focus. */
-  videoRef?: (el: HTMLVideoElement | null) => void;
+  playing?: boolean;
+  interactive?: boolean;
 }
 
-function TemplateThumbnail({ tpl, autoPlay = false, videoRef }: TemplateThumbnailProps) {
-  const [videoFailed, setVideoFailed] = useState(false);
+function startPreview(video: HTMLVideoElement | null) {
+  if (video) void video.play().catch(() => {});
+}
 
-  if (!tpl.videoSrc) {
-    /* Custom card — show a thin brand-accent strip */
-    return <div className="ai-gradient-line h-0.5 w-full" />;
-  }
+function TemplateThumbnail({ tpl, playing = false, interactive = false }: TemplateThumbnailProps) {
+  const [requested, setRequested] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
+  const showVideo = (playing || requested) && !videoFailed;
+
+  if (!tpl.videoSrc) return <div className="ai-gradient-line h-0.5 w-full" />;
 
   return (
     <div className="relative aspect-[16/7] w-full min-w-0 overflow-hidden bg-muted/25">
-      {!videoFailed ? (
+      {tpl.poster ? (
+        <img
+          src={tpl.poster}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          width={640}
+          height={280}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-2xl">{tpl.emoji}</div>
+      )}
+      {showVideo && (
         <video
-          ref={videoRef}
+          ref={startPreview}
           src={tpl.videoSrc}
           poster={tpl.poster || undefined}
           muted
-          autoPlay={false}
-          controls={autoPlay}
+          controls={interactive}
           loop
           playsInline
-          preload="metadata"
-          className="h-full w-full object-cover"
+          preload="none"
+          className="absolute inset-0 h-full w-full object-cover"
           onError={() => setVideoFailed(true)}
         />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center bg-muted/30 text-2xl">
-          {tpl.emoji}
-        </div>
       )}
-
-      {!videoFailed && (
-        <>
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background: 'linear-gradient(to bottom, transparent 45%, rgba(0,0,0,0.55) 100%)',
-            }}
-          />
-          <div className="absolute bottom-2 right-2.5 hidden items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white 2xl:flex">
-            <Play className="h-2.5 w-2.5 fill-current" />
-            Preview
-          </div>
-          <div className="absolute inset-x-0 top-0 h-0.5" style={{ background: tpl.accent }} />
-        </>
+      {interactive && !showVideo && (
+        <button
+          type="button"
+          aria-label={`${videoFailed ? 'Retry' : 'Play'} preview: ${tpl.title}`}
+          onClick={() => {
+            setVideoFailed(false);
+            setRequested(true);
+          }}
+          className="absolute inset-0 flex items-center justify-center bg-black/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white"
+        >
+          <span className="flex items-center gap-2 rounded-full bg-black/75 px-4 py-2 text-sm font-semibold text-white">
+            <Play className="h-4 w-4 fill-current" />
+            {videoFailed ? 'Retry preview' : 'Play preview'}
+          </span>
+        </button>
       )}
+      {!interactive && (
+        <span className="absolute bottom-2 right-2.5 flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+          <Play className="h-2.5 w-2.5 fill-current" /> Preview
+        </span>
+      )}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-0.5"
+        style={{ background: tpl.accent }}
+      />
     </div>
   );
 }
@@ -84,7 +101,7 @@ export default function PromptSelector({
   onResetPrompt,
   dialogueText,
 }: PromptSelectorProps) {
-  const videoElsRef = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   function selectTemplate(tpl: VideoTemplate) {
     setSelectedTemplate(tpl);
@@ -92,19 +109,11 @@ export default function PromptSelector({
 
   function playCardVideo(id: string) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const el = videoElsRef.current.get(id);
-    if (!el) return;
-    el.currentTime = 0;
-    void el.play().catch(() => {
-      // Autoplay/hover-play can be rejected by the browser; the poster/last frame stays visible.
-    });
+    setPreviewId(id);
   }
 
-  function pauseCardVideo(id: string) {
-    const el = videoElsRef.current.get(id);
-    if (!el) return;
-    el.pause();
-    el.currentTime = 0;
+  function pauseCardVideo() {
+    setPreviewId(null);
   }
 
   const isCustom = selectedTemplate?.id === 'custom';
@@ -127,9 +136,9 @@ export default function PromptSelector({
                 <div
                   key={tpl.id}
                   onMouseEnter={() => playCardVideo(tpl.id)}
-                  onMouseLeave={() => pauseCardVideo(tpl.id)}
+                  onMouseLeave={() => pauseCardVideo()}
                   onFocus={() => playCardVideo(tpl.id)}
-                  onBlur={() => pauseCardVideo(tpl.id)}
+                  onBlur={() => pauseCardVideo()}
                   className={cn(
                     'group relative min-h-[270px] min-w-0 overflow-hidden rounded-xl border bg-card transition-all duration-200',
                     'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background',
@@ -147,13 +156,7 @@ export default function PromptSelector({
                   />
 
                   <div className="pointer-events-none relative z-10 flex h-full min-h-0 min-w-0 flex-col">
-                    <TemplateThumbnail
-                      tpl={tpl}
-                      videoRef={(el) => {
-                        if (el) videoElsRef.current.set(tpl.id, el);
-                        else videoElsRef.current.delete(tpl.id);
-                      }}
-                    />
+                    <TemplateThumbnail tpl={tpl} playing={previewId === tpl.id} />
 
                     <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
                       <div className="flex items-start justify-between gap-2">
@@ -201,7 +204,7 @@ export default function PromptSelector({
         <div className="min-h-0 space-y-3 lg:col-span-5">
           {selectedTemplate ? (
             <div className="flex h-full min-h-[580px] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <TemplateThumbnail tpl={selectedTemplate} autoPlay />
+              <TemplateThumbnail key={selectedTemplate.id} tpl={selectedTemplate} interactive />
               <p className="px-4 pt-3 text-xs text-muted-foreground">
                 Style example — your presenter and product will differ. Press play to preview.
               </p>

@@ -104,5 +104,6 @@ export interface VideoRequestData {
 
 /** Gallery listing. Items are a subset of VideoRequestData, not a separate shape. */
 export interface VideoListResponse {
+  next_cursor?: string | null;
   items: VideoRequestData[];
 }

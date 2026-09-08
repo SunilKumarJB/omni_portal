@@ -11,7 +11,7 @@ import { PRESET_CHARS } from '@/data/characters';
 import { LANGUAGES } from '@/data/languages';
 import { PRODUCT_CATALOG } from '@/data/products';
 import { VIDEO_TEMPLATES } from '@/data/scenarios';
-import { listVideos, setVideoHidden } from '@/lib/api';
+import { getStatus, listVideos, setVideoHidden } from '@/lib/api';
 import type { GenerationStatus, VideoRequestData } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +25,7 @@ const STATUS_CFG: Record<
   failed: { label: 'Failed', variant: 'destructive' },
 };
 
-const LIST_LIMIT = 50;
+const LIST_LIMIT = 24;
 
 function scenarioTitle(styleId?: string) {
   return VIDEO_TEMPLATES.find((t) => t.id === styleId)?.title ?? 'Custom scenario';
@@ -65,44 +65,114 @@ export default function Gallery() {
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
 
   const [refreshError, setRefreshError] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pageVisible, setPageVisible] = useState(() => !document.hidden);
+  const generation = useRef(0);
+  const visibilityRevision = useRef(0);
+  const visibilityChanges = useRef(new Map<string, { revision: number; hidden: boolean }>());
   const pendingRef = useRef(pendingIds);
   pendingRef.current = pendingIds;
+
+  function preserveVisibility(item: VideoRequestData, readRevision: number) {
+    const change = visibilityChanges.current.get(item.request_id);
+    return change && (change.revision > readRevision || pendingRef.current.has(item.request_id))
+      ? { ...item, hidden: change.hidden }
+      : item;
+  }
+
   useEffect(() => {
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    const update = () => setPageVisible(!document.hidden);
+    document.addEventListener('visibilitychange', update);
+    return () => document.removeEventListener('visibilitychange', update);
+  }, []);
+
+  useEffect(() => {
+    const current = ++generation.current;
+    const readRevision = visibilityRevision.current;
     setLoading(true);
-    async function load(quiet = false) {
-      let keepChecking = quiet;
-      try {
-        const data = await listVideos({
-          includeHidden: showHidden,
-          includeFailed: showFailed,
-          limit: LIST_LIMIT,
-        });
-        if (cancelled) return;
-        if (pendingRef.current.size === 0) setItems(data);
+    setLoadingMore(false);
+    setRefreshError(false);
+    setNextCursor(null);
+    void listVideos({ includeHidden: showHidden, includeFailed: showFailed, limit: LIST_LIMIT })
+      .then((data) => {
+        if (generation.current !== current) return;
+        setItems(data.items.map((item) => preserveVisibility(item, readRevision)));
+        setNextCursor(data.next_cursor ?? null);
         setError(null);
-        setRefreshError(false);
-        keepChecking = data.some(
-          (item) => item.status === 'pending' || item.status === 'processing',
-        );
-      } catch {
-        if (cancelled) return;
-        if (quiet) setRefreshError(true);
-        else setError('Could not load previous videos.');
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-          if (keepChecking) timer = setTimeout(() => void load(true), 5000);
-        }
+      })
+      .catch(() => {
+        if (generation.current === current) setError('Could not load previous videos.');
+      })
+      .finally(() => {
+        if (generation.current === current) setLoading(false);
+      });
+    return () => {
+      generation.current++;
+    };
+  }, [showHidden, showFailed, reloadKey]);
+
+  // Read only active jobs, without re-fetching completed history. Hidden tabs do no polling.
+  useEffect(() => {
+    if (!pageVisible || loading) return;
+    const active = items.filter(
+      (item) =>
+        (showHidden || !item.hidden) && (item.status === 'pending' || item.status === 'processing'),
+    );
+    if (!active.length) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const readRevision = visibilityRevision.current;
+      const results = await Promise.allSettled(active.map((item) => getStatus(item.request_id)));
+      if (cancelled) return;
+      const updates = new Map<string, VideoRequestData>();
+      for (const result of results) {
+        if (result.status === 'fulfilled')
+          updates.set(result.value.request_id, preserveVisibility(result.value, readRevision));
       }
-    }
-    void load();
+      setRefreshError(results.some((result) => result.status === 'rejected'));
+      setItems((previous) =>
+        previous.map((item) => {
+          const update = updates.get(item.request_id);
+          return update && !pendingRef.current.has(item.request_id) ? { ...item, ...update } : item;
+        }),
+      );
+    }, 5000);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [showHidden, showFailed, reloadKey]);
+  }, [items, pageVisible, loading, showHidden]);
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    const current = generation.current;
+    const readRevision = visibilityRevision.current;
+    setLoadingMore(true);
+    try {
+      const data = await listVideos({
+        includeHidden: showHidden,
+        includeFailed: showFailed,
+        limit: LIST_LIMIT,
+        cursor: nextCursor,
+      });
+      if (generation.current !== current) return;
+      setItems((previous) => {
+        const known = new Set(previous.map((item) => item.request_id));
+        return [
+          ...previous,
+          ...data.items
+            .filter((item) => !known.has(item.request_id))
+            .map((item) => preserveVisibility(item, readRevision)),
+        ];
+      });
+      setNextCursor(data.next_cursor ?? null);
+    } catch {
+      if (generation.current === current) toast.error('Could not load more videos. Try again.');
+    } finally {
+      if (generation.current === current) setLoadingMore(false);
+    }
+  }
 
   function setToggle(key: 'hidden' | 'failed', value: boolean) {
     const next = new URLSearchParams(searchParams);
@@ -114,13 +184,16 @@ export default function Gallery() {
   async function toggleHidden(item: VideoRequestData) {
     const requestId = item.request_id;
     const nextHidden = !item.hidden;
-    const patch = (hidden: boolean) =>
+    const patch = (hidden: boolean) => {
+      visibilityChanges.current.set(requestId, { revision: ++visibilityRevision.current, hidden });
       setItems((prev) => prev.map((i) => (i.request_id === requestId ? { ...i, hidden } : i)));
+    };
 
     patch(nextHidden);
     setPendingIds((prev) => new Set(prev).add(requestId));
     try {
       await setVideoHidden(requestId, nextHidden);
+      patch(nextHidden);
     } catch {
       patch(!nextHidden);
       toast.error(nextHidden ? 'Could not hide that video.' : 'Could not unhide that video.');
@@ -134,7 +207,9 @@ export default function Gallery() {
   }
 
   // Hiding is optimistic, so the local flag — not the server query — decides what stays.
-  const visible = showHidden ? items : items.filter((i) => !i.hidden);
+  const visible = items.filter(
+    (item) => (showHidden || !item.hidden) && (showFailed || item.status !== 'failed'),
+  );
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-background">
@@ -192,9 +267,15 @@ export default function Gallery() {
             Updates paused by a connection problem. We are trying again.
           </p>
         )}
-        {items.length >= LIST_LIMIT && (
+        {!loading && !error && items.length > 0 && (
           <p className="mb-4 text-sm text-muted-foreground">
-            Showing the latest {LIST_LIMIT} matching videos.
+            Showing{' '}
+            {
+              items.filter(
+                (item) => (showHidden || !item.hidden) && (showFailed || item.status !== 'failed'),
+              ).length
+            }{' '}
+            videos{nextCursor ? ' · More available' : ''}.
           </p>
         )}
         {loading ? (
@@ -238,6 +319,13 @@ export default function Gallery() {
                 onToggleHidden={() => void toggleHidden(item)}
               />
             ))}
+          </div>
+        )}
+        {!loading && !error && nextCursor && (
+          <div className="mt-6 text-center">
+            <Button variant="outline" onClick={() => void loadMore()} disabled={loadingMore}>
+              {loadingMore ? 'Loading…' : 'Load more'}
+            </Button>
           </div>
         )}
       </div>
@@ -298,13 +386,16 @@ function GalleryCard({ item, busy, onToggleHidden }: GalleryCardProps) {
             muted
             playsInline
             loop
-            preload="metadata"
+            preload="none"
+            poster={item.thumbnail_url || item.character_image_url || undefined}
             className="h-full w-full object-cover"
             onError={() => setVideoFailed(true)}
           />
         ) : item.character_image_url ? (
           <img
             src={item.character_image_url}
+            loading="lazy"
+            decoding="async"
             alt=""
             className="h-full w-full object-cover opacity-60"
           />

@@ -1,22 +1,16 @@
 import axios from 'axios';
 import { FlaskConical, Images } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PortalMark } from '@/components/AppHeader';
-import CharacterSelector from '@/components/CharacterSelector';
-import DialogueSelector from '@/components/DialogueSelector';
 import NameStep from '@/components/NameStep';
-import ProductSelector from '@/components/ProductSelector';
-import PromptSelector from '@/components/PromptSelector';
-import ResultPanel from '@/components/ResultPanel';
-import ReviewGenerate from '@/components/ReviewGenerate';
 import SideRail from '@/components/SideRail';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { HERO_MAX_PER_CATEGORY, HERO_PRODUCT_SLOTS, PRODUCT_CATALOG } from '@/data/products';
-import { loadDraft, saveDraft, type VideoDraft } from '@/lib/draft';
+import { flushDraft, loadDraft, saveDraft, type VideoDraft } from '@/lib/draft';
 import { pickHeroProducts } from '@/lib/productPicker';
 import {
   briefContext,
@@ -33,6 +27,17 @@ import type {
   VideoRequestData,
   VideoTemplate,
 } from '../lib/types';
+
+const CharacterSelector = lazy(() => import('@/components/CharacterSelector'));
+const DialogueSelector = lazy(() => import('@/components/DialogueSelector'));
+const ProductSelector = lazy(() => import('@/components/ProductSelector'));
+const PromptSelector = lazy(() => import('@/components/PromptSelector'));
+const ResultPanel = lazy(() => import('@/components/ResultPanel'));
+const ReviewGenerate = lazy(() => import('@/components/ReviewGenerate'));
+
+function focusStepHeading(node: HTMLDivElement | null) {
+  node?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+}
 
 const STEPS: { id: 1 | 2 | 3 | 4 | 5 | 6; label: string }[] = [
   { id: 1, label: 'Character' },
@@ -212,6 +217,22 @@ function VideoWizard({ initial }: { initial: VideoDraft | null }) {
     aspectRatio,
     requestData,
   ]);
+
+  useEffect(() => {
+    const flush = () => {
+      void flushDraft().catch(() => setSaveError(true));
+    };
+    const onVisibility = () => {
+      if (document.hidden) flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+      void flushDraft().catch(() => {});
+    };
+  }, []);
 
   useEffect(() => {
     const region = contentRef.current;
@@ -466,97 +487,100 @@ function VideoWizard({ initial }: { initial: VideoDraft | null }) {
           ref={contentRef}
           className="wizard-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-5 lg:px-10 lg:py-6 xl:px-12"
         >
-          {/* Keyed wrapper replays the entrance animation on each step/result transition */}
-          <div
-            key={requestData ? `result-${runKey}` : currentStep}
-            className="wizard-content animate-step-in w-full"
-          >
-            {requestData ? (
-              <ResultPanel
-                requestData={requestData}
-                selectedTemplate={selectedTemplate}
-                dialogueText={spokenLine}
-                selectedLanguage={selectedLanguage}
-                onReset={handleReset}
-                onRetry={handleGenerate}
-                onEdit={() => {
-                  setRequestData(null);
-                  setCurrentStep(6);
-                }}
-              />
-            ) : (
-              <>
-                {currentStep === 1 && (
-                  <NameStep
-                    userName={userName}
-                    setUserName={setUserName}
-                    onNext={() => setCurrentStep(2)}
-                  />
-                )}
-                {currentStep === 2 && (
-                  <ProductSelector
-                    products={heroProducts}
-                    selectedProduct={selectedProduct}
-                    setSelectedProduct={setSelectedProduct}
-                  />
-                )}
-                {currentStep === 3 && (
-                  <DialogueSelector
-                    userName={userName}
-                    selectedProduct={selectedProduct}
-                    selectedLanguage={selectedLanguage}
-                    setSelectedLanguage={setSelectedLanguage}
-                    dialogueText={spokenLine}
-                    setDialogueText={editDialogue}
-                    dialogueTouched={dialogueTouched}
-                    setDialogueTouched={setDialogueTouched}
-                  />
-                )}
-                {currentStep === 4 && (
-                  <CharacterSelector
-                    selectedCharacter={selectedCharacter}
-                    setSelectedCharacter={setSelectedCharacter}
-                    characterImageFile={characterImageFile}
-                    setCharacterImageFile={setCharacterImageFile}
-                  />
-                )}
-                {currentStep === 5 && (
-                  <PromptSelector
-                    userName={userName}
-                    selectedProduct={selectedProduct}
-                    selectedTemplate={selectedTemplate}
-                    setSelectedTemplate={setSelectedTemplate}
-                    videoPrompt={videoPrompt}
-                    setVideoPrompt={setVideoPrompt}
-                    onResetPrompt={resetPrompt}
-                    dialogueText={spokenLine}
-                  />
-                )}
-                {currentStep === 6 && (
-                  <ReviewGenerate
-                    testMode={testMode}
-                    userName={userName}
-                    selectedProduct={selectedProduct}
-                    selectedTemplate={selectedTemplate}
-                    videoPrompt={videoPrompt}
-                    dialogueText={spokenLine}
-                    selectedLanguage={selectedLanguage}
-                    selectedCharacter={selectedCharacter}
-                    characterImageFile={characterImageFile}
-                    onGenerate={handleGenerate}
-                    onEdit={setCurrentStep}
-                    duration={duration}
-                    setDuration={setDuration}
-                    aspectRatio={aspectRatio}
-                    setAspectRatio={setAspectRatio}
-                    needsReview={needsReview}
-                    onAcknowledge={acknowledgeChanges}
-                    canGenerate={[1, 2, 4, 5].every(isStepComplete)}
-                  />
-                )}
-              </>
-            )}
-          </div>
+          <Suspense fallback={<p role="status">Opening this step…</p>}>
+            {/* Keyed wrapper replays the entrance animation on each step/result transition */}
+            <div
+              ref={focusStepHeading}
+              key={requestData ? `result-${runKey}` : currentStep}
+              className="wizard-content animate-step-in w-full"
+            >
+              {requestData ? (
+                <ResultPanel
+                  requestData={requestData}
+                  selectedTemplate={selectedTemplate}
+                  dialogueText={spokenLine}
+                  selectedLanguage={selectedLanguage}
+                  onReset={handleReset}
+                  onRetry={handleGenerate}
+                  onEdit={() => {
+                    setRequestData(null);
+                    setCurrentStep(6);
+                  }}
+                />
+              ) : (
+                <>
+                  {currentStep === 1 && (
+                    <NameStep
+                      userName={userName}
+                      setUserName={setUserName}
+                      onNext={() => setCurrentStep(2)}
+                    />
+                  )}
+                  {currentStep === 2 && (
+                    <ProductSelector
+                      products={heroProducts}
+                      selectedProduct={selectedProduct}
+                      setSelectedProduct={setSelectedProduct}
+                    />
+                  )}
+                  {currentStep === 3 && (
+                    <DialogueSelector
+                      userName={userName}
+                      selectedProduct={selectedProduct}
+                      selectedLanguage={selectedLanguage}
+                      setSelectedLanguage={setSelectedLanguage}
+                      dialogueText={spokenLine}
+                      setDialogueText={editDialogue}
+                      dialogueTouched={dialogueTouched}
+                      setDialogueTouched={setDialogueTouched}
+                    />
+                  )}
+                  {currentStep === 4 && (
+                    <CharacterSelector
+                      selectedCharacter={selectedCharacter}
+                      setSelectedCharacter={setSelectedCharacter}
+                      characterImageFile={characterImageFile}
+                      setCharacterImageFile={setCharacterImageFile}
+                    />
+                  )}
+                  {currentStep === 5 && (
+                    <PromptSelector
+                      userName={userName}
+                      selectedProduct={selectedProduct}
+                      selectedTemplate={selectedTemplate}
+                      setSelectedTemplate={setSelectedTemplate}
+                      videoPrompt={videoPrompt}
+                      setVideoPrompt={setVideoPrompt}
+                      onResetPrompt={resetPrompt}
+                      dialogueText={spokenLine}
+                    />
+                  )}
+                  {currentStep === 6 && (
+                    <ReviewGenerate
+                      testMode={testMode}
+                      userName={userName}
+                      selectedProduct={selectedProduct}
+                      selectedTemplate={selectedTemplate}
+                      videoPrompt={videoPrompt}
+                      dialogueText={spokenLine}
+                      selectedLanguage={selectedLanguage}
+                      selectedCharacter={selectedCharacter}
+                      characterImageFile={characterImageFile}
+                      onGenerate={handleGenerate}
+                      onEdit={setCurrentStep}
+                      duration={duration}
+                      setDuration={setDuration}
+                      aspectRatio={aspectRatio}
+                      setAspectRatio={setAspectRatio}
+                      needsReview={needsReview}
+                      onAcknowledge={acknowledgeChanges}
+                      canGenerate={[1, 2, 4, 5].every(isStepComplete)}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          </Suspense>
         </div>
 
         {/* Pinned action bar */}

@@ -2,7 +2,11 @@
 Unified database service: Firestore or local JSON files.
 """
 
+import asyncio
+import base64
 import json
+import threading
+import tempfile
 import aiofiles
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,6 +40,21 @@ def _now_iso() -> str:
 
 def _local_path(request_id: str) -> Path:
     return _local_db_path() / f"{request_id}.json"
+
+
+def _write_local_record(path: Path, record: Dict[str, Any]) -> None:
+    # Readers see either the previous full record or the next full record.
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=path.parent, suffix=".tmp", delete=False
+        ) as stream:
+            temporary = Path(stream.name)
+            json.dump(record, stream, indent=2)
+        temporary.replace(path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 TIMEOUT_ERROR = "Generation job timed out"
@@ -126,8 +145,7 @@ async def create_request(request_id: str, data: Dict[str, Any]) -> None:
         await db.collection("video_requests").document(request_id).set(record)
     else:
         path = _local_path(request_id)
-        async with aiofiles.open(path, "w") as f:
-            await f.write(json.dumps(record, indent=2))
+        await asyncio.to_thread(_write_local_record, path, record)
 
 
 async def get_request(request_id: str) -> Optional[Dict[str, Any]]:
@@ -163,38 +181,110 @@ async def update_request(request_id: str, updates: Dict[str, Any]) -> None:
                 content = await f.read()
             record = json.loads(content)
             record.update(updates)
-            async with aiofiles.open(path, "w") as f:
-                await f.write(json.dumps(record, indent=2))
+            await asyncio.to_thread(_write_local_record, path, record)
 
 
-async def list_requests(limit: int) -> list[Dict[str, Any]]:
-    """
-    Return up to `limit` records ordered newest-first by created_at, for the gallery.
-    Does not run the timeout watchdog — listing performs no writes.
-    """
+def encode_cursor(record: Dict[str, Any]) -> str:
+    value = [record.get("created_at", ""), record["request_id"]]
+    return base64.urlsafe_b64encode(json.dumps(value).encode()).decode().rstrip("=")
+
+
+def decode_cursor(cursor: str) -> tuple[str, str]:
+    try:
+        value = json.loads(base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4)))
+        if (
+            not isinstance(value, list)
+            or len(value) != 2
+            or not all(isinstance(v, str) for v in value)
+        ):
+            raise ValueError()
+        if not value[1] or "/" in value[1]:
+            raise ValueError()
+        return tuple(value)
+    except Exception as exc:
+        raise ValueError("Invalid gallery cursor") from exc
+
+
+# Metadata scans run off the event loop. Parse only changed files; inode and
+# nanosecond timestamps detect external edits, replacements, and deletions.
+_local_index: dict[Path, tuple[tuple, dict]] = {}
+_index_lock = threading.Lock()
+_index_root: Optional[Path] = None
+
+
+def _read_local_index() -> list[Dict[str, Any]]:
+    global _index_root
+    root = _local_db_path().resolve()
+    with _index_lock:
+        if root != _index_root:
+            _local_index.clear()
+            _index_root = root
+        seen = set()
+        for path in root.glob("*.json"):
+            seen.add(path)
+            try:
+                stat = path.stat()
+                signature = (stat.st_ino, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
+                cached = _local_index.get(path)
+                if cached is None or cached[0] != signature:
+                    record = json.loads(path.read_text())
+                    if not isinstance(record, dict):
+                        raise ValueError("Expected a record")
+                    _local_index[path] = (signature, record)
+            except (OSError, ValueError):
+                _local_index.pop(path, None)
+        for path in _local_index.keys() - seen:
+            del _local_index[path]
+        return [dict(entry[1]) for entry in _local_index.values()]
+
+
+async def list_requests(limit: int, cursor: Optional[str] = None) -> list[Dict[str, Any]]:
+    """Read a stable page without watchdog writes or an arbitrary history cap."""
+    after = decode_cursor(cursor) if cursor else None
     if settings.DB_BACKEND == "firestore" and not settings.TEST_MODE:
         from google.cloud import firestore
 
         db = _get_firestore()
-        query = (
-            db.collection("video_requests")
-            .order_by("created_at", direction=firestore.Query.DESCENDING)
-            .limit(limit)
+        collection = db.collection("video_requests")
+        query = collection.order_by("created_at", direction=firestore.Query.DESCENDING).order_by(
+            "__name__", direction=firestore.Query.DESCENDING
         )
+        if after:
+            query = query.start_after(
+                {"created_at": after[0], "__name__": collection.document(after[1])}
+            )
         records = []
-        async for doc in query.stream():
+        async for doc in query.limit(limit).stream():
             data = doc.to_dict()
             if data is not None:
-                records.append(data)
+                records.append({**data, "request_id": doc.id})
         return records
 
-    records = []
-    for path in _local_db_path().glob("*.json"):
-        try:
-            async with aiofiles.open(path, "r") as f:
-                content = await f.read()
-            records.append(json.loads(content))
-        except (OSError, json.JSONDecodeError):
-            continue
-    records.sort(key=lambda r: r.get("created_at", ""), reverse=True)
-    return records[:limit]
+    return (await _local_records(after))[:limit]
+
+
+async def _local_records(after=None):
+    records = await asyncio.to_thread(_read_local_index)
+
+    def key(record):
+        return (record.get("created_at", ""), record.get("request_id", ""))
+
+    records.sort(key=key, reverse=True)
+    if after:
+        records = [record for record in records if key(record) < after]
+    return records
+
+
+async def iter_requests(batch_size: int, cursor: Optional[str] = None):
+    """Iterate storage pages; local filtering shares a single metadata snapshot."""
+    if settings.DB_BACKEND != "firestore" or settings.TEST_MODE:
+        for record in await _local_records(decode_cursor(cursor) if cursor else None):
+            yield record
+        return
+    while True:
+        batch = await list_requests(batch_size, cursor)
+        for record in batch:
+            yield record
+        if len(batch) < batch_size:
+            return
+        cursor = encode_cursor(batch[-1])

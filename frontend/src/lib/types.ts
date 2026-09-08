@@ -14,14 +14,30 @@ export interface VideoTemplate {
   poster: string | null;
 }
 
+/** Groups the catalog so a random pick shows a range rather than six kitchen gadgets. */
+export type ProductCategory =
+  | 'kitchen'
+  | 'home'
+  | 'wearables'
+  | 'mobility'
+  | 'wellness'
+  | 'gadgets';
+
+/** How the presenter relates to the product on screen; selects the tailored scenario prompt. */
+export type ProductPosture = 'active' | 'relaxed' | 'vehicle';
+
 export interface ProductPreset {
   id: string;
   name: string;
   tagline: string;
   description: string;
+  /** Spliced into the video prompt after "[REF_Character] is ...". */
   visualDescription: string;
   emoji: string;
-  gradient: string;
+  category: ProductCategory;
+  posture: ProductPosture;
+  /** Default pitch line per language. "[Character_Name]" is replaced at render time. */
+  dialogue: Record<LanguageCode, string>;
 }
 
 export interface CharacterPreset {

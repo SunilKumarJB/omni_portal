@@ -5,12 +5,12 @@ import { toast } from 'sonner';
 import AppHeader from '@/components/AppHeader';
 import { PRESET_CHARS } from '@/components/CharacterSelector';
 import { LANGUAGES } from '@/components/DialogueSelector';
-import { PRODUCT_PRESETS } from '@/components/ProductSelector';
 import { VIDEO_TEMPLATES } from '@/components/PromptSelector';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { PRODUCT_CATALOG } from '@/data/products';
 import { listVideos, setVideoHidden } from '@/lib/api';
 import type { GenerationStatus, VideoRequestData } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ function scenarioTitle(styleId?: string) {
 }
 
 function productName(productId?: string) {
-  return PRODUCT_PRESETS.find((p) => p.id === productId)?.name;
+  return PRODUCT_CATALOG.find((p) => p.id === productId)?.name;
 }
 
 function presenterName(item: VideoRequestData) {

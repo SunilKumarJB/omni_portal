@@ -15,6 +15,8 @@ import SideRail from '@/components/SideRail';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { HERO_MAX_PER_CATEGORY, HERO_PRODUCT_SLOTS, PRODUCT_CATALOG } from '@/data/products';
+import { pickHeroProducts } from '@/lib/productPicker';
 import { generateVideo } from '../lib/api';
 import type {
   CharacterPreset,
@@ -67,6 +69,10 @@ function describeGenerateError(err: unknown): string {
   return 'Something went wrong starting your video. Please try again.';
 }
 
+function drawHeroProducts() {
+  return pickHeroProducts(PRODUCT_CATALOG, HERO_PRODUCT_SLOTS, HERO_MAX_PER_CATEGORY);
+}
+
 export default function Home() {
   // Deliberately not persisted: every demo run starts against the real backend.
   const [testMode, setTestMode] = useState(false);
@@ -77,7 +83,9 @@ export default function Home() {
 
   // Step 1: Director Name
   const [userName, setUserName] = useState('');
-  // Step 2: Hero Product
+  // Step 2: Hero Product. Six are drawn from the catalog once per run, so going back to
+  // the step shows the same six; "Start over" draws a fresh set.
+  const [heroProducts, setHeroProducts] = useState(drawHeroProducts);
   const [selectedProduct, setSelectedProduct] = useState<ProductPreset | null>(null);
   // Step 3: Dialogue & Language
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>('en');
@@ -233,6 +241,7 @@ export default function Home() {
     setCurrentStep(1);
     setRequestData(null);
     setUserName('');
+    setHeroProducts(drawHeroProducts());
     setSelectedProduct(null);
     setSelectedTemplate(null);
     setVideoPrompt('');
@@ -336,6 +345,7 @@ export default function Home() {
                 )}
                 {currentStep === 2 && (
                   <ProductSelector
+                    products={heroProducts}
                     selectedProduct={selectedProduct}
                     setSelectedProduct={setSelectedProduct}
                   />

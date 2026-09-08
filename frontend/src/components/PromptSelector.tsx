@@ -3,7 +3,7 @@ import type * as React from 'react';
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import type { ProductPreset, VideoTemplate } from '@/lib/types';
+import type { ProductPosture, ProductPreset, VideoTemplate } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import StepHeading from './StepHeading';
 
@@ -93,16 +93,7 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
   },
 ];
 
-const PRODUCT_POSTURES: Record<string, 'active' | 'relaxed' | 'vehicle'> = {
-  aggressive_toaster: 'active',
-  snooze_blanket: 'relaxed',
-  flying_sneakers: 'active',
-  flying_suv: 'vehicle',
-  impatient_spoon: 'active',
-  diet_plate: 'active',
-};
-
-const TAILORED_PROMPTS: Record<string, Record<'active' | 'relaxed' | 'vehicle', string>> = {
+const TAILORED_PROMPTS: Record<string, Record<ProductPosture, string>> = {
   bollywood_romance: {
     active:
       'A slow push-in, medium shot of [REF_Character] in a grand Bollywood romance scene. The lighting is warm and golden, casting a romantic glow. Wind gently blows through their hair and clothes as marigold petals drift in the background. High-saturation colors and dramatic slow-motion capture the emotional depth and premium grandeur of the moment as they actively showcase the product.',
@@ -228,9 +219,7 @@ export default function PromptSelector({
     const pName = selectedProduct?.name || 'our product';
     const pVisual = selectedProduct?.visualDescription || 'interacting with the product';
     const cName = userName || 'our character';
-    const pId = selectedProduct?.id || '';
-
-    const posture = PRODUCT_POSTURES[pId] || 'active';
+    const posture = selectedProduct?.posture ?? 'active';
     let basePrompt = TAILORED_PROMPTS[tpl.id]?.[posture] || tpl.prompt;
 
     // Dynamically inject the product name into the scenario prompt for maximum customization

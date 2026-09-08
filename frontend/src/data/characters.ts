@@ -1,0 +1,58 @@
+import type { CharacterPreset } from '@/lib/types';
+
+export const PRESET_CHARS: CharacterPreset[] = [
+  {
+    id: 'char_01',
+    name: 'Hari',
+    gender: 'M',
+    role: 'Farmer',
+    avatar: '🌾',
+    bg: '#1B5E20',
+    img: '/assets/characters/char_01.jpg',
+  },
+  {
+    id: 'char_02',
+    name: 'Lakshmi',
+    gender: 'F',
+    role: 'Traditional',
+    avatar: '🪔',
+    bg: '#BF360C',
+    img: '/assets/characters/char_02.jpg',
+  },
+  {
+    id: 'char_03',
+    name: 'Rohan',
+    gender: 'M',
+    role: 'Techie',
+    avatar: '🧑‍💻',
+    bg: '#1A237E',
+    img: '/assets/characters/char_03.jpg',
+  },
+  {
+    id: 'char_04',
+    name: 'Kriti',
+    gender: 'F',
+    role: 'Influencer',
+    avatar: '🌟',
+    bg: '#E65100',
+    img: '/assets/characters/char_04.jpg',
+  },
+  {
+    id: 'char_05',
+    name: 'Rajesh',
+    gender: 'M',
+    role: 'Merchant',
+    avatar: '🏪',
+    bg: '#FBBC05',
+    img: '/assets/characters/char_05.jpg',
+  },
+  {
+    id: 'char_06',
+    name: 'Ananya',
+    gender: 'F',
+    role: 'Director',
+    avatar: '👩‍💼',
+    bg: '#4A148C',
+    img: '/assets/characters/char_06.jpg',
+  },
+];

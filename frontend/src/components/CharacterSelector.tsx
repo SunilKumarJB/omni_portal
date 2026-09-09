@@ -2,71 +2,80 @@ import { Camera, Check, ImagePlus, RefreshCcw, Sparkles, Upload, UserRound, X } 
 import type React from 'react';
 import { lazy, Suspense, useCallback, useRef, useState } from 'react';
 import type WebcamClass from 'react-webcam';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PRESET_CHARS } from '@/data/characters';
 import type { CharacterPreset } from '@/lib/types';
+import { useImagePreview } from '@/lib/useImagePreview';
 import { cn } from '@/lib/utils';
 import StepHeading from './StepHeading';
 
+const MAX_IMAGE_DIMENSION = 1024;
+const IMAGE_JPEG_QUALITY = 0.9;
+
+class UnsupportedImageError extends Error {}
+
+/**
+ * Downscales an image to at most MAX_IMAGE_DIMENSION on its long side and
+ * re-encodes it as JPEG, keeping upload/capture payloads small before they
+ * are sent to the backend. Throws UnsupportedImageError when the browser
+ * cannot decode the source file (e.g. HEIC in most non-Safari browsers).
+ */
+async function resizeImageToJpeg(file: File): Promise<File> {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new UnsupportedImageError(`Cannot decode image: ${file.name}`);
+  }
+
+  try {
+    const { width, height } = bitmap;
+    const longSide = Math.max(width, height);
+    const scale = longSide > MAX_IMAGE_DIMENSION ? MAX_IMAGE_DIMENSION / longSide : 1;
+    const targetWidth = Math.max(1, Math.round(width * scale));
+    const targetHeight = Math.max(1, Math.round(height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D context unavailable');
+    ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', IMAGE_JPEG_QUALITY),
+    );
+    if (!blob) throw new Error('Canvas encoding failed');
+
+    const baseName = file.name.replace(/\.[^./\\]+$/, '') || 'image';
+    return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
+  } finally {
+    bitmap.close();
+  }
+}
+
+/**
+ * Runs a File through resizeImageToJpeg and reports the outcome via toast.
+ * Undecodable formats are rejected outright; any other failure falls back
+ * to the original, unresized file so the user isn't blocked.
+ */
+async function optimizeImageFile(file: File): Promise<File | null> {
+  try {
+    return await resizeImageToJpeg(file);
+  } catch (err) {
+    if (err instanceof UnsupportedImageError) {
+      toast.error('Unsupported image format. Please use JPEG or PNG.');
+      return null;
+    }
+    toast.error('Could not optimize the image; using the original file.');
+    return file;
+  }
+}
+
 // Heavy dependency - only loaded when the user opens the camera tab.
 const Webcam = lazy(() => import('react-webcam'));
-
-const PRESET_CHARS: CharacterPreset[] = [
-  {
-    id: 'char_01',
-    name: 'Hari',
-    gender: 'M',
-    role: 'Farmer',
-    avatar: '🌾',
-    bg: '#1B5E20',
-    img: '/assets/characters/char_01.png',
-  },
-  {
-    id: 'char_02',
-    name: 'Lakshmi',
-    gender: 'F',
-    role: 'Traditional',
-    avatar: '🪔',
-    bg: '#BF360C',
-    img: '/assets/characters/char_02.png',
-  },
-  {
-    id: 'char_03',
-    name: 'Rohan',
-    gender: 'M',
-    role: 'Techie',
-    avatar: '🧑‍💻',
-    bg: '#1A237E',
-    img: '/assets/characters/char_03.png',
-  },
-  {
-    id: 'char_04',
-    name: 'Kriti',
-    gender: 'F',
-    role: 'Influencer',
-    avatar: '🌟',
-    bg: '#E65100',
-    img: '/assets/characters/char_04.png',
-  },
-  {
-    id: 'char_05',
-    name: 'Rajesh',
-    gender: 'M',
-    role: 'Merchant',
-    avatar: '🏪',
-    bg: '#FBBC05',
-    img: '/assets/characters/char_05.png',
-  },
-  {
-    id: 'char_06',
-    name: 'Ananya',
-    gender: 'F',
-    role: 'Director',
-    avatar: '👩‍💼',
-    bg: '#4A148C',
-    img: '/assets/characters/char_06.png',
-  },
-];
 
 const TABS = [
   { id: 'preset', label: 'Presets', Icon: null },
@@ -133,9 +142,9 @@ function PresenterPreview({
       </div>
 
       <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-3">
-        <div className="relative min-h-0 overflow-hidden rounded-xl border border-border bg-background/55">
+        <div className="relative min-h-[320px] overflow-hidden rounded-xl border border-border bg-background/55">
           {hasSelection ? (
-            <img src={image} alt={title} className="h-full w-full object-cover" />
+            <img src={image} alt={title} className="h-full max-h-[420px] w-full object-contain" />
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-6 text-center">
               <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-border bg-muted/60">
@@ -159,7 +168,7 @@ function PresenterPreview({
         <div className="rounded-xl border border-border bg-background/40 p-3">
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-foreground">
             <Sparkles className="h-3.5 w-3.5 text-[#8ab4f8]" />
-            Readiness check
+            Photo tips
           </div>
           <div className="grid grid-cols-3 gap-2">
             {READY_POINTS.map((point) => (
@@ -167,12 +176,7 @@ function PresenterPreview({
                 key={point}
                 className="flex min-h-[42px] items-center gap-2 rounded-lg border border-border/70 bg-card/60 px-2.5 py-2 text-xs text-muted-foreground"
               >
-                <Check
-                  className={cn(
-                    'h-3.5 w-3.5 shrink-0',
-                    hasSelection ? 'text-success' : 'text-muted-foreground',
-                  )}
-                />
+                <ImagePlus className={cn('h-3.5 w-3.5 shrink-0', 'text-muted-foreground')} />
                 <span className="leading-snug">{point}</span>
               </div>
             ))}
@@ -204,10 +208,11 @@ export default function CharacterSelector({
 }: CharacterSelectorProps) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const webcamRef = useRef<WebcamClass | null>(null);
-  const [tab, setTab] = useState('preset');
+  const [tab, setTab] = useState(characterImageFile ? 'upload' : 'preset');
   const [cameraActive, setCameraActive] = useState(false);
   const [captured, setCaptured] = useState<string | null>(null);
-  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const uploadPreview = useImagePreview(characterImageFile);
+  const [processingImage, setProcessingImage] = useState(false);
 
   const capture = useCallback(() => {
     const src = webcamRef.current?.getScreenshot();
@@ -216,23 +221,35 @@ export default function CharacterSelector({
     setCameraActive(false);
     fetch(src)
       .then((r) => r.blob())
-      .then((blob) => {
-        setCharacterImageFile(new File([blob], 'capture.png', { type: 'image/png' }));
+      .then(async (blob) => {
+        const original = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+        const optimized = await optimizeImageFile(original);
+        setCharacterImageFile(optimized ?? original);
         setSelectedCharacter(null);
       });
   }, [setCharacterImageFile, setSelectedCharacter]);
 
-  function handleUpload(file: File | undefined) {
+  const handleCameraError = useCallback(() => {
+    toast.error('Camera not available. Use Upload instead.');
+    setCameraActive(false);
+    setTab('upload');
+  }, []);
+
+  async function handleUpload(file: File | undefined) {
     if (!file?.type.startsWith('image/')) return;
-    setUploadPreview(URL.createObjectURL(file));
-    setCharacterImageFile(file);
+    setProcessingImage(true);
+    const optimized = await optimizeImageFile(file);
+    setProcessingImage(false);
+    if (!optimized) return;
+
+    setCharacterImageFile(optimized);
     setSelectedCharacter(null);
     setCaptured(null);
   }
 
   function resetCustom() {
     setCaptured(null);
-    setUploadPreview(null);
+
     setCharacterImageFile(null);
     setCameraActive(false);
   }
@@ -244,8 +261,7 @@ export default function CharacterSelector({
 
   function switchTab(id: string) {
     setTab(id);
-    resetCustom();
-    setSelectedCharacter(null);
+    setCameraActive(false);
   }
 
   return (
@@ -267,18 +283,19 @@ export default function CharacterSelector({
             </TabsList>
 
             <TabsContent value="preset" className="mt-0 min-h-0 flex-1 focus-visible:outline-none">
-              <div className="grid h-full min-h-0 grid-cols-3 grid-rows-2 gap-3">
+              <div className="grid min-h-0 grid-cols-2 sm:grid-cols-3 gap-3">
                 {PRESET_CHARS.map((c) => {
                   const selected = selectedCharacter?.id === c.id;
                   return (
                     <button
                       key={c.id}
+                      aria-pressed={selected}
                       onClick={() => {
                         setSelectedCharacter(c);
                         resetCustom();
                       }}
                       className={cn(
-                        'group grid min-h-0 grid-rows-[minmax(78px,1fr)_auto] overflow-hidden rounded-xl border bg-card/75 text-left transition-all duration-200',
+                        'group grid min-h-[230px] grid-rows-[160px_auto] overflow-hidden rounded-xl border bg-card/75 text-left transition-all duration-200',
                         selected
                           ? 'border-foreground ring-1 ring-foreground'
                           : 'border-border hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-accent/40 hover:shadow-lg hover:shadow-black/10',
@@ -375,9 +392,15 @@ export default function CharacterSelector({
                         <Webcam
                           ref={webcamRef}
                           screenshotFormat="image/jpeg"
-                          className="h-full w-full object-cover"
+                          screenshotQuality={0.92}
+                          className="h-full max-h-[420px] w-full object-contain"
                           mirrored
-                          videoConstraints={{ facingMode: 'user' }}
+                          videoConstraints={{
+                            facingMode: 'user',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                          }}
+                          onUserMediaError={handleCameraError}
                         />
                       </Suspense>
                     </div>
@@ -393,9 +416,13 @@ export default function CharacterSelector({
                 )}
 
                 {captured && (
-                  <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_220px] gap-4">
+                  <div className="grid min-h-0 flex-1 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_180px] gap-4">
                     <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background/60">
-                      <img src={captured} alt="Captured" className="h-full w-full object-cover" />
+                      <img
+                        src={captured}
+                        alt="Captured"
+                        className="h-full max-h-[420px] w-full object-contain"
+                      />
                     </div>
                     <div className="flex flex-col justify-center rounded-xl border border-border bg-background/40 p-4">
                       <div className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-success">
@@ -423,11 +450,19 @@ export default function CharacterSelector({
             </TabsContent>
 
             <TabsContent value="upload" className="mt-0 min-h-0 flex-1 focus-visible:outline-none">
-              <button
-                type="button"
-                className="flex h-full min-h-0 w-full cursor-pointer flex-col rounded-xl border border-dashed border-border bg-card/70 p-4 text-left transition-all duration-200 hover:border-foreground/30 hover:bg-accent/30"
-                onClick={() => fileRef.current?.click()}
-              >
+              <section className="flex min-h-[420px] w-full flex-col rounded-xl border border-dashed border-border bg-card/70 p-4">
+                <Button
+                  variant="outline"
+                  className="mb-4 self-start"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={processingImage}
+                >
+                  {processingImage
+                    ? 'Preparing image…'
+                    : characterImageFile
+                      ? 'Replace image'
+                      : 'Choose image'}
+                </Button>
                 {!uploadPreview ? (
                   <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-xl bg-background/35 px-8 text-center">
                     <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-border bg-muted/50">
@@ -440,16 +475,16 @@ export default function CharacterSelector({
                     </p>
                     <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-2 text-xs font-semibold text-foreground">
                       <Upload className="h-3.5 w-3.5" />
-                      Choose image
+                      JPEG, PNG, or WebP
                     </span>
                   </div>
                 ) : (
-                  <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_220px] gap-4">
+                  <div className="grid min-h-0 flex-1 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_180px] gap-4">
                     <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background/60">
                       <img
                         src={uploadPreview}
                         alt="Character"
-                        className="h-full w-full object-cover"
+                        className="h-full max-h-[420px] w-full object-contain"
                       />
                     </div>
                     <div className="flex flex-col justify-center rounded-xl border border-border bg-background/40 p-4">
@@ -468,7 +503,7 @@ export default function CharacterSelector({
                           resetCustom();
                         }}
                       >
-                        Change image
+                        Remove image
                       </Button>
                     </div>
                   </div>
@@ -476,11 +511,14 @@ export default function CharacterSelector({
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   className="hidden"
-                  onChange={(e) => handleUpload(e.target.files?.[0])}
+                  onChange={(e) => {
+                    void handleUpload(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
                 />
-              </button>
+              </section>
             </TabsContent>
           </Tabs>
         </div>

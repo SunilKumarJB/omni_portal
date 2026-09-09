@@ -164,16 +164,16 @@ class TestHttpClientLifecycle:
                 patch.object(omni_service, "_auth_headers", return_value={}),
             ):
                 # Call 1
-                video1, mime1 = await omni_service.generate_video(prompt="Prompt one")
-                assert video1 == b"generated_video"
-                assert mime1 == "video/mp4"
+                result1 = await omni_service.generate_video(prompt="Prompt one")
+                assert result1.video_bytes == b"generated_video"
+                assert result1.mime_type == "video/mp4"
                 assert request_count == 1
                 assert not shared_client.is_closed
 
                 # Call 2 with same client
-                video2, mime2 = await omni_service.generate_video(prompt="Prompt two")
-                assert video2 == b"generated_video"
-                assert mime2 == "video/mp4"
+                result2 = await omni_service.generate_video(prompt="Prompt two")
+                assert result2.video_bytes == b"generated_video"
+                assert result2.mime_type == "video/mp4"
                 assert request_count == 2
                 assert not shared_client.is_closed
         finally:
@@ -225,12 +225,12 @@ class TestHttpClientLifecycle:
                 patch.object(omni_service, "_auth_headers", return_value={}),
                 patch("asyncio.sleep", return_value=None),  # Instant polling
             ):
-                video, mime = await omni_service.generate_video(
+                result = await omni_service.generate_video(
                     prompt="Car driving through neon city",
                     client=shared_client,
                 )
-                assert video == b"polled_video"
-                assert mime == "video/mp4"
+                assert result.video_bytes == b"polled_video"
+                assert result.mime_type == "video/mp4"
                 assert len(calls) == 3
                 assert calls[0][0] == "POST"
                 assert calls[1][0] == "GET"

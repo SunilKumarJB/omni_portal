@@ -3,6 +3,7 @@ QR code generation service.
 """
 
 import io
+from functools import lru_cache
 import qrcode
 from qrcode.image.styledpil import StyledPilImage
 from qrcode.image.styles.moduledrawers.pil import RoundedModuleDrawer
@@ -10,6 +11,7 @@ from qrcode.image.styles.colormasks import RadialGradiantColorMask
 from app.config import settings
 
 
+@lru_cache(maxsize=256)
 def generate_qr_bytes(url: str, size: int = 10, border: int = 2) -> bytes:
     """Generate a styled QR code PNG as bytes."""
     qr = qrcode.QRCode(

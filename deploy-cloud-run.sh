@@ -14,7 +14,13 @@ REPO="gcr.io/${PROJECT_ID}"
 # and redeploy — no code edit required.
 GCS_BUCKET="${GCS_BUCKET_NAME:-your-gcs-bucket-name}"
 GEMINI_MODEL="${GEMINI_MODEL:-gemini-omni-1.1-flash-preview}"
-REGION="${REGION:-global}"                       # model interactions region
+# OMNI_REGION is the Gemini model interactions region (independent of REGION,
+# which is the Cloud Run deployment location set above). These used to share
+# the REGION variable, which silently forced the model region to match
+# whatever Cloud Run region was chosen instead of defaulting to "global".
+OMNI_REGION="${OMNI_REGION:-global}"
+DEMO_API_KEY="${DEMO_API_KEY:-}"
+LOG_LEVEL="${LOG_LEVEL:-INFO}"
 # --------------------------
 
 echo "🚀 Deploying Omni Video Generator to Cloud Run (project: ${PROJECT_ID})"
@@ -46,7 +52,7 @@ gcloud run deploy "${BACKEND_SERVICE}" \
   --concurrency 80 \
   --no-cpu-throttling \
   --min-instances 1 \
-  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},GCS_BUCKET_NAME=${GCS_BUCKET},GEMINI_MODEL=${GEMINI_MODEL},REGION=${REGION},STORAGE_BACKEND=gcs,DB_BACKEND=firestore,TEST_MODE=false"
+  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},GCS_BUCKET_NAME=${GCS_BUCKET},GEMINI_MODEL=${GEMINI_MODEL},REGION=${OMNI_REGION},STORAGE_BACKEND=gcs,DB_BACKEND=firestore,TEST_MODE=false,DEMO_API_KEY=${DEMO_API_KEY},LOG_LEVEL=${LOG_LEVEL}"
 # FRONTEND_URL + ALLOWED_ORIGINS are set further down, once the frontend URL is known.
 
 BACKEND_URL=$(gcloud run services describe "${BACKEND_SERVICE}" \
@@ -55,23 +61,31 @@ BACKEND_URL=$(gcloud run services describe "${BACKEND_SERVICE}" \
 
 echo "✅ Backend deployed at: ${BACKEND_URL}"
 
-# Update frontend to point to backend
+# Update frontend to point to backend. The nginx template proxies /api and /storage to
+# BACKEND_URL, using BACKEND_HOST as the proxied Host header — Cloud Run routes ingress
+# by Host, so this must be the backend service's own host, not the frontend's.
+BACKEND_HOST="${BACKEND_URL#https://}"
+BACKEND_HOST="${BACKEND_HOST#http://}"
+BACKEND_HOST="${BACKEND_HOST%%/*}"
+
 echo "📦 Building frontend..."
 docker build \
-  --build-arg VITE_API_URL="${BACKEND_URL}" \
+  --build-arg VITE_DEMO_API_KEY="${DEMO_API_KEY}" \
   -t "${REPO}/${FRONTEND_SERVICE}:latest" \
   ./frontend
 docker push "${REPO}/${FRONTEND_SERVICE}:latest"
 
 echo "☁️  Deploying frontend..."
+# No --port: Cloud Run defaults the container port (and its PORT env var) to 8080,
+# which the nginx template picks up via envsubst at container start.
 gcloud run deploy "${FRONTEND_SERVICE}" \
   --image "${REPO}/${FRONTEND_SERVICE}:latest" \
   --platform managed \
   --region "${REGION}" \
   --allow-unauthenticated \
-  --port 80 \
   --memory 512Mi \
-  --cpu 1
+  --cpu 1 \
+  --set-env-vars "BACKEND_URL=${BACKEND_URL},BACKEND_HOST=${BACKEND_HOST}"
 
 FRONTEND_URL=$(gcloud run services describe "${FRONTEND_SERVICE}" \
   --platform managed --region "${REGION}" \
@@ -94,3 +108,7 @@ echo ""
 echo "⚠️  Still verify manually:"
 echo "   1. GCS bucket '${GCS_BUCKET}' exists and the runtime SA can write to it"
 echo "   2. Firestore database is initialized in project '${PROJECT_ID}'"
+echo "   3. The Vertex AI service agent has roles/storage.objectViewer on '${GCS_BUCKET}' (gs:// inputs)"
+echo "      and roles/storage.objectCreator on it (uri delivery)"
+echo "   4. The backend runtime service account has roles/iam.serviceAccountTokenCreator on itself"
+echo "      (required to mint v4 signed URLs)"

@@ -19,7 +19,10 @@ export default function StepHeading({ eyebrow, title, children, className }: Ste
           {eyebrow}
         </span>
       )}
-      <h2 className="mb-2 font-display text-3xl font-bold leading-[1.1] tracking-tight text-foreground lg:text-4xl xl:text-[40px] 2xl:text-[46px]">
+      <h2
+        tabIndex={-1}
+        className="mb-2 font-display text-3xl font-bold leading-[1.1] tracking-tight text-foreground lg:text-4xl xl:text-[40px] 2xl:text-[46px]"
+      >
         {title}
       </h2>
       {children && (

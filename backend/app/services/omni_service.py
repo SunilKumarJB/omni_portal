@@ -1,14 +1,15 @@
 """
 Omni video generation via Gemini Enterprise Interactions API (gemini-omni-1.1-flash-preview).
-Supports T2V with reference images, audio-driven generation, and V2V editing.
+Supports T2V with reference images and V2V editing.
 """
 
 import asyncio
 import base64
+import logging
 import math
 import time
 from datetime import timezone
-from typing import Awaitable, Callable, Optional, Tuple
+from typing import Awaitable, Callable, NamedTuple, Optional, Tuple
 
 import httpx
 import google.auth
@@ -16,10 +17,18 @@ import google.auth.transport.requests
 
 from app.config import settings
 
-_ASPECT_RATIO_MAP = {
-    "16:9": "Landscape (16:9)",
-    "9:16": "Portrait (9:16)",
-}
+logger = logging.getLogger(__name__)
+
+_ASPECT_RATIOS = ("16:9", "9:16")
+
+# HTTP statuses worth retrying: quota pushback and transient backend failures.
+_POLL_RETRY_STATUSES = (429, 500, 502, 503, 504)
+_SUBMIT_RETRY_STATUSES = (429, 502, 503, 504)
+_MAX_POLL_FAILURES = 5
+_MAX_SUBMIT_ATTEMPTS = 3
+
+# A completed interaction can carry a multi-MB base64 video; parse those off the event loop.
+_LARGE_BODY_BYTES = 1_000_000
 
 # Maps the UI's language codes (DialogueSelector.tsx) to human-readable names so the
 # prompt can instruct Omni to speak the dialogue in the chosen language with lip-sync.
@@ -157,12 +166,9 @@ def _enrich_prompt(
     dialogue: Optional[str] = None,
     language: Optional[str] = None,
     has_character: bool = False,
-    has_audio: bool = False,
     is_v2v: bool = False,
     character_image_uri: Optional[str] = None,
     character_image_bytes: Optional[bytes] = None,
-    audio_uri: Optional[str] = None,
-    audio_bytes: Optional[bytes] = None,
     source_video_uri: Optional[str] = None,
     source_video_bytes: Optional[bytes] = None,
 ) -> str:
@@ -170,10 +176,9 @@ def _enrich_prompt(
     Build the final Omni text input. The scenario template carries the visual style
     inline (it IS the style), so this only adds the things the template can't:
     bind the character reference, speak the dialogue in the chosen language, and
-    sync any audio / V2V edit.
+    describe the V2V edit.
     """
     character_present = has_character or bool(character_image_uri) or bool(character_image_bytes)
-    audio_present = has_audio or bool(audio_uri) or bool(audio_bytes)
     v2v_present = is_v2v or bool(source_video_uri) or bool(source_video_bytes)
 
     parts = [prompt]
@@ -192,17 +197,14 @@ def _enrich_prompt(
             f'with natural, accurate lip-sync: "{dialogue.strip()}"'
         )
 
-    if audio_present:
-        parts.append(
-            "Synchronize with the provided audio track, including lip-sync where applicable."
-        )
+    if not dialogue or not dialogue.strip():
+        parts.append("No spoken dialogue or voice-over. Use only ambient sound or music.")
 
     if v2v_present:
         parts.append(
             "Apply the described changes to the source video while keeping the core scene intact."
         )
 
-    parts.append("High quality, 4K resolution.")
     return " ".join(parts)
 
 
@@ -227,27 +229,56 @@ def _media_payload(
     raise ValueError(f"Either uri or data must be provided for {media_type} media payload")
 
 
+def _video_task(has_character: bool, has_source_video: bool) -> str:
+    """Pick generation_config.video_config.task to match the supplied inputs."""
+    if has_source_video:
+        return "edit"
+    if has_character:
+        return "reference_to_video"
+    return "text_to_video"
+
+
+def _output_gcs_uri(request_id: Optional[str]) -> Optional[str]:
+    """Cloud Storage prefix for uri delivery, or None when output must come back inline."""
+    if settings.TEST_MODE or settings.STORAGE_BACKEND != "gcs":
+        return None
+    if not settings.GCS_BUCKET_NAME:
+        return None
+    prefix = f"gs://{settings.GCS_BUCKET_NAME}"
+    return f"{prefix}/{request_id}/" if request_id else f"{prefix}/"
+
+
 def _compose_request(
     prompt: str,
     media_inputs: list,
     aspect_ratio: str,
     duration_seconds: int,
+    task: str = "text_to_video",
+    output_gcs_uri: Optional[str] = None,
 ) -> dict:
-    omni_ratio = _ASPECT_RATIO_MAP.get(aspect_ratio, "Landscape (16:9)")
+    response_format: dict = {
+        "type": "video",
+        "aspect_ratio": aspect_ratio if aspect_ratio in _ASPECT_RATIOS else "16:9",
+        "duration": f"{duration_seconds}s",
+    }
+    if output_gcs_uri:
+        response_format["delivery"] = "uri"
+        response_format["gcs_uri"] = output_gcs_uri
+
     return {
         "model": settings.GEMINI_MODEL,
         "input": [
-            {
-                "type": "text",
-                "text": f"[aspect_ratio={omni_ratio}][duration={duration_seconds}s] {prompt}",
-            },
+            {"type": "text", "text": prompt},
             *media_inputs,
         ],
         "background": True,
+        "response_format": [response_format],
+        "generation_config": {"video_config": {"task": task}},
     }
 
 
-def _extract_video_bytes(response: dict) -> Tuple[Optional[bytes], str]:
+def _extract_video_output(response: dict) -> Tuple[Optional[bytes], str, Optional[str]]:
+    """Return (inline_bytes, mime_type, uri) for the first video output in the interaction."""
     contents = []
     if "steps" in response:
         for step in response["steps"]:
@@ -257,21 +288,93 @@ def _extract_video_bytes(response: dict) -> Tuple[Optional[bytes], str]:
         contents = response["outputs"]
 
     for output in contents:
-        if output.get("type") == "video" and "data" in output:
-            return base64.b64decode(output["data"]), output.get("mime_type", "video/mp4")
+        if output.get("type") != "video":
+            continue
+        mime_type = output.get("mime_type") or "video/mp4"
+        if output.get("data"):
+            return base64.b64decode(output["data"]), mime_type, None
+        if output.get("uri"):
+            return None, mime_type, output["uri"]
 
-    return None, "video/mp4"
+    return None, "video/mp4", None
 
 
 def calculate_progress_fraction(elapsed: float) -> float:
     """
     Calculate an asymptotic smooth progress fraction based on expected generation duration (~55s median).
-    Fraction smoothly approaches 0.92 so the progress bar advances continuously without prematurely
-    claiming completion before the model returns the video.
+    Fraction smoothly approaches 0.98 so the progress bar keeps advancing on long jobs without
+    prematurely claiming completion before the model returns the video.
     """
     if elapsed <= 0:
         return 0.0
-    return min(0.92, 1.0 - math.exp(-elapsed / 25.0))
+    return min(0.98, 1.0 - math.exp(-elapsed / 25.0))
+
+
+def _raise_for_status(context: str, resp: httpx.Response) -> None:
+    """Surface the status code and body prefix — safety blocks and quota reasons live there."""
+    try:
+        resp.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise RuntimeError(
+            f"Omni {context} failed with HTTP {resp.status_code}: {resp.text[:500]}"
+        ) from exc
+
+
+async def _parse_body(resp: httpx.Response) -> dict:
+    if len(resp.content) > _LARGE_BODY_BYTES:
+        return await asyncio.to_thread(resp.json)
+    return resp.json()
+
+
+async def _submit_interaction(http_client: httpx.AsyncClient, endpoint: str, payload: dict) -> dict:
+    last_error: Optional[Exception] = None
+    for attempt in range(_MAX_SUBMIT_ATTEMPTS):
+        headers = await _auth_headers()
+        try:
+            resp = await http_client.post(endpoint, headers=headers, json=payload)
+        except httpx.TransportError as exc:
+            last_error = exc
+        else:
+            if resp.status_code not in _SUBMIT_RETRY_STATUSES:
+                _raise_for_status("submit", resp)
+                return await _parse_body(resp)
+            last_error = RuntimeError(
+                f"Omni submit failed with HTTP {resp.status_code}: {resp.text[:500]}"
+            )
+        if attempt < _MAX_SUBMIT_ATTEMPTS - 1:
+            await asyncio.sleep(2**attempt)
+    raise RuntimeError(
+        f"Omni submit failed after {_MAX_SUBMIT_ATTEMPTS} attempts: {last_error}"
+    ) from last_error
+
+
+async def _poll_interaction(http_client: httpx.AsyncClient, url: str) -> dict:
+    last_error: Optional[Exception] = None
+    for attempt in range(_MAX_POLL_FAILURES):
+        headers = await _auth_headers()
+        try:
+            resp = await http_client.get(url, headers=headers)
+        except httpx.TransportError as exc:
+            last_error = exc
+        else:
+            if resp.status_code not in _POLL_RETRY_STATUSES:
+                _raise_for_status("poll", resp)
+                return await _parse_body(resp)
+            last_error = RuntimeError(
+                f"Omni poll failed with HTTP {resp.status_code}: {resp.text[:500]}"
+            )
+        if attempt < _MAX_POLL_FAILURES - 1:
+            await asyncio.sleep(2**attempt)
+    raise RuntimeError(
+        f"Omni poll failed after {_MAX_POLL_FAILURES} consecutive attempts: {last_error}"
+    ) from last_error
+
+
+class VideoResult(NamedTuple):
+    video_bytes: Optional[bytes]
+    mime_type: str
+    uri: Optional[str]
+    final_prompt: str
 
 
 async def generate_video(
@@ -283,42 +386,42 @@ async def generate_video(
     character_image_bytes: Optional[bytes] = None,
     character_image_mime: Optional[str] = None,
     character_image_uri: Optional[str] = None,
-    audio_bytes: Optional[bytes] = None,
-    audio_mime: Optional[str] = None,
-    audio_uri: Optional[str] = None,
     source_video_bytes: Optional[bytes] = None,
     source_video_mime: Optional[str] = None,
     source_video_uri: Optional[str] = None,
+    request_id: Optional[str] = None,
     progress_callback: Optional[Callable[[float], Awaitable[None]]] = None,
     client: Optional[httpx.AsyncClient] = None,
-) -> Tuple[bytes, str]:
+) -> VideoResult:
     """
     Generates video via Omni Interactions API.
-    Returns (video_bytes, mime_type).
+    Returns a VideoResult: inline bytes for inline delivery, or a gs:// uri when the
+    output was delivered to Cloud Storage.
     Raises RuntimeError / TimeoutError on failure.
 
     progress_callback: optional async fn called with a fraction in [0.0, 1.0]
     on each poll tick so callers can surface live progress during the
     multi-minute generation instead of a frozen bar.
     """
-    if settings.TEST_MODE:
-        await asyncio.sleep(3)
-        return b"", "video/mp4"
-
     enriched_prompt = _enrich_prompt(
         prompt,
         dialogue=dialogue,
         language=language,
         character_image_uri=character_image_uri,
         character_image_bytes=character_image_bytes,
-        audio_uri=audio_uri,
-        audio_bytes=audio_bytes,
         source_video_uri=source_video_uri,
         source_video_bytes=source_video_bytes,
     )
 
+    if settings.TEST_MODE:
+        await asyncio.sleep(3)
+        return VideoResult(b"", "video/mp4", None, enriched_prompt)
+
+    has_character = bool(character_image_uri or character_image_bytes)
+    has_source_video = bool(source_video_uri or source_video_bytes)
+
     media_inputs = []
-    if character_image_uri or character_image_bytes:
+    if has_character:
         media_inputs.append(
             _media_payload(
                 data=character_image_bytes,
@@ -327,16 +430,7 @@ async def generate_video(
                 uri=character_image_uri,
             )
         )
-    if audio_uri or audio_bytes:
-        media_inputs.append(
-            _media_payload(
-                data=audio_bytes,
-                media_type="audio",
-                mime_type=audio_mime or "audio/wav",
-                uri=audio_uri,
-            )
-        )
-    if source_video_uri or source_video_bytes:
+    if has_source_video:
         media_inputs.append(
             _media_payload(
                 data=source_video_bytes,
@@ -346,27 +440,35 @@ async def generate_video(
             )
         )
 
-    payload = _compose_request(enriched_prompt, media_inputs, aspect_ratio, duration_seconds)
+    payload = _compose_request(
+        enriched_prompt,
+        media_inputs,
+        aspect_ratio,
+        duration_seconds,
+        task=_video_task(has_character, has_source_video),
+        output_gcs_uri=_output_gcs_uri(request_id),
+    )
     endpoint = _api_endpoint()
 
     # Reuse shared AsyncClient connection pool for request and polling
     http_client = get_http_client(client)
-    headers = await _auth_headers()
-    resp = await http_client.post(endpoint, headers=headers, json=payload)
-    resp.raise_for_status()
-    data = resp.json()
+    data = await _submit_interaction(http_client, endpoint, payload)
 
     if "error" in data:
         raise RuntimeError(f"Omni API error: {data['error']}")
 
     interaction_id = data.get("id")
     status = data.get("status")
-    elapsed = 0
-    poll_interval = 10
+    started = time.monotonic()
+    logger.info(
+        "omni interaction submitted request_id=%s interaction_id=%s", request_id, interaction_id
+    )
 
-    while status == "in_progress":
-        await asyncio.sleep(poll_interval)
-        elapsed += poll_interval
+    # Keep polling until the interaction reaches a terminal state; an unexpected
+    # non-terminal status (for example a queued state) must not end the loop early.
+    while status not in (None, "completed", "failed"):
+        await asyncio.sleep(settings.OMNI_POLL_INTERVAL_SECONDS)
+        elapsed = time.monotonic() - started
         if elapsed >= settings.OMNI_MAX_WAIT_SECONDS:
             raise TimeoutError(
                 f"Omni video generation timed out after {settings.OMNI_MAX_WAIT_SECONDS}s"
@@ -377,13 +479,9 @@ async def generate_video(
             try:
                 await progress_callback(fraction)
             except Exception:
-                pass  # progress reporting must never break generation
+                logger.warning("progress callback failed request_id=%s", request_id, exc_info=True)
 
-        headers = await _auth_headers()
-        # Reuse the same client session across polling ticks
-        poll_resp = await http_client.get(f"{endpoint}/{interaction_id}", headers=headers)
-        poll_resp.raise_for_status()
-        data = poll_resp.json()
+        data = await _poll_interaction(http_client, f"{endpoint}/{interaction_id}")
 
         if "error" in data:
             raise RuntimeError(f"Omni API error: {data['error']}")
@@ -398,8 +496,8 @@ async def generate_video(
         )
         raise RuntimeError(f"Omni generation failed: {fail_msg}")
 
-    video_bytes, mime_type = _extract_video_bytes(data)
-    if not video_bytes:
+    video_bytes, mime_type, video_uri = _extract_video_output(data)
+    if not video_bytes and not video_uri:
         raise RuntimeError("Omni returned no video data in response")
 
-    return video_bytes, mime_type
+    return VideoResult(video_bytes, mime_type, video_uri, enriched_prompt)

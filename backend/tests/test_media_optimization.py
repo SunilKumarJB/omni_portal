@@ -9,9 +9,10 @@ Verifies:
    - neither raises ValueError
 2. omni_service._enrich_prompt:
    - handles character_image_uri and character_image_bytes
-   - handles audio_uri and audio_bytes
    - handles source_video_uri and source_video_bytes
-3. omni_service.generate_video:
+3. omni_service._compose_request / generate_video:
+   - selects video_config.task from the supplied inputs
+   - emits structured response_format (aspect_ratio / duration / delivery)
    - correctly constructs payload input entries for URIs vs bytes
 4. generate.py endpoint (/api/generate/video):
    - GCS-backed uploads capture gs:// storage paths and pass them as URIs
@@ -20,7 +21,7 @@ Verifies:
 5. generate.py _run_generation:
    - handles GCS URIs without reading assets
    - handles local storage paths by reading bytes
-   - silent audio fallback works when audio was supplied as a GCS URI
+   - handles both inline-bytes and gs:// uri delivery of the generated video
 """
 
 import base64
@@ -88,18 +89,7 @@ class TestMediaPayload:
                 mime_type="image/png",
             )
 
-    def test_media_payload_audio_and_video(self):
-        audio_res = omni_service._media_payload(
-            uri="gs://my-bucket/voice.wav",
-            media_type="audio",
-            mime_type="audio/wav",
-        )
-        assert audio_res == {
-            "type": "audio",
-            "mime_type": "audio/wav",
-            "uri": "gs://my-bucket/voice.wav",
-        }
-
+    def test_media_payload_video(self):
         video_res = omni_service._media_payload(
             data=b"video_bytes",
             media_type="video",
@@ -137,14 +127,11 @@ class TestEnrichPrompt:
         )
         assert prompt.count("[REF_Character]") == 1
 
-    def test_enrich_prompt_audio_uri(self):
-        prompt = omni_service._enrich_prompt(
-            prompt="A concert performance",
-            audio_uri="gs://bucket/song.wav",
-        )
-        assert (
-            "Synchronize with the provided audio track, including lip-sync where applicable."
-            in prompt
+    def test_enrich_prompt_has_no_resolution_boilerplate(self):
+        prompt = omni_service._enrich_prompt(prompt="A quiet street at dawn")
+        assert prompt == (
+            "A quiet street at dawn No spoken dialogue or voice-over. "
+            "Use only ambient sound or music."
         )
 
     def test_enrich_prompt_video_v2v_uri(self):
@@ -167,6 +154,125 @@ class TestEnrichPrompt:
             'The character speaks the following line in Hindi, with natural, accurate lip-sync: "Welcome to my restaurant"'
             in prompt
         )
+
+
+# ---------------------------------------------------------------------------
+# 3. Unit tests for request composition (task, response_format, delivery)
+# ---------------------------------------------------------------------------
+class TestComposeRequest:
+    def test_task_text_to_video_without_media(self):
+        assert omni_service._video_task(has_character=False, has_source_video=False) == (
+            "text_to_video"
+        )
+
+    def test_task_reference_to_video_with_character_only(self):
+        assert omni_service._video_task(has_character=True, has_source_video=False) == (
+            "reference_to_video"
+        )
+
+    def test_task_edit_with_source_video(self):
+        assert omni_service._video_task(has_character=False, has_source_video=True) == "edit"
+        # A source video wins over a character reference
+        assert omni_service._video_task(has_character=True, has_source_video=True) == "edit"
+
+    def test_compose_request_structured_response_format(self):
+        payload = omni_service._compose_request(
+            "A neon skyline",
+            [],
+            "9:16",
+            8,
+            task="text_to_video",
+        )
+        assert payload["input"] == [{"type": "text", "text": "A neon skyline"}]
+        assert payload["background"] is True
+        assert payload["response_format"] == [
+            {"type": "video", "aspect_ratio": "9:16", "duration": "8s"}
+        ]
+        assert payload["generation_config"] == {"video_config": {"task": "text_to_video"}}
+
+    def test_compose_request_falls_back_to_landscape(self):
+        payload = omni_service._compose_request("A neon skyline", [], "4:3", 10)
+        assert payload["response_format"][0]["aspect_ratio"] == "16:9"
+
+    def test_compose_request_uri_delivery(self):
+        payload = omni_service._compose_request(
+            "A neon skyline",
+            [],
+            "16:9",
+            10,
+            task="reference_to_video",
+            output_gcs_uri="gs://omni-bucket/req-1/",
+        )
+        assert payload["response_format"][0]["delivery"] == "uri"
+        assert payload["response_format"][0]["gcs_uri"] == "gs://omni-bucket/req-1/"
+
+    def test_output_gcs_uri_only_for_gcs_backend(self):
+        with (
+            patch.object(settings, "STORAGE_BACKEND", "gcs"),
+            patch.object(settings, "GCS_BUCKET_NAME", "omni-bucket"),
+            patch.object(settings, "TEST_MODE", False),
+        ):
+            assert omni_service._output_gcs_uri("req-1") == "gs://omni-bucket/req-1/"
+
+        with (
+            patch.object(settings, "STORAGE_BACKEND", "local"),
+            patch.object(settings, "TEST_MODE", False),
+        ):
+            assert omni_service._output_gcs_uri("req-1") is None
+
+        with (
+            patch.object(settings, "STORAGE_BACKEND", "gcs"),
+            patch.object(settings, "GCS_BUCKET_NAME", "omni-bucket"),
+            patch.object(settings, "TEST_MODE", True),
+        ):
+            assert omni_service._output_gcs_uri("req-1") is None
+
+
+class TestExtractVideoOutput:
+    def test_extract_inline_data_from_steps(self):
+        response = {
+            "steps": [
+                {
+                    "type": "model_output",
+                    "content": [
+                        {
+                            "type": "video",
+                            "mime_type": "video/mp4",
+                            "data": base64.b64encode(b"inline_bytes").decode(),
+                        }
+                    ],
+                }
+            ]
+        }
+        assert omni_service._extract_video_output(response) == (
+            b"inline_bytes",
+            "video/mp4",
+            None,
+        )
+
+    def test_extract_uri_from_steps(self):
+        response = {
+            "steps": [
+                {
+                    "type": "model_output",
+                    "content": [
+                        {
+                            "type": "video",
+                            "mime_type": "video/mp4",
+                            "uri": "gs://omni-bucket/req-1/output.mp4",
+                        }
+                    ],
+                }
+            ]
+        }
+        assert omni_service._extract_video_output(response) == (
+            None,
+            "video/mp4",
+            "gs://omni-bucket/req-1/output.mp4",
+        )
+
+    def test_extract_returns_nothing_when_no_video(self):
+        assert omni_service._extract_video_output({"steps": []}) == (None, "video/mp4", None)
 
 
 # ---------------------------------------------------------------------------
@@ -195,32 +301,30 @@ class TestOmniGenerateVideoPayload:
             patch.object(omni_service, "_auth_headers", return_value={}),
             patch("httpx.AsyncClient.post", side_effect=mock_post),
         ):
-            video_bytes, mime = await omni_service.generate_video(
+            result = await omni_service.generate_video(
                 prompt="Futuristic car racing",
                 character_image_uri="gs://my-bucket/driver.png",
                 character_image_mime="image/png",
-                audio_uri="gs://my-bucket/engine.wav",
-                audio_mime="audio/wav",
                 source_video_uri="gs://my-bucket/scene.mp4",
                 source_video_mime="video/mp4",
             )
-            assert video_bytes == b"dummy_video"
-            assert mime == "video/mp4"
+            assert result.video_bytes == b"dummy_video"
+            assert result.mime_type == "video/mp4"
+            assert result.uri is None
 
             inputs = captured_json.get("input", [])
-            assert len(inputs) == 4  # text + 3 media inputs
+            assert len(inputs) == 3  # text + 2 media inputs
 
             image_input = next(item for item in inputs if item.get("type") == "image")
             assert image_input["uri"] == "gs://my-bucket/driver.png"
             assert "data" not in image_input
 
-            audio_input = next(item for item in inputs if item.get("type") == "audio")
-            assert audio_input["uri"] == "gs://my-bucket/engine.wav"
-            assert "data" not in audio_input
-
             video_input = next(item for item in inputs if item.get("type") == "video")
             assert video_input["uri"] == "gs://my-bucket/scene.mp4"
             assert "data" not in video_input
+
+            # A source video makes this an edit task
+            assert captured_json["generation_config"]["video_config"]["task"] == "edit"
 
     @pytest.mark.anyio
     async def test_generate_video_sends_base64_data_when_bytes_provided(self):
@@ -273,7 +377,9 @@ class TestRunGenerationMediaInputs:
 
             await db_service.create_request(request_id, {"prompt": "City drone shot"})
 
-            mock_generate = AsyncMock(return_value=(b"generated_mp4", "video/mp4"))
+            mock_generate = AsyncMock(
+                return_value=omni_service.VideoResult(b"generated_mp4", "video/mp4", None, "final")
+            )
             mock_read_asset = AsyncMock()
 
             with (
@@ -290,8 +396,6 @@ class TestRunGenerationMediaInputs:
                     prompt="City drone shot",
                     character_image_local="gs://omni-bucket/char.png",
                     character_image_mime="image/png",
-                    audio_local="gs://omni-bucket/sound.wav",
-                    audio_mime="audio/wav",
                     source_video_local="gs://omni-bucket/source.mp4",
                     source_video_mime="video/mp4",
                 )
@@ -304,8 +408,6 @@ class TestRunGenerationMediaInputs:
                 call_kwargs = mock_generate.call_args.kwargs
                 assert call_kwargs["character_image_uri"] == "gs://omni-bucket/char.png"
                 assert call_kwargs["character_image_bytes"] is None
-                assert call_kwargs["audio_uri"] == "gs://omni-bucket/sound.wav"
-                assert call_kwargs["audio_bytes"] is None
                 assert call_kwargs["source_video_uri"] == "gs://omni-bucket/source.mp4"
                 assert call_kwargs["source_video_bytes"] is None
 
@@ -324,7 +426,9 @@ class TestRunGenerationMediaInputs:
             local_char_file = tmp_path / "char.png"
             local_char_file.write_bytes(b"local_png_bytes")
 
-            mock_generate = AsyncMock(return_value=(b"generated_mp4", "video/mp4"))
+            mock_generate = AsyncMock(
+                return_value=omni_service.VideoResult(b"generated_mp4", "video/mp4", None, "final")
+            )
 
             with (
                 patch.object(omni_service, "generate_video", mock_generate),
@@ -347,13 +451,9 @@ class TestRunGenerationMediaInputs:
                 assert call_kwargs["character_image_bytes"] == b"local_png_bytes"
 
     @pytest.mark.anyio
-    async def test_run_generation_silent_fallback_with_audio_uri(self, tmp_path: Path):
-        """
-        Verify that when primary generation fails with audio provided via GCS URI,
-        the fallback retries without audio (audio_uri=None, audio_bytes=None)
-        and adds the silent subtitle prompt.
-        """
-        request_id = "test-req-audio-uri-fallback"
+    async def test_run_generation_uploads_inline_video_bytes(self, tmp_path: Path):
+        """Inline (base64) delivery: bytes are uploaded to storage and the URL is stored."""
+        request_id = "test-req-inline-delivery"
         with (
             patch.object(settings, "LOCAL_STORAGE_PATH", str(tmp_path)),
             patch.object(settings, "DB_BACKEND", "local"),
@@ -363,42 +463,67 @@ class TestRunGenerationMediaInputs:
 
             await db_service.create_request(request_id, {"prompt": "A toy infomercial"})
 
-            # First attempt fails; fallback attempt succeeds
             mock_generate = AsyncMock(
-                side_effect=[
-                    RuntimeError("Omni audio track synthesis error"),
-                    (b"fallback_silent_video", "video/mp4"),
-                ]
+                return_value=omni_service.VideoResult(
+                    b"inline_video", "video/mp4", None, "A toy infomercial, enriched"
+                )
+            )
+            mock_upload = AsyncMock(
+                return_value=("/storage/video.mp4", str(tmp_path / "video.mp4"))
             )
 
             with (
                 patch.object(omni_service, "generate_video", mock_generate),
-                patch.object(
-                    storage_service,
-                    "upload_bytes",
-                    return_value=("/storage/video.mp4", str(tmp_path / "video.mp4")),
-                ),
+                patch.object(storage_service, "upload_bytes", mock_upload),
             ):
-                await _run_generation(
-                    request_id=request_id,
-                    prompt="A toy infomercial",
-                    audio_uri="gs://omni-bucket/voiceover.wav",
-                    audio_mime="audio/wav",
+                await _run_generation(request_id=request_id, prompt="A toy infomercial")
+
+            mock_upload.assert_awaited_once()
+            assert mock_upload.await_args.args[0] == b"inline_video"
+
+            record = await db_service.get_request(request_id)
+            assert record["status"] == "completed"
+            assert record["progress"] == 100
+            assert record["video_url"] == "/storage/video.mp4"
+            assert record["stage"] == "completed"
+            assert record["final_prompt"] == "A toy infomercial, enriched"
+            assert record["generation_seconds"] >= 0
+            assert "submitting" in record["timings"]
+
+    @pytest.mark.anyio
+    async def test_run_generation_uses_gcs_uri_delivery_without_reupload(self, tmp_path: Path):
+        """uri delivery: the gs:// output is signed for playback, never downloaded/re-uploaded."""
+        request_id = "test-req-uri-delivery"
+        with (
+            patch.object(settings, "LOCAL_STORAGE_PATH", str(tmp_path)),
+            patch.object(settings, "DB_BACKEND", "local"),
+            patch.object(settings, "TEST_MODE", False),
+        ):
+            from app.api.routes.generate import _run_generation
+
+            await db_service.create_request(request_id, {"prompt": "A skyline timelapse"})
+
+            mock_generate = AsyncMock(
+                return_value=omni_service.VideoResult(
+                    None, "video/mp4", f"gs://omni-bucket/{request_id}/output.mp4", "final prompt"
                 )
+            )
+            mock_upload = AsyncMock()
+            mock_public_url = AsyncMock(return_value="https://signed.example/output.mp4")
 
-                assert mock_generate.call_count == 2
-                # Primary call had audio_uri
-                primary_call = mock_generate.call_args_list[0].kwargs
-                assert primary_call["audio_uri"] == "gs://omni-bucket/voiceover.wav"
+            with (
+                patch.object(omni_service, "generate_video", mock_generate),
+                patch.object(storage_service, "upload_bytes", mock_upload),
+                patch.object(storage_service, "get_public_url", mock_public_url),
+            ):
+                await _run_generation(request_id=request_id, prompt="A skyline timelapse")
 
-                # Fallback call stripped audio_uri and audio_bytes
-                fallback_call = mock_generate.call_args_list[1].kwargs
-                assert fallback_call["audio_uri"] is None
-                assert fallback_call["audio_bytes"] is None
-                assert "[SILENT INFOMERCIAL FALLBACK]" in fallback_call["prompt"]
+            mock_upload.assert_not_called()
+            mock_public_url.assert_awaited_once_with(f"gs://omni-bucket/{request_id}/output.mp4")
 
-                record = await db_service.get_request(request_id)
-                assert record["status"] == "completed"
+            record = await db_service.get_request(request_id)
+            assert record["status"] == "completed"
+            assert record["video_url"] == "https://signed.example/output.mp4"
 
 
 # ---------------------------------------------------------------------------
@@ -442,11 +567,6 @@ class TestGenerateEndpointMediaInputs:
                             b"png_content_data",
                             "image/png",
                         ),
-                        "audio_file": (
-                            "speech.wav",
-                            b"wav_content_data",
-                            "audio/wav",
-                        ),
                     }
                     resp = await client.post(
                         "/api/generate/video",
@@ -460,14 +580,8 @@ class TestGenerateEndpointMediaInputs:
                         captured_bg_args["character_image_uri"]
                         == f"gs://test-bucket/{captured_bg_args['request_id']}/character.png"
                     )
-                    assert (
-                        captured_bg_args["audio_uri"]
-                        == f"gs://test-bucket/{captured_bg_args['request_id']}/audio.wav"
-                    )
-
                     # Large bytes should have been freed (None) to avoid memory overhead
                     assert captured_bg_args["character_image_bytes"] is None
-                    assert captured_bg_args["audio_bytes"] is None
 
     @pytest.mark.anyio
     async def test_endpoint_with_local_storage_passes_bytes(self, tmp_path: Path):

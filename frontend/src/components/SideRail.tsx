@@ -1,7 +1,9 @@
-import { Check, FlaskConical } from 'lucide-react';
+import { Check, FlaskConical, Images } from 'lucide-react';
 import type * as React from 'react';
+import { Link } from 'react-router-dom';
 import { PortalMark } from '@/components/AppHeader';
 import ThemeToggle from '@/components/ThemeToggle';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +42,9 @@ interface SideRailProps {
   testMode: boolean;
   setTestMode: React.Dispatch<React.SetStateAction<boolean>>;
   onBrandClick: () => void;
+  /** Highest step the rail may jump to. Steps beyond it stay inert. */
+  maxNavigableStep?: number;
+  onStepSelect?: (step: StepItem['id']) => void;
 }
 
 export default function SideRail({
@@ -48,6 +53,8 @@ export default function SideRail({
   testMode,
   setTestMode,
   onBrandClick,
+  maxNavigableStep = 0,
+  onStepSelect,
 }: SideRailProps) {
   return (
     <aside className="relative z-10 hidden w-72 shrink-0 flex-col border-r border-border/60 px-7 py-5 lg:flex xl:w-80">
@@ -69,7 +76,7 @@ export default function SideRail({
             Step inside your imagination
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground xl:text-sm">
-            A cinematic Omni demo deck for live executive showcases.
+            Create a product video, one choice at a time.
           </p>
         </div>
 
@@ -83,9 +90,30 @@ export default function SideRail({
               const accent = STEP_ACCENTS[step.id];
               const filled = active || done;
               const segmented = step.id === 6;
+              const navigable = !!onStepSelect && !active && step.id <= maxNavigableStep;
+
+              const label = (
+                <>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/60">
+                    Step {step.id}
+                  </div>
+                  <div
+                    className={cn(
+                      'mt-0.5 text-sm font-bold tracking-tight transition-colors duration-200 xl:text-base',
+                      active
+                        ? 'text-foreground'
+                        : done
+                          ? 'text-foreground/70'
+                          : 'text-muted-foreground',
+                    )}
+                  >
+                    {step.label}
+                  </div>
+                </>
+              );
 
               return (
-                <li key={step.id} className="flex gap-4">
+                <li aria-current={active ? 'step' : undefined} key={step.id} className="flex gap-4">
                   <div className="flex flex-col items-center">
                     <span
                       className={cn(
@@ -129,23 +157,20 @@ export default function SideRail({
                       />
                     )}
                   </div>
-                  <div className={cn('pt-0', last ? 'pb-0' : 'pb-4')}>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/60">
-                      Step {step.id}
-                    </div>
-                    <div
+                  {navigable ? (
+                    <button
+                      type="button"
+                      onClick={() => onStepSelect?.(step.id)}
                       className={cn(
-                        'mt-0.5 text-sm font-bold tracking-tight transition-colors duration-200 xl:text-base',
-                        active
-                          ? 'text-foreground'
-                          : done
-                            ? 'text-foreground/70'
-                            : 'text-muted-foreground',
+                        'rounded-md pt-0 text-left transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                        last ? 'pb-0' : 'pb-4',
                       )}
                     >
-                      {step.label}
-                    </div>
-                  </div>
+                      {label}
+                    </button>
+                  ) : (
+                    <div className={cn('pt-0', last ? 'pb-0' : 'pb-4')}>{label}</div>
+                  )}
                 </li>
               );
             })}
@@ -162,7 +187,20 @@ export default function SideRail({
               aria-label="Toggle test mode"
             />
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Open gallery"
+              asChild
+              className="h-9 w-9 rounded-full"
+            >
+              <Link to="/gallery">
+                <Images className="h-4 w-4" strokeWidth={1.75} />
+              </Link>
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </aside>

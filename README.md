@@ -245,6 +245,7 @@ Set your GCP environment variables and run the included deployment script:
 export GCP_PROJECT_ID="your-gcp-project-id"
 export GCP_LOCATION="us-central1"
 export GCS_BUCKET_NAME="your-gcs-bucket-name"
+export DEMO_API_KEY="your-demo-key"   # optional: gates the API for the demo
 
 ./deploy-cloud-run.sh
 ```
@@ -300,7 +301,7 @@ docker-compose up --build -d
 <details>
 <summary><b>Option B: Standalone Cloud Run Frontend</b></summary>
 
-You can also deploy both frontend and backend to Cloud Run using `./deploy-cloud-run.sh`. The script automatically wires backend CORS and QR URLs to the frontend Cloud Run URL.
+You can also deploy both frontend and backend to Cloud Run using `./deploy-cloud-run.sh`. The script automatically wires backend CORS and QR URLs to the frontend Cloud Run URL, and configures the frontend's nginx proxy with `BACKEND_URL`/`BACKEND_HOST`.
 </details>
 
 ---
@@ -322,6 +323,10 @@ You can also deploy both frontend and backend to Cloud Run using `./deploy-cloud
 | `BASE_URL` | Backend URL for links and QR generation | `http://localhost:8000` |
 | `FRONTEND_URL` | Frontend URL for CORS configuration | `http://localhost:5173` |
 | `ALLOWED_ORIGINS` | Comma-separated CORS allowed origins | `http://localhost:5173,http://localhost:3000` |
+| `DEMO_API_KEY` | Optional shared key gating the API for the demo; baked into the frontend build as `VITE_DEMO_API_KEY` | `""` |
+| `LOG_LEVEL` | Backend log level | `INFO` |
+| `BACKEND_URL` | Frontend nginx: origin the `/api` and `/storage` locations proxy to | `http://backend:8000` |
+| `BACKEND_HOST` | Frontend nginx: `Host` header sent to `BACKEND_URL` (Cloud Run routes ingress by Host) | `backend` |
 
 ---
 

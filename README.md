@@ -344,6 +344,8 @@ From the repo root:
 | `make format` | Format codebase (Ruff for backend, Biome for frontend) |
 | `make check` | Execute full check pipeline (`format` ➔ `lint` ➔ `format`) |
 | `make clean` | Reset build outputs, caches, and virtual environments |
+| `make deploy` | Build and deploy stack to Google Cloud Run |
+| `make deploy-firebase` | Deploy frontend to Firebase Hosting |
 
 ---
 

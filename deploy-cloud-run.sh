@@ -1,49 +1,232 @@
 #!/bin/bash
-# Deploy Omni Video Generator to Google Cloud Run
+# Deploy Omni Video Generator to Google Cloud Run using Google Cloud Build
 set -e
 
-# ---- CONFIGURE THESE (override by exporting the env var before running) ----
-PROJECT_ID="${GCP_PROJECT_ID:-your-project-id}"
-REGION="${GCP_LOCATION:-us-central1}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# -----------------------------------------------------------------------------
+# 1. Load configuration from gitignored files (precedence: CLI env > .env.deploy > .env > backend/.env)
+# -----------------------------------------------------------------------------
+load_env_file() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    echo "📄 Loading configuration from ${file}..."
+    while IFS= read -r line || [ -n "$line" ]; do
+      line="${line#"${line%%[![:space:]]*}"}" # strip leading spaces
+      [[ "$line" =~ ^#.*$ ]] && continue      # skip comments
+      [ -z "$line" ] && continue              # skip empty lines
+      key="${line%%=*}"
+      val="${line#*=}"
+      val="${val%\"}"                         # strip quotes
+      val="${val#\"}"
+      val="${val%\'}"
+      val="${val#\'}"
+      if [ -z "${!key+x}" ]; then            # only set if not already set in environment
+        export "${key}=${val}"
+      fi
+    done < "$file"
+  fi
+}
+
+if [ -f "${SCRIPT_DIR}/.env.deploy" ]; then
+  load_env_file "${SCRIPT_DIR}/.env.deploy"
+elif [ -f "${SCRIPT_DIR}/.env" ]; then
+  load_env_file "${SCRIPT_DIR}/.env"
+elif [ -f "${SCRIPT_DIR}/backend/.env" ]; then
+  load_env_file "${SCRIPT_DIR}/backend/.env"
+fi
+
+# -----------------------------------------------------------------------------
+# 2. Variable resolution & interactive prompt helpers
+# -----------------------------------------------------------------------------
+prompt_var() {
+  local var_name="$1"
+  local prompt_text="$2"
+  local default_val="$3"
+  local current_val="${!var_name}"
+
+  if [ -z "${current_val}" ] || [ "${current_val}" = "your-project-id" ] || [ "${current_val}" = "your-gcs-bucket-name" ]; then
+    if [ -t 0 ]; then
+      read -r -p "${prompt_text} [${default_val}]: " input_val
+      eval "${var_name}=\"\${input_val:-$default_val}\""
+    else
+      eval "${var_name}=\"${default_val}\""
+    fi
+  fi
+}
+
+DETECTED_PROJECT=$(gcloud config get-value project 2>/dev/null || echo "")
+DETECTED_REGION=$(gcloud config get-value compute/region 2>/dev/null || echo "")
+# Fallback to India (asia-south1) if no region configured
+FALLBACK_REGION="${DETECTED_REGION:-asia-south1}"
+
+PROJECT_ID="${GCP_PROJECT_ID:-}"
+prompt_var "PROJECT_ID" "GCP Project ID" "${DETECTED_PROJECT}"
+if [ -z "${PROJECT_ID}" ] || [ "${PROJECT_ID}" = "your-project-id" ]; then
+  echo "❌ Error: Project ID is required. Set GCP_PROJECT_ID or run 'gcloud config set project <id>'."
+  exit 1
+fi
+
+REGION="${GCP_LOCATION:-}"
+prompt_var "REGION" "Cloud Run Region (fallback India: asia-south1)" "${FALLBACK_REGION}"
+if [ -z "${REGION}" ]; then
+  REGION="asia-south1"
+fi
+
+GCS_BUCKET="${GCS_BUCKET_NAME:-}"
+DEFAULT_BUCKET="${PROJECT_ID}-omni-videos"
+prompt_var "GCS_BUCKET" "GCS Bucket for videos" "${DEFAULT_BUCKET}"
+
+FIRESTORE_DB="${FIRESTORE_DATABASE_ID:-}"
+prompt_var "FIRESTORE_DB" "Firestore Database ID (blank for default)" ""
+
+SERVICE_ACCOUNT="${SERVICE_ACCOUNT:-}"
+DEFAULT_SA="omni-portal-sa@${PROJECT_ID}.iam.gserviceaccount.com"
+prompt_var "SERVICE_ACCOUNT" "Cloud Run Service Account" "${DEFAULT_SA}"
+
 BACKEND_SERVICE="${BACKEND_SERVICE:-omni-video-backend}"
 FRONTEND_SERVICE="${FRONTEND_SERVICE:-omni-video-frontend}"
-REPO="gcr.io/${PROJECT_ID}"
+AR_REPO="${AR_REPO:-cloud-run-source-deploy}"
+REPO="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}"
 
-# Runtime config — single source of truth for the backend's pydantic Settings.
-# Each falls back to a sensible default; change a model/bucket here (or export it)
-# and redeploy — no code edit required.
-GCS_BUCKET="${GCS_BUCKET_NAME:-your-gcs-bucket-name}"
 GEMINI_MODEL="${GEMINI_MODEL:-gemini-omni-1.1-flash-preview}"
-# OMNI_REGION is the Gemini model interactions region (independent of REGION,
-# which is the Cloud Run deployment location set above). These used to share
-# the REGION variable, which silently forced the model region to match
-# whatever Cloud Run region was chosen instead of defaulting to "global".
+# The Gemini Omni Interactions API only supports global, us, and eu.
+# Keep global so backend in any region connects over Google's internal backbone.
 OMNI_REGION="${OMNI_REGION:-global}"
 DEMO_API_KEY="${DEMO_API_KEY:-}"
 LOG_LEVEL="${LOG_LEVEL:-INFO}"
-# --------------------------
 
-echo "🚀 Deploying Omni Video Generator to Cloud Run (project: ${PROJECT_ID})"
+# Optional: Prompt to save config to gitignored .env.deploy if it doesn't exist
+if [ ! -f "${SCRIPT_DIR}/.env.deploy" ] && [ -t 0 ]; then
+  read -r -p "💾 Save these deployment settings to gitignored .env.deploy? [y/N]: " SAVE_CONF
+  if [[ "${SAVE_CONF}" =~ ^[Yy]$ ]]; then
+    cat <<SAVE_EOF > "${SCRIPT_DIR}/.env.deploy"
+GCP_PROJECT_ID=${PROJECT_ID}
+GCP_LOCATION=${REGION}
+GCS_BUCKET_NAME=${GCS_BUCKET}
+FIRESTORE_DATABASE_ID=${FIRESTORE_DB}
+SERVICE_ACCOUNT=${SERVICE_ACCOUNT}
+GEMINI_MODEL=${GEMINI_MODEL}
+OMNI_REGION=${OMNI_REGION}
+AR_REPO=${AR_REPO}
+BACKEND_SERVICE=${BACKEND_SERVICE}
+FRONTEND_SERVICE=${FRONTEND_SERVICE}
+DEMO_API_KEY=${DEMO_API_KEY}
+LOG_LEVEL=${LOG_LEVEL}
+SAVE_EOF
+    echo "✅ Saved to .env.deploy"
+  fi
+fi
+
+# -----------------------------------------------------------------------------
+# 3. Infrastructure Auto-Provisioning (GCS Bucket, SA, Roles, Artifact Registry)
+# -----------------------------------------------------------------------------
+echo "🚀 Deploying Omni Video Generator to Cloud Run"
+echo "   Project:         ${PROJECT_ID}"
+echo "   Region:          ${REGION}"
+echo "   Bucket:          ${GCS_BUCKET}"
+echo "   Firestore DB:    ${FIRESTORE_DB:-(default)}"
+echo "   Service Account: ${SERVICE_ACCOUNT}"
+echo "   Model:           ${GEMINI_MODEL} (${OMNI_REGION})"
+echo "   Artifact Repo:   ${REPO}"
+echo ""
 
 gcloud config set project "${PROJECT_ID}"
-gcloud auth configure-docker
 
-# Build & push backend
-echo "📦 Building backend..."
-docker build -t "${REPO}/${BACKEND_SERVICE}:latest" ./backend
-docker push "${REPO}/${BACKEND_SERVICE}:latest"
+PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)' 2>/dev/null || echo "")
 
-# Deploy backend to Cloud Run.
-# Video generation runs 3-8 min in a FastAPI BackgroundTask AFTER the HTTP response
-# returns. --no-cpu-throttling keeps the CPU allocated so that task keeps running, and
-# --min-instances 1 keeps a warm instance so it isn't reaped during scale-in (otherwise
-# requests get stuck at "processing" forever). A fully robust design would move generation
-# to a Cloud Tasks / Pub/Sub worker decoupled from the request lifecycle.
+# 3a. Auto-create GCS Bucket if it does not exist
+if ! gcloud storage buckets describe "gs://${GCS_BUCKET}" >/dev/null 2>&1; then
+  echo "🪣 Bucket 'gs://${GCS_BUCKET}' does not exist. Creating in ${REGION}..."
+  gcloud storage buckets create "gs://${GCS_BUCKET}" \
+    --project="${PROJECT_ID}" \
+    --location="${REGION}" \
+    --uniform-bucket-level-access
+fi
+
+# Grant Vertex AI service agent access to the bucket for URI delivery
+if [ -n "${PROJECT_NUMBER}" ]; then
+  VERTEX_SA="service-${PROJECT_NUMBER}@gcp-sa-aiplatform.iam.gserviceaccount.com"
+  gcloud storage buckets add-iam-policy-binding "gs://${GCS_BUCKET}" \
+    --member="serviceAccount:${VERTEX_SA}" \
+    --role="roles/storage.objectAdmin" --quiet >/dev/null 2>&1 || true
+fi
+
+# 3b. Auto-create Service Account and grant required roles if not existing
+SA_NAME="${SERVICE_ACCOUNT%%@*}"
+if ! gcloud iam service-accounts describe "${SERVICE_ACCOUNT}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
+  echo "👤 Service account '${SERVICE_ACCOUNT}' does not exist. Creating..."
+  gcloud iam service-accounts create "${SA_NAME}" \
+    --description="Omni Portal Cloud Run runtime service account" \
+    --display-name="Omni Portal Runtime SA" \
+    --project="${PROJECT_ID}"
+
+  echo "🔑 Granting project roles to '${SERVICE_ACCOUNT}'..."
+  for role in roles/aiplatform.user roles/datastore.user roles/storage.objectAdmin roles/logging.logWriter; do
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+      --member="serviceAccount:${SERVICE_ACCOUNT}" \
+      --role="$role" --condition=None --quiet >/dev/null 2>&1 || true
+  done
+
+  # Grant Token Creator to itself (for GCS v4 signed URLs)
+  gcloud iam service-accounts add-iam-policy-binding "${SERVICE_ACCOUNT}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT}" \
+    --role="roles/iam.serviceAccountTokenCreator" \
+    --project="${PROJECT_ID}" --quiet >/dev/null 2>&1 || true
+fi
+
+# Ensure runtime SA has objectAdmin and legacyBucketReader on the target bucket
+gcloud storage buckets add-iam-policy-binding "gs://${GCS_BUCKET}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --role="roles/storage.objectAdmin" --quiet >/dev/null 2>&1 || true
+gcloud storage buckets add-iam-policy-binding "gs://${GCS_BUCKET}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --role="roles/storage.legacyBucketReader" --quiet >/dev/null 2>&1 || true
+
+# Grant serviceAccountUser to deploying user & Cloud Build
+CURRENT_USER=$(gcloud config get-value account 2>/dev/null || echo "")
+if [ -n "${CURRENT_USER}" ]; then
+  gcloud iam service-accounts add-iam-policy-binding "${SERVICE_ACCOUNT}" \
+    --member="user:${CURRENT_USER}" \
+    --role="roles/iam.serviceAccountUser" \
+    --project="${PROJECT_ID}" --quiet >/dev/null 2>&1 || true
+fi
+if [ -n "${PROJECT_NUMBER}" ]; then
+  gcloud iam service-accounts add-iam-policy-binding "${SERVICE_ACCOUNT}" \
+    --member="serviceAccount:${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com" \
+    --role="roles/iam.serviceAccountUser" \
+    --project="${PROJECT_ID}" --quiet >/dev/null 2>&1 || true
+  gcloud iam service-accounts add-iam-policy-binding "${SERVICE_ACCOUNT}" \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role="roles/iam.serviceAccountUser" \
+    --project="${PROJECT_ID}" --quiet >/dev/null 2>&1 || true
+fi
+
+# 3c. Ensure Artifact Registry Docker repository exists
+if ! gcloud artifacts repositories describe "${AR_REPO}" --location="${REGION}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
+  echo "📦 Creating Artifact Registry repository '${AR_REPO}' in ${REGION}..."
+  gcloud artifacts repositories create "${AR_REPO}" \
+    --repository-format=docker \
+    --location="${REGION}" \
+    --project="${PROJECT_ID}" \
+    --description="Docker repository for Cloud Run source deployments" \
+    --quiet || true
+fi
+
+# -----------------------------------------------------------------------------
+# 4. Build & Deploy Backend
+# -----------------------------------------------------------------------------
+echo "📦 Building backend with Cloud Build..."
+gcloud builds submit ./backend \
+  --tag "${REPO}/${BACKEND_SERVICE}:latest" \
+  --project "${PROJECT_ID}"
+
 echo "☁️  Deploying backend..."
 gcloud run deploy "${BACKEND_SERVICE}" \
   --image "${REPO}/${BACKEND_SERVICE}:latest" \
   --platform managed \
   --region "${REGION}" \
+  --service-account "${SERVICE_ACCOUNT}" \
   --allow-unauthenticated \
   --port 8000 \
   --memory 2Gi \
@@ -52,8 +235,7 @@ gcloud run deploy "${BACKEND_SERVICE}" \
   --concurrency 80 \
   --no-cpu-throttling \
   --min-instances 1 \
-  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},GCS_BUCKET_NAME=${GCS_BUCKET},GEMINI_MODEL=${GEMINI_MODEL},REGION=${OMNI_REGION},STORAGE_BACKEND=gcs,DB_BACKEND=firestore,TEST_MODE=false,DEMO_API_KEY=${DEMO_API_KEY},LOG_LEVEL=${LOG_LEVEL}"
-# FRONTEND_URL + ALLOWED_ORIGINS are set further down, once the frontend URL is known.
+  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},GCS_BUCKET_NAME=${GCS_BUCKET},FIRESTORE_DATABASE_ID=${FIRESTORE_DB},GEMINI_MODEL=${GEMINI_MODEL},REGION=${OMNI_REGION},STORAGE_BACKEND=gcs,DB_BACKEND=firestore,TEST_MODE=false,DEMO_API_KEY=${DEMO_API_KEY},LOG_LEVEL=${LOG_LEVEL}"
 
 BACKEND_URL=$(gcloud run services describe "${BACKEND_SERVICE}" \
   --platform managed --region "${REGION}" \
@@ -61,23 +243,19 @@ BACKEND_URL=$(gcloud run services describe "${BACKEND_SERVICE}" \
 
 echo "✅ Backend deployed at: ${BACKEND_URL}"
 
-# Update frontend to point to backend. The nginx template proxies /api and /storage to
-# BACKEND_URL, using BACKEND_HOST as the proxied Host header — Cloud Run routes ingress
-# by Host, so this must be the backend service's own host, not the frontend's.
 BACKEND_HOST="${BACKEND_URL#https://}"
 BACKEND_HOST="${BACKEND_HOST#http://}"
 BACKEND_HOST="${BACKEND_HOST%%/*}"
 
-echo "📦 Building frontend..."
-docker build \
-  --build-arg VITE_DEMO_API_KEY="${DEMO_API_KEY}" \
-  -t "${REPO}/${FRONTEND_SERVICE}:latest" \
-  ./frontend
-docker push "${REPO}/${FRONTEND_SERVICE}:latest"
+# -----------------------------------------------------------------------------
+# 5. Build & Deploy Frontend
+# -----------------------------------------------------------------------------
+echo "📦 Building frontend with Cloud Build..."
+gcloud builds submit ./frontend \
+  --tag "${REPO}/${FRONTEND_SERVICE}:latest" \
+  --project "${PROJECT_ID}"
 
 echo "☁️  Deploying frontend..."
-# No --port: Cloud Run defaults the container port (and its PORT env var) to 8080,
-# which the nginx template picks up via envsubst at container start.
 gcloud run deploy "${FRONTEND_SERVICE}" \
   --image "${REPO}/${FRONTEND_SERVICE}:latest" \
   --platform managed \
@@ -91,10 +269,10 @@ FRONTEND_URL=$(gcloud run services describe "${FRONTEND_SERVICE}" \
   --platform managed --region "${REGION}" \
   --format 'value(status.url)')
 
-# Now that the frontend URL exists, point the backend at it. FRONTEND_URL drives the
-# QR-code / share links (qr_service) — without this they'd default to localhost and
-# every QR code would be dead. ALLOWED_ORIGINS opens CORS to the deployed frontend.
-echo "🔗 Wiring backend → frontend (QR/share links + CORS)..."
+# -----------------------------------------------------------------------------
+# 6. Wire Backend CORS & QR Codes
+# -----------------------------------------------------------------------------
+echo "🔗 Wiring backend → frontend (QR links + CORS)..."
 gcloud run services update "${BACKEND_SERVICE}" \
   --platform managed --region "${REGION}" \
   --update-env-vars "FRONTEND_URL=${FRONTEND_URL},ALLOWED_ORIGINS=${FRONTEND_URL}"
@@ -105,10 +283,3 @@ echo "   Frontend: ${FRONTEND_URL}"
 echo "   Backend:  ${BACKEND_URL}"
 echo "   API docs: ${BACKEND_URL}/docs"
 echo ""
-echo "⚠️  Still verify manually:"
-echo "   1. GCS bucket '${GCS_BUCKET}' exists and the runtime SA can write to it"
-echo "   2. Firestore database is initialized in project '${PROJECT_ID}'"
-echo "   3. The Vertex AI service agent has roles/storage.objectViewer on '${GCS_BUCKET}' (gs:// inputs)"
-echo "      and roles/storage.objectCreator on it (uri delivery)"
-echo "   4. The backend runtime service account has roles/iam.serviceAccountTokenCreator on itself"
-echo "      (required to mint v4 signed URLs)"

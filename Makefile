@@ -1,4 +1,4 @@
-.PHONY: install start start-be start-fe clean format lint check
+.PHONY: install start start-be start-fe clean format lint check deploy deploy-firebase
 
 install:
 	@echo "Installing backend dependencies..."
@@ -45,3 +45,11 @@ check:
 	$(MAKE) format
 	$(MAKE) lint
 	$(MAKE) format
+
+deploy:
+	@echo "Deploying to Google Cloud Run..."
+	./deploy-cloud-run.sh
+
+deploy-firebase:
+	@echo "Deploying frontend to Firebase Hosting..."
+	./deploy-firebase.sh
